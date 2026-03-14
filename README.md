@@ -2,7 +2,7 @@
 
 GymAppAI, antrenmanlarınızı takip etmenizi, gelişiminizi analiz etmenizi, dinlenme sürelerinizi yönetmenizi, beslenme makrolarınızı hesaplamanızı ve Yapay Zeka destekli özel programlar oluşturmanızı sağlayan kapsamlı ve tamamen mobil uyumlu (PWA) bir fitness asistanıdır.
 
-## 🚀 Yeni Gelen Özellikler (2026 Güncellemesi)
+## 🚀 Yeni Gelen Özellikler
 - **Tasarım & Mobil Optimizasyon:** Uygulama tamamen mobil cihazlara göre yeniden boyutlandırıldı. Yüzen bileşenler, buton hedefleri (minimum 44px) ve esnek tablo görünümleriyle (%100 Responsive) her ekranda kusursuz bir deneyim sunulmaktadır.
 - **PWA (Progressive Web App):** Uygulamayı artık telefonunuza "Ana Ekrana Ekle" diyerek bir mobil uygulama gibi indirebilirsiniz.
 - **1RM Hesaplayıcı:** Epley ve Brzycki formüllerini kullanarak kaldırdığınız ağırlığa göre 1 Tekrar Maksimum (1RM) değerinizi ve yüzdelik dilimlerinizi hesaplayabilirsiniz.
