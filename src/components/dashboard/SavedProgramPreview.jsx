@@ -1,5 +1,6 @@
 import React from 'react';
-import { Bot, Trash2, Check, Play } from 'lucide-react';
+import { Bot, Trash2, Check, Play, Info } from 'lucide-react';
+import ExerciseModal from '../workout/ExerciseModal';
 
 function SavedProgramPreview({
     savedAiProgram,
@@ -9,6 +10,8 @@ function SavedProgramPreview({
     startActiveAiWorkout,
     handleUpdateAiProgram
 }) {
+    const [selectedExerciseForModal, setSelectedExerciseForModal] = React.useState(null);
+
     if (!savedAiProgram || showCustomBuilder) return null;
 
     return (
@@ -47,7 +50,16 @@ function SavedProgramPreview({
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                                 {(day?.exercises || []).map((ex, eIdx) => (
                                     <div key={eIdx} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.8rem' }}>
-                                        <span style={{ color: 'var(--text-light)', flex: '1 1 200px', fontWeight: '500' }}>{ex.name}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', flex: '1 1 200px', gap: '8px' }}>
+                                            <span style={{ color: 'var(--text-light)', fontWeight: '500' }}>{ex.name}</span>
+                                            <button
+                                                onClick={() => setSelectedExerciseForModal(ex.name)}
+                                                style={{ background: 'transparent', border: 'none', color: '#00c3ff', display: 'flex', alignItems: 'center', cursor: 'pointer', padding: 0 }}
+                                                title="Egzersiz Bilgisi"
+                                            >
+                                                <Info size={16} />
+                                            </button>
+                                        </div>
                                         <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem', alignItems: 'center', flexWrap: 'nowrap' }}>
                                             <span style={{ color: 'var(--accent-secondary)' }}>{ex.sets} Sets</span>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', padding: '2px 6px' }}>
@@ -76,6 +88,14 @@ function SavedProgramPreview({
                     ))}
                 </div>
             </div>
+
+            {/* Exercise Info Modal */}
+            {selectedExerciseForModal && (
+                <ExerciseModal
+                    exerciseName={selectedExerciseForModal}
+                    onClose={() => setSelectedExerciseForModal(null)}
+                />
+            )}
         </section>
     );
 }

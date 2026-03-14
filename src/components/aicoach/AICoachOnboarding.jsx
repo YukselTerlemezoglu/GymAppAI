@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Bot, Loader2, Check } from 'lucide-react';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+
 
 function AICoachOnboarding({ workoutHistory, setSavedAiProgram, setCurrentView }) {
     const [aiGoal, setAiGoal] = useState('');
@@ -29,10 +29,8 @@ function AICoachOnboarding({ workoutHistory, setSavedAiProgram, setCurrentView }
 
         try {
             const API_KEYS = [
-                "AIzaSyBF23GhljP5cq-llGHToj_hxJVz7sE9-J8",
-                "AIzaSyDZl_MelrX0pBX6jDqovZhLBU7vDlVw9KA",
-                "AIzaSyCkI4w2mL1VkzChvszeGSbz0RSHtYSm0r0",
-            ].filter(k => k);
+                import.meta.env.VITE_GROQ_API_KEY,
+            ].filter(k => k && k !== "API_ANAHTARINIZI_BURAYA_YAZIN");
 
             // --- 4-Week Analytics Engine Calculation ---
             const fourWeeksAgo = new Date();
@@ -142,14 +140,42 @@ Ağırlık (weight) değerini kullanıcının seviyesine göre (Örn: "Boş bar"
             for (let i = 0; i < API_KEYS.length; i++) {
                 console.log(`AI: Attempting generation with API Key standard index ${i}...`);
                 try {
-                    const genAI = new GoogleGenerativeAI(API_KEYS[i]);
-                    const currentModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-                    const result = await currentModel.generateContent(prompt);
-                    textResult = result.response.text();
+                    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${API_KEYS[i]}`,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            "model": "llama-3.3-70b-versatile",
+                            "messages": [
+                                {
+                                    "role": "system",
+                                    "content": "You are a professional fitness coach. You must ONLY output a valid JSON object matching the requested schema. No other text, no markdown formatting like ```json."
+                                },
+                                {
+                                    "role": "user",
+                                    "content": prompt
+                                }
+                            ],
+                            "response_format": { "type": "json_object" },
+                            "temperature": 0.5
+                        })
+                    });
 
-                    if (textResult) {
-                        console.log("AI: Generation successful!");
+                    if (!response.ok) {
+                        const errData = await response.json().catch(() => ({}));
+                        throw new Error(errData.error?.message || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+
+                    if (result.choices && result.choices.length > 0) {
+                        textResult = result.choices[0].message.content;
+                        console.log("AI: Generation successful via Groq!");
                         break;
+                    } else {
+                        throw new Error("Boş veya geçersiz Groq yanıtı.");
                     }
                 } catch (err) {
                     console.error(`AI: Error with Key ${i}:`, err.message);
@@ -184,6 +210,7 @@ Ağırlık (weight) değerini kullanıcının seviyesine göre (Örn: "Boş bar"
             text = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
             const parsedData = JSON.parse(text);
+            parsedData.isAiGenerated = true;
             setAiResponseJson(parsedData);
         } catch (error) {
             console.error("AI Error:", error);

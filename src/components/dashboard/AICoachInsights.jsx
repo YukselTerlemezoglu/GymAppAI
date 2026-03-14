@@ -62,17 +62,39 @@ function AICoachInsights({ workoutHistory }) {
 
         const progression = { title: progTitle, desc: progDesc };
 
-        // 3. Motivasyon / Mikro Hedef
-        const goals = [
-            `Bugün 4 Set ${topEx} + 3 Set Core`,
-            `Sadece 30 Dakika Odaklan!`,
-            `Geçen seferki ${topEx} rekorunu 1 tekrar geç.`,
-            `Bugün sporu aksatma, sadece 3 set yapsan bile kârdır.`
-        ];
-        const microGoal = goals[Math.floor(Math.random() * goals.length)];
+        // 3. Akıllı Mikro Hedef / Tavsiye Sistemi (Eski rastgele sistem yerine geçmişe dayalı)
+        let dynamicGoal = "Bugün 3 Set Squat + 3 Set Şınav ile güne zinde başla.";
 
-        return { todaysPlan, progression, microGoal };
+        if (workoutHistory.length > 0) {
+            // Son idman verileri
+            const lastWorkout = workoutHistory[0];
+            const lastWorkoutDate = new Date(lastWorkout.date);
+            const daysSinceLastWorkout = Math.floor((new Date() - lastWorkoutDate) / (1000 * 60 * 60 * 24));
+            const avgRecentRpe = workoutHistory.slice(0, 5).reduce((a, b) => a + (b.avgRpe || 0), 0) / Math.min(workoutHistory.length, 5);
+            const thisWeekWorkouts = workoutHistory.filter(w => {
+                const diffTime = Math.abs(new Date() - new Date(w.date));
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                return diffDays <= 7;
+            }).length;
+
+            if (daysSinceLastWorkout >= 4) {
+                dynamicGoal = `🚀 ${daysSinceLastWorkout} gündür salona gitmiyorsun. Bugün sadece 20 dakikalık hafif bir antrenman yapıp o ivmeyi geri kazanmaya ne dersin?`;
+            } else if (avgRecentRpe >= 8.5) {
+                dynamicGoal = `🛌 Son idmanların seni çok zorlamış (Ort RPE: ${avgRecentRpe.toFixed(1)}). Bugün ağırlıklara saldırmak yerine hafif kardiyo veya stretching (esneme) yapıp dinlenmeni tavsiye ederim.`;
+            } else if (thisWeekWorkouts >= 15) { // 15 hareket/set kaydı vs.
+                dynamicGoal = `🔥 Bu hafta salonda adeta şov yaptın! Kaslarının büyümesi için bugünü Off-Day (dinlenme günü) ilan etmeyi düşünebilirsin.`;
+            } else if (lastWorkout.totalReps < 15) {
+                dynamicGoal = `⚡ Son idmanında hacmin (Volume) biraz düşük kalmış gibi. Bugün yapacağın idmanda her harekete ekstra 1 set daha ekleyerek kasları şaşırt!`;
+            } else {
+                dynamicGoal = `🎯 ${topEx} hareketinde harikasın. Bugünkü hedefin geçen seferki ${topEx} rekoruna +1 tekrar daha eklemek olsun. Başarabilirsin!`;
+            }
+        }
+
+        return { todaysPlan, progression, microGoal: dynamicGoal };
     }, [workoutHistory]);
+
+    // useMemo artık doğrudan string dönüyor, random'a gerek kalmadı
+    const microGoal = localAiCoachData.microGoal;
 
     return (
         <section className="fade-in" style={{ animationDelay: '0.15s', marginBottom: '2rem' }}>
@@ -82,7 +104,7 @@ function AICoachInsights({ workoutHistory }) {
                 </h2>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
                 {/* Bugün Ne Yapayım? */}
                 <div className="glass-card" style={{ borderLeft: '4px solid var(--accent-primary)', padding: '1.2rem' }}>
                     <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -112,7 +134,7 @@ function AICoachInsights({ workoutHistory }) {
                     </h3>
                     <div style={{ padding: '1rem', background: 'rgba(255, 215, 0, 0.1)', borderRadius: '8px', border: '1px dashed var(--accent-warning)', textAlign: 'center' }}>
                         <p style={{ color: 'var(--accent-warning)', fontWeight: 'bold', fontSize: '1.05rem' }}>
-                            "{localAiCoachData.microGoal}"
+                            "{microGoal}"
                         </p>
                     </div>
                 </div>
