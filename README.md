@@ -2,14 +2,6 @@
 
 GymAppAI, antrenmanlarınızı takip etmenizi, gelişiminizi analiz etmenizi, dinlenme sürelerinizi yönetmenizi, beslenme makrolarınızı hesaplamanızı ve Yapay Zeka destekli özel programlar oluşturmanızı sağlayan kapsamlı ve tamamen mobil uyumlu (PWA) bir fitness asistanıdır.
 
-## 🚀 Yeni Gelen Özellikler (Oyunlaştırma & Tema Sistemi)
-- **Rütbe (Rank) Sistemi:** Antrenman yaparak kazandığınız XP'ler ile seviye atlarsınız ve "Demir Çaylak" tan "Elit Titan" a kadar yükselen özel rütbe ikonlarına sahip olursunuz.
-- **Kutlama Animasyonları:** Seviye atladığınızda ekranı kaplayan konfeti (Confetti) animasyonlarıyla başarınız kutlanır.
-- **Jeton (Coin) Sistemi ve Tema Mağazası:** İdmanlardan kazandığınız XP'lerin %10'u kadar Jeton kazanırsınız. Bu jetonları harcayarak uygulamanın genel renk paletini ve arka planlarını değiştiren (Siberpunk, Kanlı Ay, Olimpiyat vb.) premium temalar satın alabilirsiniz.
-- **Seri Çarpanı (Streak Multiplier):** İdman günlerinizi aksatmazsanız 3 gün için (1.2x) ve 7 gün için (1.5x) XP ve Jeton çarpanı kazanırsınız! İstikrar her şeydir.
-- **Gizli Rozetler (Secret Badges):** 100 kg barajını aşmak veya gece yarısı spor yapmak gibi sadece özel eylemleri yapınca kilidi açılan sürpriz rozetler eklendi.
-- **Geliştirici Admin Paneli:** Testler için Profil resminize *çift tıklayarak* erişebileceğiniz gizli bir Admin menüsü bulunur. Buradan kendi istatistiklerinizi (Jeton, XP) simüle edebilir veya sistemi tamamen sıfırlayabilirsiniz.
-
 ## 🌟 Temel Özellikler
 
 *   **🏆 Yapay Zeka Koçu:**
@@ -20,10 +12,6 @@ GymAppAI, antrenmanlarınızı takip etmenizi, gelişiminizi analiz etmenizi, di
 *   **🏋️‍♂️ Antrenman Takibi & Otomatik Dinlenme Sayacı:**
     *   Seviye atlatan detaylı bir idman giriş ekranı.
     *   Setleri işaretledikçe otomatik sıfırlanan **Yüzen Dinlenme Sayacı (Floating Rest Timer)** ekranın altında sizi bekler.
-
-*   **📈 Gelişmiş Gelişim Analizi & Beslenme (Nutrition):**
-    *   Kalori ve Makro (Protein, Karbonhidrat, Yağ) hedeflerinizi hesaplar ve takip eder.
-    *   1 Tekrar Maksimum (1RM) Güç E-1RM değişim trendi ve Hacim (Volume) değişim tablosu.
 
 *   **PWA (Progressive Web App):** 
     *   Uygulamayı telefonunuza "Ana Ekrana Ekle" diyerek yerel mobil bir uygulama gibi indirebilirsiniz. Tamamen Mobile-First (Responsive) olarak tasarlanmıştır.
