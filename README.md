@@ -2,31 +2,31 @@
 
 GymAppAI, antrenmanlarınızı takip etmenizi, gelişiminizi analiz etmenizi, dinlenme sürelerinizi yönetmenizi, beslenme makrolarınızı hesaplamanızı ve Yapay Zeka destekli özel programlar oluşturmanızı sağlayan kapsamlı ve tamamen mobil uyumlu (PWA) bir fitness asistanıdır.
 
-## 🚀 Yeni Gelen Özellikler
-- **Tasarım & Mobil Optimizasyon:** Uygulama tamamen mobil cihazlara göre yeniden boyutlandırıldı. Yüzen bileşenler, buton hedefleri (minimum 44px) ve esnek tablo görünümleriyle (%100 Responsive) her ekranda kusursuz bir deneyim sunulmaktadır.
-- **PWA (Progressive Web App):** Uygulamayı artık telefonunuza "Ana Ekrana Ekle" diyerek bir mobil uygulama gibi indirebilirsiniz.
-- **1RM Hesaplayıcı:** Epley ve Brzycki formüllerini kullanarak kaldırdığınız ağırlığa göre 1 Tekrar Maksimum (1RM) değerinizi ve yüzdelik dilimlerinizi hesaplayabilirsiniz.
-- **Beslenme Takipçisi (Nutrition Tracker):** Günlük kalori ve makro (Protein, Karbonhidrat, Yağ) hedeflerinizi belirleyip, öğünlerinizi kaydedebilir ve hedefinize ne kadar yaklaştığınızı görebilirsiniz.
-- **Veri Dışa/İçe Aktarımı (Data Sync):** Tüm gelişiminizi yedeklemek için JSON formatında dışa aktarabilir, başka bir cihazda veya tarayıcıda kaldığınız yerden devam edebilirsiniz.
+## 🚀 Yeni Gelen Özellikler (Oyunlaştırma & Tema Sistemi)
+- **Rütbe (Rank) Sistemi:** Antrenman yaparak kazandığınız XP'ler ile seviye atlarsınız ve "Demir Çaylak" tan "Elit Titan" a kadar yükselen özel rütbe ikonlarına sahip olursunuz.
+- **Kutlama Animasyonları:** Seviye atladığınızda ekranı kaplayan konfeti (Confetti) animasyonlarıyla başarınız kutlanır.
+- **Jeton (Coin) Sistemi ve Tema Mağazası:** İdmanlardan kazandığınız XP'lerin %10'u kadar Jeton kazanırsınız. Bu jetonları harcayarak uygulamanın genel renk paletini ve arka planlarını değiştiren (Siberpunk, Kanlı Ay, Olimpiyat vb.) premium temalar satın alabilirsiniz.
+- **Seri Çarpanı (Streak Multiplier):** İdman günlerinizi aksatmazsanız 3 gün için (1.2x) ve 7 gün için (1.5x) XP ve Jeton çarpanı kazanırsınız! İstikrar her şeydir.
+- **Gizli Rozetler (Secret Badges):** 100 kg barajını aşmak veya gece yarısı spor yapmak gibi sadece özel eylemleri yapınca kilidi açılan sürpriz rozetler eklendi.
+- **Geliştirici Admin Paneli:** Testler için Profil resminize *çift tıklayarak* erişebileceğiniz gizli bir Admin menüsü bulunur. Buradan kendi istatistiklerinizi (Jeton, XP) simüle edebilir veya sistemi tamamen sıfırlayabilirsiniz.
 
 ## 🌟 Temel Özellikler
 
-*   **🏆 Yapay Zeka Koçu (Onboarding Wizard & Soru Cevap):**
-    *   Geçmiş antrenman performansınızı (hacim, RPE ortalaması) analiz ederek size en uygun haftalık split'i (FullBody, Upper/Lower, PPL vb.) otomatik oluşturur.
-    *   `Groq API` ve `Llama 3` altyapısı kullanarak son derece hızlı ve ücretsiz tavsiyeler sunar (API Key girişi üzerinden güvenli).
-    *   Motivasyonel tavsiyeleri (Bugün ne yapayım? Duraklama (Plateau) Analizi) sunar.
+*   **🏆 Yapay Zeka Koçu:**
+    *   Geçmiş antrenman performansınızı analiz ederek size en uygun özel programı otomatik oluşturur.
+    *   `Groq API` ve `Llama 3` altyapısı kullanarak son derece hızlı ve ücretsiz tavsiyeler sunar.
+    *   Plateau (Duraklama) Analizi yapar, Off-Day (Dinlenme) önerebilir ve anlık mikro hedefler belirler.
 
-*   **🏋️‍♂️ Antrenman Takibi & Otomatik Dinlenme Sayacı (Rest Timer):**
-    *   Seviye atlatan (XP kazandıran) detaylı bir idman giriş ekranı.
-    *   Antrenman sırasında sürenizi otomatik olarak yönetebileceğiniz **Yüzen Dinlenme Sayacı** (Floating Rest Timer) ekranın altında sizi bekler.
+*   **🏋️‍♂️ Antrenman Takibi & Otomatik Dinlenme Sayacı:**
+    *   Seviye atlatan detaylı bir idman giriş ekranı.
+    *   Setleri işaretledikçe otomatik sıfırlanan **Yüzen Dinlenme Sayacı (Floating Rest Timer)** ekranın altında sizi bekler.
 
-*   **📈 Gelişmiş Gelişim Analizi & Dashboard:**
-    *   Son 8 haftanın hacim (Volume) değişimi (BarChart).
-    *   En çok yapılan egzersizlerin tahmini 1RM (E1RM) güç değişim trendi (LineChart).
+*   **📈 Gelişmiş Gelişim Analizi & Beslenme (Nutrition):**
+    *   Kalori ve Makro (Protein, Karbonhidrat, Yağ) hedeflerinizi hesaplar ve takip eder.
+    *   1 Tekrar Maksimum (1RM) Güç E-1RM değişim trendi ve Hacim (Volume) değişim tablosu.
 
-*   **🔥 Rozetler & Seviye Sistemi:**
-    *   Ağırlık kaldırdıkça ve antrenman kaydettikçe kümülatif XP kazanırsınız. Seviyeniz her arttığında gereken XP miktarı zorlaşır.
-    *   Farklı kilometre taşları (Örn: Toplam 10.000kg Hacim) için özel rozetler kilitlerini açın.
+*   **PWA (Progressive Web App):** 
+    *   Uygulamayı telefonunuza "Ana Ekrana Ekle" diyerek yerel mobil bir uygulama gibi indirebilirsiniz. Tamamen Mobile-First (Responsive) olarak tasarlanmıştır.
 
 ## 🛠️ Kurulum ve Çalıştırma
 
@@ -44,7 +44,7 @@ Bu projeyi yerel bilgisayarınızda çalıştırmak için:
     ```
 4.  **API Anahtarlarını Ayarlayın (Yapay Zeka İçin Gerekli):**
     *   Projenin ana dizinindeki `.env.example` dosyasını `.env` olarak kopyalayın.
-    *   İçerisindeki `VITE_GROQ_API_KEY` değişkenine kendi Groq API anahtarınızı yapıştırın. Yapay Zeka ve Llama modelinin çalışması için bu gereklidir. (Groq API şu an için ücretsizdir ve [Groq Console](https://console.groq.com/keys) üzerinden alınabilir).
+    *   İçerisindeki `VITE_GROQ_API_KEY` değişkenine kendi Groq API anahtarınızı yapıştırın. Yapay Zeka ve Llama modelinin çalışması için bu gereklidir.
 5.  **Geliştirici Sunucusunu Başlatın:**
     ```bash
     npm run dev
@@ -62,11 +62,7 @@ npm run preview
 
 ## 🔒 Güvenlik
 
-- Projede hiçbir API anahtarı kaynak kodlara gömülü değildir. `.gitignore` dosyası aracılığıyla `.env` dosyası gizlenmiştir. Kendi verilerinizi veya API anahtarlarınızı sadece `.env` içerisinden kullanın. Kimlik doğrulaması API'ler için doğrudan header üzerinden (client side) yapılır.
-
-## 🤝 Katkıda Bulunma
-
-Hata bildirimleri, öneriler ve PR'lar (Pull Request) memnuniyetle karşılanır. Gelişim için proje tahtasını (Issues) kullanabilirsiniz.
+- Projede hiçbir API anahtarı kaynak kodlara gömülü değildir. `.gitignore` dosyası aracılığıyla `.env` dosyası gizlenmiştir. Kendi verilerinizi veya API anahtarlarınızı sadece `.env` içerisinden kullanın.
 
 ## 📝 Lisans
 
