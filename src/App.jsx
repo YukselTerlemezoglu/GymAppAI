@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Trophy, Play, Plus, ArrowLeft, Trash2, Check, Bot } from 'lucide-react';
 import useLocalStorage from './hooks/useLocalStorage';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -12,15 +12,44 @@ import WorkoutProgressCharts from './components/dashboard/WorkoutProgressCharts'
 import BodyTracker from './components/profile/BodyTracker';
 import NutritionTracker from './components/nutrition/NutritionTracker';
 import NutritionSummary from './components/dashboard/NutritionSummary';
+import LevelUpModal from './components/ui/LevelUpModal';
+import ShopModal from './components/profile/ShopModal';
+import AdminPanel from './components/admin/AdminPanel';
 import { BADGE_LIBRARY } from './data/badges';
 import { Zap } from 'lucide-react';
 import './App.css';
+import { getRank } from './utils/ranks';
 
 function App() {
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'workout' | 'aicoach' | 'activeAiWorkout'
 
+  const profileClickTimeout = useRef(null);
+  
+  const handleProfileClick = () => {
+    if (profileClickTimeout.current !== null) {
+      // Double click detected
+      clearTimeout(profileClickTimeout.current);
+      profileClickTimeout.current = null;
+      setCurrentView('admin');
+    } else {
+      // Single click detected
+      profileClickTimeout.current = setTimeout(() => {
+        profileClickTimeout.current = null;
+        setCurrentView('profile');
+      }, 300);
+    }
+  };
+
+  const [showLevelUpModal, setShowLevelUpModal] = useState(false);
+  const [showShopModal, setShowShopModal] = useState(false);
+  const [prevLevelForModal, setPrevLevelForModal] = useLocalStorage('gym_app_prev_level', 0);
+
   const [userName, setUserName] = useLocalStorage('gym_app_user_name', 'Athlete');
   const [isEditingName, setIsEditingName] = useState(false);
+
+  const [userCoins, setUserCoins] = useLocalStorage('gym_app_coins', 0);
+  const [unlockedThemes, setUnlockedThemes] = useLocalStorage('gym_app_unlocked_themes', ['default']);
+  const [activeTheme, setActiveTheme] = useLocalStorage('gym_app_theme', 'default');
 
   // Storage State
   const [workoutHistory, setWorkoutHistory] = useLocalStorage('gym_app_history', []);
@@ -41,6 +70,72 @@ function App() {
 
   // Nutrition State for Dashboard Summary
   const [nutritionData] = useLocalStorage('gym_app_nutrition_v2', {});
+
+  // --- THEME EFFECT ---
+  useEffect(() => {
+    const root = document.documentElement;
+    if (activeTheme === 'default') {
+      root.style.setProperty('--accent-primary', '#00ff88');
+      root.style.setProperty('--accent-secondary', '#00d4ff');
+      root.style.setProperty('--bg-dark', '#0f1115');
+      root.style.setProperty('--bg-card', 'rgba(26, 29, 36, 0.7)');
+      root.style.setProperty('--bg-card-hover', 'rgba(36, 40, 50, 0.8)');
+      root.style.setProperty('--gradient-1', 'rgba(0, 255, 136, 0.08)');
+      root.style.setProperty('--gradient-2', 'rgba(0, 212, 255, 0.08)');
+      root.style.setProperty('--neon-glow', '0 0 20px rgba(0, 255, 136, 0.15)');
+      root.style.setProperty('--neon-glow-strong', '0 0 30px rgba(0, 255, 136, 0.4)');
+    } else if (activeTheme === 'cyberpunk') {
+      root.style.setProperty('--accent-primary', '#ff00ff');
+      root.style.setProperty('--accent-secondary', '#00ffff');
+      root.style.setProperty('--bg-dark', '#090014');
+      root.style.setProperty('--bg-card', 'rgba(25, 0, 45, 0.7)');
+      root.style.setProperty('--bg-card-hover', 'rgba(40, 0, 70, 0.8)');
+      root.style.setProperty('--gradient-1', 'rgba(255, 0, 255, 0.1)');
+      root.style.setProperty('--gradient-2', 'rgba(0, 255, 255, 0.1)');
+      root.style.setProperty('--neon-glow', '0 0 20px rgba(255, 0, 255, 0.2)');
+      root.style.setProperty('--neon-glow-strong', '0 0 30px rgba(255, 0, 255, 0.5)');
+    } else if (activeTheme === 'blood') {
+      root.style.setProperty('--accent-primary', '#ff4757');
+      root.style.setProperty('--accent-secondary', '#ff6b81');
+      root.style.setProperty('--bg-dark', '#1a0505');
+      root.style.setProperty('--bg-card', 'rgba(45, 10, 10, 0.8)');
+      root.style.setProperty('--bg-card-hover', 'rgba(70, 15, 15, 0.9)');
+      root.style.setProperty('--gradient-1', 'rgba(255, 71, 87, 0.1)');
+      root.style.setProperty('--gradient-2', 'rgba(255, 107, 129, 0.1)');
+      root.style.setProperty('--neon-glow', '0 0 20px rgba(255, 71, 87, 0.2)');
+      root.style.setProperty('--neon-glow-strong', '0 0 30px rgba(255, 71, 87, 0.5)');
+    } else if (activeTheme === 'gold') {
+      root.style.setProperty('--accent-primary', '#ffd700');
+      root.style.setProperty('--accent-secondary', '#ffa502');
+      root.style.setProperty('--bg-dark', '#151205');
+      root.style.setProperty('--bg-card', 'rgba(40, 35, 10, 0.7)');
+      root.style.setProperty('--bg-card-hover', 'rgba(60, 50, 15, 0.8)');
+      root.style.setProperty('--gradient-1', 'rgba(255, 215, 0, 0.1)');
+      root.style.setProperty('--gradient-2', 'rgba(255, 165, 2, 0.1)');
+      root.style.setProperty('--neon-glow', '0 0 20px rgba(255, 215, 0, 0.15)');
+      root.style.setProperty('--neon-glow-strong', '0 0 30px rgba(255, 215, 0, 0.4)');
+    } else if (activeTheme === 'abyss') {
+      root.style.setProperty('--accent-primary', '#00cec9');
+      root.style.setProperty('--accent-secondary', '#0984e3');
+      root.style.setProperty('--bg-dark', '#010a15');
+      root.style.setProperty('--bg-card', 'rgba(5, 25, 45, 0.7)');
+      root.style.setProperty('--bg-card-hover', 'rgba(10, 40, 70, 0.8)');
+      root.style.setProperty('--gradient-1', 'rgba(0, 206, 201, 0.1)');
+      root.style.setProperty('--gradient-2', 'rgba(9, 132, 227, 0.1)');
+      root.style.setProperty('--neon-glow', '0 0 20px rgba(0, 206, 201, 0.15)');
+      root.style.setProperty('--neon-glow-strong', '0 0 30px rgba(0, 206, 201, 0.4)');
+    }
+  }, [activeTheme]);
+
+  // --- LEVEL UP EFFECT ---
+  useEffect(() => {
+    if (userLevel > prevLevelForModal && prevLevelForModal > 0) {
+      setShowLevelUpModal(true);
+    }
+    if (userLevel !== prevLevelForModal) {
+      setPrevLevelForModal(userLevel);
+    }
+  }, [userLevel, prevLevelForModal, setPrevLevelForModal]);
 
   // --- Reset Completed Days on Monday ---
   useEffect(() => {
@@ -65,11 +160,7 @@ function App() {
     setCompletedDays([]);
   };
 
-  const handleClearHistory = () => {
-    setWorkoutHistory([]);
-    setStreak(0);
-    setLastWorkoutDate(null);
-  };
+
 
   const handleUpdateAiProgram = (dayIdx, exIdx, field, value) => {
     const updatedProgram = { ...savedAiProgram };
@@ -106,6 +197,8 @@ function App() {
         setUserXP={setUserXP}
         userLevel={userLevel}
         setUserLevel={setUserLevel}
+        userCoins={userCoins}
+        setUserCoins={setUserCoins}
       />
     );
   }
@@ -134,13 +227,31 @@ function App() {
     return <NutritionTracker onBack={() => setCurrentView('dashboard')} />;
   }
 
+  if (currentView === 'admin') {
+    return (
+      <AdminPanel 
+        onBack={() => setCurrentView('dashboard')}
+        userXP={userXP} setUserXP={setUserXP}
+        userLevel={userLevel} setUserLevel={setUserLevel}
+        userCoins={userCoins} setUserCoins={setUserCoins}
+        streak={streak} setStreak={setStreak}
+        setWorkoutHistory={setWorkoutHistory}
+        setPinnedBadges={setPinnedBadges}
+        setCompletedDays={setCompletedDays}
+        setSavedAiProgram={setSavedAiProgram}
+        setUnlockedThemes={setUnlockedThemes}
+        setActiveTheme={setActiveTheme}
+      />
+    );
+  }
+
   return (
     <ErrorBoundary>
       <div className="app-container">
         {/* Top Navigation */}
         <header className="top-bar fade-in" style={{ animationDelay: '0s' }}>
           <div className="profile-section"
-            onClick={() => setCurrentView('profile')}
+            onClick={handleProfileClick}
             style={{
               cursor: 'pointer',
               padding: '0.6rem 1rem',
@@ -150,9 +261,10 @@ function App() {
               transition: 'all 0.3s ease',
               display: 'flex',
               alignItems: 'center',
-              gap: '12px'
+              gap: '12px',
+              userSelect: 'none'
             }}
-            title="Profil ve Vücut Ölçüleri"
+            title="Profile gitmek için tek, Geliştirici Ayarları için çift tıklayın!"
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0, 195, 255, 0.2)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0, 195, 255, 0.1)'; e.currentTarget.style.transform = 'translateY(0)'; }}
           >
@@ -197,8 +309,10 @@ function App() {
           }}>
             <div style={{ flex: 1, marginRight: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                <Zap size={16} color="#00c3ff" />
-                <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>Seviye {userLevel}</span>
+                <span style={{ fontSize: '1.2rem' }}>{getRank(userLevel).icon}</span>
+                <span style={{ color: getRank(userLevel).color, fontSize: '0.9rem', fontWeight: 'bold' }}>
+                  {getRank(userLevel).title} <span style={{ color: '#fff' }}>(Sv. {userLevel})</span>
+                </span>
                 <span style={{ color: 'var(--text-light)', fontSize: '0.75rem', marginLeft: 'auto' }}>
                   {(() => {
                     const reqXP = userLevel * 500 + (userLevel * 100);
@@ -221,7 +335,15 @@ function App() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div
+                onClick={() => setShowShopModal(true)}
+                style={{ background: 'rgba(255, 215, 0, 0.1)', border: '1px solid #ffd700', borderRadius: '12px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#ffd700', fontWeight: 'bold', fontSize: '0.9rem' }}
+                title="Mağazayı Aç (Tema ve Avatar Al)"
+              >
+                <span>🪙</span> {userCoins}
+              </div>
+
               {pinnedBadges.length > 0 ? (
                 pinnedBadges.map(badgeId => {
                   const bInfo = BADGE_LIBRARY.find(b => b.id === badgeId);
@@ -245,7 +367,6 @@ function App() {
         <ScoreTracker
           workoutHistory={workoutHistory}
           streak={streak}
-          handleClearHistory={handleClearHistory}
         />
 
         {/* Nutrition Summary Widget */}
@@ -295,6 +416,28 @@ function App() {
         {
           showCustomBuilder && (
             <CustomProgramBuilder setSavedAiProgram={setSavedAiProgram} setShowCustomBuilder={setShowCustomBuilder} />
+          )
+        }
+
+        {/* Level Up Confetti Modal */}
+        {
+          showLevelUpModal && (
+            <LevelUpModal level={userLevel} onClose={() => setShowLevelUpModal(false)} />
+          )
+        }
+
+        {/* Shop Modal */}
+        {
+          showShopModal && (
+            <ShopModal
+              onClose={() => setShowShopModal(false)}
+              userCoins={userCoins}
+              setUserCoins={setUserCoins}
+              unlockedThemes={unlockedThemes}
+              setUnlockedThemes={setUnlockedThemes}
+              activeTheme={activeTheme}
+              setActiveTheme={setActiveTheme}
+            />
           )
         }
 

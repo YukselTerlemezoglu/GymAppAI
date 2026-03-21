@@ -5,6 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { BADGE_LIBRARY } from '../../data/badges';
 import OneRepMaxCalc from '../tools/OneRepMaxCalc';
 import DataSync from './DataSync';
+import { getRank } from '../../utils/ranks';
 
 function BodyTracker({ onBack, userXP = 0, setUserXP, userLevel = 1, setUserLevel, workoutHistory = [], streak = 0, pinnedBadges = [], setPinnedBadges }) {
     const [bodyMetrics, setBodyMetrics] = useLocalStorage('gym_app_body_metrics', []);
@@ -40,7 +41,8 @@ function BodyTracker({ onBack, userXP = 0, setUserXP, userLevel = 1, setUserLeve
     const stats = {
         totalWorkouts: uniqueWorkoutDays,
         streak: streak,
-        aiWorkoutsCompleted: uniqueAiWorkoutDays
+        aiWorkoutsCompleted: uniqueAiWorkoutDays,
+        history: workoutHistory || []
     };
 
     const handlePinToggle = (badgeId) => {
@@ -166,7 +168,9 @@ function BodyTracker({ onBack, userXP = 0, setUserXP, userLevel = 1, setUserLeve
                 <div className="glass-card slide-in" style={{ border: '1px solid rgba(0, 195, 255, 0.2)', background: 'linear-gradient(145deg, rgba(0,0,0,0.6) 0%, rgba(0, 195, 255, 0.05) 100%)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                         <h3 style={{ margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.3rem' }}>
-                            <Zap color="#00c3ff" /> Seviye {userLevel}
+                            <span style={{ fontSize: '1.5rem' }}>{getRank(userLevel).icon}</span>
+                            <span style={{ color: getRank(userLevel).color }}>{getRank(userLevel).title}</span>
+                            <span style={{ opacity: 0.7, fontSize: '0.9rem' }}>(Seviye {userLevel})</span>
                         </h3>
                         {(() => {
                             const reqXP = userLevel * 500 + (userLevel * 100);
@@ -238,9 +242,11 @@ function BodyTracker({ onBack, userXP = 0, setUserXP, userLevel = 1, setUserLeve
                                                 transform: selectedBadge?.id === badge.id ? 'scale(1.05)' : 'scale(1)'
                                             }}
                                         >
-                                            <div style={{ fontSize: '2rem' }}>{badge.icon}</div>
-                                            <span style={{ fontSize: '0.75rem', color: isUnlocked ? 'var(--accent-primary)' : 'var(--text-light)', textAlign: 'center', fontWeight: 'bold' }}>{badge.title}</span>
-                                            {!isUnlocked && badge.progress && (
+                                            <div style={{ fontSize: '2rem' }}>{badge.isSecret && !isUnlocked ? "🔒" : badge.icon}</div>
+                                            <span style={{ fontSize: '0.75rem', color: isUnlocked ? 'var(--accent-primary)' : 'var(--text-light)', textAlign: 'center', fontWeight: 'bold' }}>
+                                                {badge.isSecret && !isUnlocked ? "Gizli Başarım" : badge.title}
+                                            </span>
+                                            {!isUnlocked && badge.progress && !badge.isSecret && (
                                                 <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
                                                     {badge.progress(stats)}
                                                 </span>
@@ -254,10 +260,19 @@ function BodyTracker({ onBack, userXP = 0, setUserXP, userLevel = 1, setUserLeve
                             {selectedBadge && (
                                 <div className="fade-in" style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', borderLeft: '4px solid #ffa502' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '0.5rem' }}>
-                                        <span style={{ fontSize: '1.5rem' }}>{selectedBadge.icon}</span>
-                                        <h4 style={{ color: '#fff', margin: 0 }}>{selectedBadge.title} {selectedBadge.condition(stats) ? '✅' : '🔒'}</h4>
+                                        <span style={{ fontSize: '1.5rem' }}>
+                                            {selectedBadge.isSecret && !selectedBadge.condition(stats) ? "🔒" : selectedBadge.icon}
+                                        </span>
+                                        <h4 style={{ color: '#fff', margin: 0 }}>
+                                            {selectedBadge.isSecret && !selectedBadge.condition(stats) ? "Gizli Başarım" : selectedBadge.title} 
+                                            {selectedBadge.condition(stats) ? ' ✅' : ''}
+                                        </h4>
                                     </div>
-                                    <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', margin: '0 0 1rem 0', lineHeight: '1.4' }}>{selectedBadge.description}</p>
+                                    <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', margin: '0 0 1rem 0', lineHeight: '1.4' }}>
+                                        {selectedBadge.isSecret && !selectedBadge.condition(stats) 
+                                            ? "Bu rozetin kilidini açma şartı gizlidir. Tesadüfen doğru bir eylem gerçekleştirerek elde edebilirsiniz!" 
+                                            : selectedBadge.description}
+                                    </p>
 
                                     {selectedBadge.condition(stats) && (
                                         <button
@@ -299,7 +314,7 @@ function BodyTracker({ onBack, userXP = 0, setUserXP, userLevel = 1, setUserLeve
                             />
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="metrics-row" style={{ marginBottom: '1rem' }}>
                             <div className="input-group" style={{ marginBottom: 0 }}>
                                 <label>Kilo (kg)</label>
                                 <input type="number" step="0.1" name="weight" className="neon-input" placeholder="Örn: 75.5" value={formData.weight} onChange={handleInputChange} />
@@ -310,7 +325,7 @@ function BodyTracker({ onBack, userXP = 0, setUserXP, userLevel = 1, setUserLeve
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="metrics-row" style={{ marginBottom: '1rem' }}>
                             <div className="input-group" style={{ marginBottom: 0 }}>
                                 <label>Omuz (cm)</label>
                                 <input type="number" step="0.5" name="shoulders" className="neon-input" placeholder="Örn: 120" value={formData.shoulders} onChange={handleInputChange} />
@@ -321,7 +336,7 @@ function BodyTracker({ onBack, userXP = 0, setUserXP, userLevel = 1, setUserLeve
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="metrics-row" style={{ marginBottom: '1rem' }}>
                             <div className="input-group" style={{ marginBottom: 0 }}>
                                 <label>Bel (cm)</label>
                                 <input type="number" step="0.5" name="waist" className="neon-input" placeholder="Örn: 80" value={formData.waist} onChange={handleInputChange} />
@@ -441,16 +456,6 @@ function BodyTracker({ onBack, userXP = 0, setUserXP, userLevel = 1, setUserLeve
                     </div>
                 )}
 
-                {/* Reset Gamification Options */}
-                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
-                    <button
-                        onClick={handleResetGamification}
-                        style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'underline' }}
-                        title="Seviye ve Rozetleri Sıfırla"
-                    >
-                        <RefreshCcw size={14} /> Oyunlaştırma Verilerini Sıfırla
-                    </button>
-                </div>
 
                 {/* Veri Yedekleme (Data Sync) */}
                 <DataSync />

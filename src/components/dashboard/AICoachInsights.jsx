@@ -104,7 +104,7 @@ function AICoachInsights({ workoutHistory }) {
                 </h2>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {/* Bugün Ne Yapayım? */}
                 <div className="glass-card" style={{ borderLeft: '4px solid var(--accent-primary)', padding: '1.2rem' }}>
                     <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>

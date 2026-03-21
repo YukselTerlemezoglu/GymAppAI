@@ -6,6 +6,9 @@
   --bg-card: rgba(26, 29, 36, 0.7);
   --bg-card-hover: rgba(36, 40, 50, 0.8);
   
+  --gradient-1: rgba(0, 255, 136, 0.05);
+  --gradient-2: rgba(0, 212, 255, 0.05);
+  
   /* Accents */
   --accent-primary: #00ff88;
   --accent-secondary: #00d4ff;
@@ -45,8 +48,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-image: 
-    radial-gradient(circle at 15% 50%, rgba(0, 255, 136, 0.04) 0%, transparent 50%),
-    radial-gradient(circle at 85% 30%, rgba(0, 212, 255, 0.04) 0%, transparent 50%);
+    radial-gradient(circle at 15% 50%, var(--gradient-1) 0%, transparent 50%),
+    radial-gradient(circle at 85% 30%, var(--gradient-2) 0%, transparent 50%);
   background-attachment: fixed;
 }
 

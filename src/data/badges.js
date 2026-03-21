@@ -40,6 +40,14 @@ export const BADGE_LIBRARY = [
         progress: (stats) => `${Math.min(stats.streak, 5)}/5`
     },
     {
+        id: "streak_30",
+        title: "Bağımlılık",
+        description: "İnanılmaz! 30 gün boyunca aralıksız spor yaptınız.",
+        icon: "🌋",
+        condition: (stats) => stats.streak >= 30,
+        progress: (stats) => `${Math.min(stats.streak, 30)}/30`
+    },
+    {
         id: "workout_20",
         title: "Salonun Müdavimi",
         description: "Toplam 20 idmanı tamamladınız. Artık spor salonu ikinci eviniz.",
@@ -56,11 +64,62 @@ export const BADGE_LIBRARY = [
         progress: (stats) => `${Math.min(stats.totalWorkouts, 50)}/50`
     },
     {
+        id: "workout_100",
+        title: "Efsane",
+        description: "100 idman barajını aştınız. Sen bir efsanesin!",
+        icon: "🌟",
+        condition: (stats) => stats.totalWorkouts >= 100,
+        progress: (stats) => `${Math.min(stats.totalWorkouts, 100)}/100`
+    },
+    {
         id: "ai_cyborg",
         title: "Sayborg",
         description: "Yapay zeka ile tam 5 idman bitirdiniz. Siz ve algoritmalar harika bir takımsınız!",
         icon: "🦾",
         condition: (stats) => stats.aiWorkoutsCompleted >= 5,
         progress: (stats) => `${Math.min(stats.aiWorkoutsCompleted, 5)}/5`
+    },
+    // GİZLİ BAŞARIMLAR (SECRET BADGES)
+    {
+        id: "night_owl",
+        title: "Gece Kuşu",
+        description: "Gecenin karanlığında (00:00 - 04:00 arası) bile bahane üretmeyip idman yaptınız.",
+        icon: "🦉",
+        isSecret: true,
+        condition: (stats) => {
+            if (!stats.history) return false;
+            return stats.history.some(w => {
+                const hour = new Date(w.date).getHours();
+                return hour >= 0 && hour < 4;
+            });
+        },
+        progress: () => ""
+    },
+    {
+        id: "early_bird",
+        title: "Erkenci Kuş",
+        description: "Güneş doğarken (05:00 - 08:00 arası) kalkıp güne sporla başladınız.",
+        icon: "🌅",
+        isSecret: true,
+        condition: (stats) => {
+            if (!stats.history) return false;
+            return stats.history.some(w => {
+                const hour = new Date(w.date).getHours();
+                return hour >= 5 && hour <= 8;
+            });
+        },
+        progress: () => ""
+    },
+    {
+        id: "century_club",
+        title: "Yüzler Kulübü",
+        description: "Herhangi bir egzersizde tek seferde 100 kg veya üzeri ağırlık kaldırma gücüne ulaştınız!",
+        icon: "🦍",
+        isSecret: true,
+        condition: (stats) => {
+            if (!stats.history) return false;
+            return stats.history.some(w => w.maxWeight && parseFloat(w.maxWeight) >= 100);
+        },
+        progress: () => ""
     }
 ];

@@ -333,7 +333,7 @@ Ağırlık (weight) değerini kullanıcının seviyesine göre (Örn: "Boş bar"
                     </div>
                 </div>
 
-                <button type="submit" className="neon-btn-secondary" style={{ width: '100%', marginTop: '1rem', color: isAiLoading ? '#fff' : 'var(--accent-primary)', borderColor: 'var(--accent-primary)' }} disabled={isAiLoading}>
+                <button type="submit" className="neon-btn-secondary" style={{ width: '100%', marginTop: '1rem', color: isAiLoading ? '#fff' : 'var(--accent-primary)', borderColor: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} disabled={isAiLoading}>
                     {isAiLoading ? <Loader2 className="spinner" size={20} /> : <Bot size={20} />}
                     {isAiLoading ? 'YAPAY ZEKA PROGRAMINI HESAPLIYOR...' : 'BANA PROGRAM ÇIKAR'}
                 </button>

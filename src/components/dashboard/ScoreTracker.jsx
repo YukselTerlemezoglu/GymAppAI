@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Trophy, Trash2 } from 'lucide-react';
 
-function ScoreTracker({ workoutHistory, streak, handleClearHistory }) {
+function ScoreTracker({ workoutHistory, streak }) {
     const { volumeScore, prScore, streakScore, totalScore } = useMemo(() => {
         if (!workoutHistory || workoutHistory.length === 0) return { volumeScore: 0, prScore: 0, streakScore: 0, totalScore: 0 };
 
@@ -56,10 +56,6 @@ function ScoreTracker({ workoutHistory, streak, handleClearHistory }) {
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', width: '100%', marginBottom: '1.5rem', position: 'relative' }}>
 
-                    <button onClick={handleClearHistory} className="clear-btn" style={{ position: 'absolute', top: '-10px', right: '0', padding: '4px 8px', fontSize: '0.8rem' }} aria-label="Geçmişi Temizle" title="Tüm Gym Puanı ve Antrenman Geçmişini Sıfırla">
-                        <Trash2 size={12} /> Sıfırla
-                    </button>
-
                     <div style={{ textAlign: 'center' }}>
                         <span style={{ fontSize: '3rem', fontWeight: 'bold', color: 'var(--accent-primary)', textShadow: '0 0 20px rgba(0,255,136,0.6)' }}>
                             {totalScore}
@@ -68,6 +64,12 @@ function ScoreTracker({ workoutHistory, streak, handleClearHistory }) {
                         <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '1.2rem', letterSpacing: '1px' }}>GYM PUANI</div>
                     </div>
                     {totalScore >= 80 && <Trophy size={48} color="var(--accent-warning)" style={{ filter: 'drop-shadow(0 0 10px rgba(255, 215, 0, 0.5))' }} />}
+                    
+                    {streak >= 3 && (
+                        <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(255, 165, 0, 0.2)', border: '1px solid #ffa502', padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 'bold', color: '#ffa502', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            🔥 {streak >= 7 ? '1.5x' : '1.2x'} XP Çarpanı Aktif!
+                        </div>
+                    )}
                 </div>
 
                 <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>

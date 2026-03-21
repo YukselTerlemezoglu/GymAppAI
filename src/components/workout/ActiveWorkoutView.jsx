@@ -22,7 +22,9 @@ function ActiveWorkoutView({
     userXP,
     setUserXP,
     userLevel,
-    setUserLevel
+    setUserLevel,
+    userCoins,
+    setUserCoins
 }) {
     const [activeAiWorkoutTimer, setActiveAiWorkoutTimer] = useLocalStorage('gym_app_active_timer', 0); // in seconds
     const [activeAiWorkoutChecked, setActiveAiWorkoutChecked] = useLocalStorage('gym_app_active_checked', {}); // { 'exIdx_setIdx': true }
@@ -230,7 +232,14 @@ function ActiveWorkoutView({
             const rpeMultiplier = 1 + ((rpe - 5) * 0.05);
             calculatedXP = Math.round(calculatedXP * rpeMultiplier);
 
-            const gainedXP = Math.max(10, Math.min(1000, calculatedXP)); // Minimum 10, maksimum 1000 XP verecek şekilde sınırla
+            // SERİ ÇARPANI (STREAK MULTIPLIER)
+            let streakMultiplier = 1.0;
+            if (newStreak >= 7) streakMultiplier = 1.5;
+            else if (newStreak >= 3) streakMultiplier = 1.2;
+
+            calculatedXP = Math.round(calculatedXP * streakMultiplier);
+
+            const gainedXP = Math.max(10, Math.min(2000, calculatedXP)); // Minimum 10, maksimum 2000 XP
 
             // Dinamik Level Barajı Hesaplayıcı (Örn: Lvl 1: 500XP, Lvl 2: 700XP, Lvl 3: 900XP vs...)
             const calculateRequiredXP = (level) => level * 500 + (level * 100);
@@ -251,11 +260,22 @@ function ActiveWorkoutView({
             setUserLevel(currentLvl);
             setUserXP(newTotalXP);
 
-            let finalMsg = `🤖 YAPAY ZEKA OPTİMİZASYONU:\n\n${optimizationMessage}\n\n⭐ +${gainedXP} XP Kazandın! (${newTotalXP} / ${currentRequiredXP})`;
+            // Jeton (Coin) Ekleme: Kazanılan XP'nin %10'u kadar Jeton verilir (Ödül Sistemi)
+            const earnedCoins = Math.max(1, Math.round(gainedXP * 0.1));
+            setUserCoins((prev) => (prev || 0) + earnedCoins);
+
+            let baseMsg = `⭐ +${gainedXP} XP Kazandın! (${newTotalXP} / ${currentRequiredXP})`;
+            if (streakMultiplier > 1.0) {
+                baseMsg += `\n🔥 Seri Çarpanı Aktif: ${streakMultiplier}x Bonus XP!`;
+            }
+            baseMsg += `\n🪙 +${earnedCoins} Jeton kazandın!`;
+
+            let finalMsg = `🤖 YAPAY ZEKA OPTİMİZASYONU:\n\n${optimizationMessage}\n\n${baseMsg}`;
             if (leveledUp) {
                 finalMsg += `\n🎉 TEBRİKLER SEVİYE ATLADIN! Yeni Güç Seviyen: ${currentLvl}`;
             }
 
+            // Note: In the future, we will replace this alert with a Confetti UI modal!
             alert(finalMsg);
         }
         // ----------------------------------------
