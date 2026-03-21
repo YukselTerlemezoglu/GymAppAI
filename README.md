@@ -13,6 +13,10 @@ GymAppAI, antrenmanlarınızı takip etmenizi, gelişiminizi analiz etmenizi, di
     *   Seviye atlatan detaylı bir idman giriş ekranı.
     *   Setleri işaretledikçe otomatik sıfırlanan **Yüzen Dinlenme Sayacı (Floating Rest Timer)** ekranın altında sizi bekler.
 
+*   **📈 Gelişmiş Gelişim Analizi & Beslenme (Nutrition):**
+    *   Kalori ve Makro (Protein, Karbonhidrat, Yağ) hedeflerinizi hesaplar ve takip eder.
+    *   1 Tekrar Maksimum (1RM) Güç E-1RM değişim trendi ve Hacim (Volume) değişim tablosu.
+
 *   **PWA (Progressive Web App):** 
     *   Uygulamayı telefonunuza "Ana Ekrana Ekle" diyerek yerel mobil bir uygulama gibi indirebilirsiniz. Tamamen Mobile-First (Responsive) olarak tasarlanmıştır.
 
