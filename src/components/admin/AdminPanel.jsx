@@ -18,7 +18,7 @@ function AdminPanel({
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     // Hardcoded simple admin password
-    const ADMIN_PASS = "6967yY+";
+    const ADMIN_PASS = "1234";
 
     const [editXP, setEditXP] = useState(userXP);
     const [editLevel, setEditLevel] = useState(userLevel);
