@@ -54,10 +54,10 @@ function AICoachInsights({ workoutHistory }) {
         let progDesc = t('ai_coach_prog_weight_desc', { exercise: topEx });
 
         if (topExHistory.length >= 3) {
-            const w1 = topExHistory[0].maxWeight;
-            const w2 = topExHistory[1].maxWeight;
-            const w3 = topExHistory[2].maxWeight;
-            if (w1 === w2 && w2 === w3 && w1 > 0) {
+            const w1 = Number(topExHistory[0]?.maxWeight) || 0;
+            const w2 = Number(topExHistory[1]?.maxWeight) || 0;
+            const w3 = Number(topExHistory[2]?.maxWeight) || 0;
+            if (w1 > 0 && w1 === w2 && w2 === w3) {
                 progTitle = t('ai_coach_prog_plateau_title');
                 progDesc = t('ai_coach_prog_plateau_desc', { exercise: topEx, weight: w1 });
             }

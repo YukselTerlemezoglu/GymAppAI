@@ -14,7 +14,7 @@ function ScoreTracker({ workoutHistory, streak }) {
         let last4WeeksVolume = 0;
         workoutHistory.forEach(w => {
             if (new Date(w.date) >= fourWeeksAgo) {
-                last4WeeksVolume += w.totalWeight || (w.maxWeight * w.bestReps * w.sets);
+                last4WeeksVolume += Number(w.totalWeight) || (Number(w.maxWeight || 0) * Number(w.bestReps || 0) * Number(w.sets || 0)) || 0;
             }
         });
 
@@ -42,13 +42,13 @@ function ScoreTracker({ workoutHistory, streak }) {
         // 3. Streak Score (Max 15 points) - based on current streak
         let sScore = Math.min((streak / 7) * 15, 15);
 
-        const total = Math.round(vScore + pScore + sScore);
+        const total = Math.round(vScore + pScore + sScore) || 0;
 
         return {
-            volumeScore: Math.round(vScore),
-            prScore: Math.round(pScore),
-            streakScore: Math.round(sScore),
-            totalScore: total
+            volumeScore: isNaN(vScore) ? 0 : Math.round(vScore),
+            prScore: isNaN(pScore) ? 0 : Math.round(pScore),
+            streakScore: isNaN(sScore) ? 0 : Math.round(sScore),
+            totalScore: isNaN(total) ? 0 : total
         };
     }, [workoutHistory, streak]);
 

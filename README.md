@@ -93,8 +93,8 @@ Projeyi yerel ortamınızda çalıştırmak için şu adımları izleyin:
 
 ## 📝 Lisans
 
-Bu proje MIT Lisansı altında lisanslanmıştır - detaylar için [LICENSE](LICENSE) dosyasına göz atın.
+Bu proje MIT Lisansı altında lisanslanmıştır.
 
 ---
 
-*💪 ve 🤖 ile GymAppAI Ekibi tarafından geliştirildi.*
+

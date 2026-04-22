@@ -29,7 +29,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 
 function AppContent() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'workout' | 'aicoach' | 'activeAiWorkout' | 'auth'
   const [currentUser, setCurrentUser] = useState(null);
 
@@ -428,70 +428,71 @@ function AppContent() {
           </div>
 
           {/* Dashboard Level & Badges Showcase */}
-          <div style={{
-            marginTop: '1rem',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: 'rgba(0,0,0,0.3)',
-            padding: '10px 15px',
-            borderRadius: '12px',
-            border: '1px solid rgba(255,255,255,0.05)'
-          }}>
-            <div style={{ flex: 1, marginRight: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '1.2rem' }}>{getRank(userLevel).icon}</span>
-                <span style={{ color: getRank(userLevel).color, fontSize: '0.9rem', fontWeight: 'bold' }}>
-                  {lang === 'tr' ? getRank(userLevel).title_tr : getRank(userLevel).title_en} <span style={{ color: '#fff' }}>({t('level')} {userLevel})</span>
-                </span>
-                <span style={{ color: 'var(--text-light)', fontSize: '0.75rem', marginLeft: 'auto' }}>
-                  {(() => {
-                    const reqXP = userLevel * 500 + (userLevel * 100);
-                    return `${userXP}/${reqXP}`;
-                  })()}
-                </span>
-              </div>
-              <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
-                {(() => {
-                  const reqXP = userLevel * 500 + (userLevel * 100);
-                  return (
+          {(() => {
+            const currentRank = getRank(userLevel) || { icon: '🛡️', color: '#fff', title_tr: '...', title_en: '...' };
+            const reqXP = (userLevel * 500) + (userLevel * 100);
+            const progressPercent = Math.min(100, Math.max(0, (userXP / reqXP) * 100)) || 0;
+            
+            return (
+              <div style={{
+                marginTop: '1rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: 'rgba(0,0,0,0.3)',
+                padding: '10px 15px',
+                borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.05)'
+              }}>
+                <div style={{ flex: 1, marginRight: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '1.2rem' }}>{currentRank.icon}</span>
+                    <span style={{ color: currentRank.color, fontSize: '0.9rem', fontWeight: 'bold' }}>
+                      {lang === 'tr' ? currentRank.title_tr : currentRank.title_en} <span style={{ color: '#fff' }}>({t('level')} {userLevel})</span>
+                    </span>
+                    <span style={{ color: 'var(--text-light)', fontSize: '0.75rem', marginLeft: 'auto' }}>
+                      {userXP}/{reqXP}
+                    </span>
+                  </div>
+                  <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
                     <div style={{
                       height: '100%',
-                      width: `${Math.min(100, (userXP / reqXP) * 100)}%`,
+                      width: `${progressPercent}%`,
                       background: 'linear-gradient(90deg, #00c3ff, #ff0088)',
-                      borderRadius: '4px'
+                      borderRadius: '4px',
+                      transition: 'width 0.5s ease'
                     }}></div>
-                  );
-                })()}
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <div
-                onClick={() => setShowShopModal(true)}
-                style={{ background: 'rgba(255, 215, 0, 0.1)', border: '1px solid #ffd700', borderRadius: '12px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#ffd700', fontWeight: 'bold', fontSize: '0.9rem' }}
-                title={t('app_shop_tooltip')}
-              >
-                <span>🪙</span> {userCoins}
-              </div>
-
-              {pinnedBadges.length > 0 ? (
-                pinnedBadges.map(badgeId => {
-                  const bInfo = BADGE_LIBRARY.find(b => b.id === badgeId);
-                  if (!bInfo) return null;
-                  return (
-                    <div key={bInfo.id} title={bInfo.title} style={{ fontSize: '1.5rem', background: 'rgba(0, 195, 255, 0.1)', padding: '4px', borderRadius: '8px', border: '1px solid rgba(0, 195, 255, 0.3)' }}>
-                      {bInfo.icon}
-                    </div>
-                  );
-                })
-              ) : (
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-light)', textAlign: 'right', fontStyle: 'italic' }}>
-                  {t('app_rank_empty')}
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
+
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <div
+                    onClick={() => setShowShopModal(true)}
+                    style={{ background: 'rgba(255, 215, 0, 0.1)', border: '1px solid #ffd700', borderRadius: '12px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#ffd700', fontWeight: 'bold', fontSize: '0.9rem' }}
+                    title={t('app_shop_tooltip')}
+                  >
+                    <span>🪙</span> {userCoins}
+                  </div>
+
+                  {pinnedBadges.length > 0 ? (
+                    pinnedBadges.map(badgeId => {
+                      const bInfo = BADGE_LIBRARY.find(b => b.id === badgeId);
+                      if (!bInfo) return null;
+                      return (
+                        <div key={bInfo.id} title={lang === 'tr' ? bInfo.title : bInfo.title_en} style={{ fontSize: '1.5rem', background: 'rgba(0, 195, 255, 0.1)', padding: '4px', borderRadius: '8px', border: '1px solid rgba(0, 195, 255, 0.3)' }}>
+                          {bInfo.icon}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)', textAlign: 'right', fontStyle: 'italic' }}>
+                      {t('app_rank_empty')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </header>
 
         {/* Main Stats: Score Tracker */}
