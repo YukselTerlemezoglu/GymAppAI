@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Shield, Save, RefreshCcw, Trash2, ArrowLeft } from 'lucide-react';
+import { Shield, Save, RefreshCcw, Trash2, ArrowLeft, Cloud, LogOut } from 'lucide-react';
+import { auth } from '../../services/firebase';
+import { useTranslation } from '../../i18n/LanguageContext';
 
 function AdminPanel({
     onBack,
@@ -14,11 +16,12 @@ function AdminPanel({
     setUnlockedThemes,
     setActiveTheme
 }) {
+    const { t } = useTranslation();
     const [passwordInput, setPasswordInput] = useState('');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-    // Hardcoded simple admin password
-    const ADMIN_PASS = "6967yY+";
+    // Admin password (Moved to .env)
+    const ADMIN_PASS = import.meta.env.VITE_ADMIN_PASSWORD;
 
     const [editXP, setEditXP] = useState(userXP);
     const [editLevel, setEditLevel] = useState(userLevel);
@@ -31,17 +34,17 @@ function AdminPanel({
         if (passwordInput === ADMIN_PASS) {
             setIsAuthenticated(true);
         } else {
-            alert("Hatalı Şifre!");
+            alert(t('admin_wrong_pass'));
             setPasswordInput('');
         }
     };
 
     const handleSaveModifications = () => {
-        if (window.confirm("Girdiğiniz statik değerler sisteme kaydedilsin mi?")) {
+        if (window.confirm(t('admin_save_confirm'))) {
             setUserXP(Number(editXP));
             setUserLevel(Number(editLevel));
             setUserCoins(Number(editCoins));
-            alert("Değerler başarıyla güncellendi!");
+            alert(t('admin_save_success'));
         }
     };
 
@@ -59,16 +62,20 @@ function AdminPanel({
 
         setUserLevel(currentLvl);
         setUserXP(newTotalXP);
-        
+
         // Jeton da verelim
         const earnedCoins = Math.max(1, Math.round(Number(simulateXP) * 0.1));
         setUserCoins((prev) => (prev || 0) + earnedCoins);
 
-        alert(`Simülasyon Başarılı! \n+${simulateXP} XP Eklendi.\n+${earnedCoins} Jeton Eklendi.\nYeni Seviyen: ${currentLvl}. \n\nDashboard'a dönünce konfetiler patlayacak!`);
+        alert(t('admin_simulate_success', { 
+            xp: simulateXP, 
+            coins: earnedCoins, 
+            level: currentLvl 
+        }));
     };
 
     const handleFullReset = () => {
-        if (window.confirm("BÜYÜK UYARI: Uygulamadaki tüm idman geçmişi, skorlar, jetonlar, temalar, rozetler ve istatistiklerinizi KESİN OLARAK SIFIRLAMAK istiyor musunuz? Bu işlem geri alınamaz!")) {
+        if (window.confirm(t('admin_full_reset_warning'))) {
             setUserXP(0);
             setUserLevel(1);
             setUserCoins(0);
@@ -80,7 +87,7 @@ function AdminPanel({
             if (setUnlockedThemes) setUnlockedThemes(['default']);
             if (setActiveTheme) setActiveTheme('default');
             localStorage.clear(); // Tam temizlik
-            alert("Sistem tamamen sıfırlandı. Lütfen sayfayı yenisi ile başlatın.");
+            alert(t('admin_full_reset_success'));
             window.location.reload();
         }
     };
@@ -92,20 +99,20 @@ function AdminPanel({
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '1rem' }}>
                         <button type="button" className="back-btn" onClick={onBack} style={{ margin: 0 }}>
-                            <ArrowLeft size={20} /> Geri
+                            <ArrowLeft size={20} /> {t('btn_back')}
                         </button>
                     </div>
 
                     <div>
                         <Shield size={48} color="#ff4757" style={{ margin: '0 auto 1rem' }} />
-                        <h2 style={{ color: '#fff', margin: 0 }}>Admin Paneli</h2>
-                        <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', marginTop: '0.5rem' }}>Geliştirici kontrolleri için şifre girin.</p>
+                        <h2 style={{ color: '#fff', margin: 0 }}>{t('admin_title')}</h2>
+                        <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', marginTop: '0.5rem' }}>{t('admin_subtitle')}</p>
                     </div>
 
                     <input
                         type="password"
                         className="neon-input"
-                        placeholder="Admin Şifresi (admin123)"
+                        placeholder={t('admin_pass_placeholder')}
                         value={passwordInput}
                         onChange={(e) => setPasswordInput(e.target.value)}
                         required
@@ -113,7 +120,7 @@ function AdminPanel({
                     />
 
                     <button type="submit" className="neon-btn" style={{ width: '100%', borderColor: '#ff4757', color: '#ff4757', background: 'rgba(255, 71, 87, 0.1)' }}>
-                        GİRİŞ YAP
+                        {t('auth_btn_login')}
                     </button>
                 </form>
             </div>
@@ -124,65 +131,65 @@ function AdminPanel({
         <div className="app-container slide-in">
             <header className="top-bar" style={{ paddingBottom: '1rem', borderBottom: '1px solid var(--glass-border)' }}>
                 <button className="back-btn" onClick={onBack} style={{ margin: 0 }}>
-                    <ArrowLeft size={20} /> Geri
+                    <ArrowLeft size={20} /> {t('btn_back')}
                 </button>
                 <h2 style={{ color: '#ff4757', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                    <Shield size={24} /> Admin Modu
+                    <Shield size={24} /> {t('admin_mode_title')}
                 </h2>
             </header>
 
             <div className="glass-card fade-in" style={{ border: '1px solid #00ff88', marginBottom: '1.5rem', marginTop: '1.5rem' }}>
-                <h3 style={{ color: '#00ff88', marginBottom: '1.5rem', borderBottom: '1px solid rgba(0,255,136,0.1)', paddingBottom: '0.5rem' }}>📈 XP ve Seviye Simülatörü</h3>
-                <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '1rem' }}>Gerçek bir idman bitirmiş gibi XP ve Jeton kazandırır, gerekirse seviye atlatır.</p>
-                
+                <h3 style={{ color: '#00ff88', marginBottom: '1.5rem', borderBottom: '1px solid rgba(0,255,136,0.1)', paddingBottom: '0.5rem' }}>📈 {t('admin_xp_simulator')}</h3>
+                <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '1rem' }}>{t('admin_xp_simulator_desc')}</p>
+
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                     <div className="input-group" style={{ flexGrow: 1, marginBottom: 0 }}>
-                        <input type="number" className="neon-input" value={simulateXP} onChange={(e) => setSimulateXP(e.target.value)} placeholder="Eklenecek XP" />
+                        <input type="number" className="neon-input" value={simulateXP} onChange={(e) => setSimulateXP(e.target.value)} placeholder="XP" />
                     </div>
                     <button onClick={handleSimulateXP} className="neon-btn" style={{ borderColor: '#00ff88', color: '#00ff88', whiteSpace: 'nowrap' }}>
-                        XP KAZAN!
+                        {t('admin_xp_btn')}
                     </button>
                 </div>
-                
+
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                     <button onClick={() => setStreak(streak + 1)} className="neon-btn-secondary" style={{ flexGrow: 1 }}>
-                        🔥 Seriyi +1 Artır (Mevcut: {streak})
+                        🔥 {t('admin_streak_inc')} (Mevcut: {streak})
                     </button>
                     <button onClick={() => setStreak(0)} className="neon-btn-secondary" style={{ flexGrow: 1, color: '#ff4757' }}>
-                        🧨 Seriyi Boz
+                        🧨 {t('admin_streak_reset')}
                     </button>
                 </div>
             </div>
 
             <div className="glass-card fade-in" style={{ border: '1px solid #00c3ff', marginBottom: '1.5rem' }}>
-                <h3 style={{ color: '#00c3ff', marginBottom: '1.5rem', borderBottom: '1px solid rgba(0,195,255,0.1)', paddingBottom: '0.5rem' }}>🛠 Manuel Veri Düzenleme</h3>
-                <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '1rem' }}>Aşağıdaki değerleri doğrudan üzerine yazar. (Seviye atlatma mantığını çalıştırmaz).</p>
+                <h3 style={{ color: '#00c3ff', marginBottom: '1.5rem', borderBottom: '1px solid rgba(0,195,255,0.1)', paddingBottom: '0.5rem' }}>🛠 {t('admin_manual_edit')}</h3>
+                <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '1rem' }}>{t('admin_manual_edit_desc')}</p>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                     <div className="input-group" style={{ marginBottom: 0 }}>
-                        <label>XP Ekle / Düzenle</label>
+                        <label>{t('admin_edit_xp')}</label>
                         <input type="number" className="neon-input" value={editXP} onChange={(e) => setEditXP(e.target.value)} />
                     </div>
                     <div className="input-group" style={{ marginBottom: 0 }}>
-                        <label>Level (Seviye) Düzenle</label>
+                        <label>{t('admin_edit_level')}</label>
                         <input type="number" className="neon-input" value={editLevel} onChange={(e) => setEditLevel(e.target.value)} />
                     </div>
                     <div className="input-group" style={{ marginBottom: 0 }}>
-                        <label>Jeton (Coin) Düzenle</label>
+                        <label>{t('admin_edit_coins')}</label>
                         <input type="number" className="neon-input" value={editCoins} onChange={(e) => setEditCoins(e.target.value)} />
                     </div>
                 </div>
 
                 <button onClick={handleSaveModifications} className="neon-btn" style={{ width: '100%', borderColor: '#00c3ff', color: '#00c3ff', background: 'rgba(0, 195, 255, 0.1)' }}>
-                    <Save size={18} /> DEĞERLERİ KAYDET
+                    <Save size={18} /> {t('btn_save').toUpperCase()}
                 </button>
             </div>
 
             <div className="glass-card fade-in" style={{ border: '1px solid #ff4757', background: 'rgba(255, 71, 87, 0.05)' }}>
-                <h3 style={{ color: '#ff4757', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255, 71, 87, 0.2)', paddingBottom: '0.5rem' }}>Tehlikeli Bölge (Sıfırlama)</h3>
-                <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginBottom: '1rem' }}>Sistemi tamamen sıfırlamak istiyorsanız aşağıdaki butonu kullanın. Tüm kayıtlı veriler kalıcı olarak silinir.</p>
+                <h3 style={{ color: '#ff4757', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255, 71, 87, 0.2)', paddingBottom: '0.5rem' }}>{t('admin_danger_zone')}</h3>
+                <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginBottom: '1rem' }}>{t('admin_danger_zone_desc')}</p>
                 <button onClick={handleFullReset} className="neon-btn" style={{ width: '100%', borderColor: '#ff4757', color: '#ff4757', background: 'rgba(255, 71, 87, 0.1)' }}>
-                    <Trash2 size={18} /> TÜM SİSTEMİ SIFIRLA (HARD RESET)
+                    <Trash2 size={18} /> {t('admin_hard_reset_btn')}
                 </button>
             </div>
         </div>

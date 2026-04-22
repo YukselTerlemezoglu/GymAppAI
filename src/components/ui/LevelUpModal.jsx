@@ -3,8 +3,11 @@ import { createPortal } from 'react-dom';
 import confetti from 'canvas-confetti';
 import { X } from 'lucide-react';
 import { getRank } from '../../utils/ranks';
+import { useTranslation } from '../../i18n/LanguageContext';
 
 function LevelUpModal({ level, onClose }) {
+    const { t, lang } = useTranslation();
+    
     useEffect(() => {
         // Trigger confetti
         var duration = 3 * 1000;
@@ -34,6 +37,7 @@ function LevelUpModal({ level, onClose }) {
     }, []);
 
     const rank = getRank(level);
+    const rankTitle = lang === 'tr' ? rank.title_tr : rank.title_en;
 
     return createPortal(
         <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem', backdropFilter: 'blur(5px)' }}>
@@ -48,16 +52,16 @@ function LevelUpModal({ level, onClose }) {
                 </div>
                 
                 <h2 style={{ color: '#fff', fontSize: '2rem', marginBottom: '0.5rem', fontFamily: 'var(--font-heading)' }}>
-                    SEVİYE {level}!
+                    {t('level_up_title', { level })}
                 </h2>
                 
                 <p style={{ color: 'var(--text-light)', fontSize: '1rem', marginBottom: '1.5rem' }}>
-                    Tebrikler! Yeni rütben: <br/>
-                    <strong style={{ color: rank.color, fontSize: '1.2rem' }}>{rank.title}</strong>
+                    {t('level_up_congrats')} {t('level_up_rank_label')} <br/>
+                    <strong style={{ color: rank.color, fontSize: '1.2rem' }}>{rankTitle}</strong>
                 </p>
                 
                 <button onClick={onClose} className="neon-btn" style={{ width: '100%', borderColor: rank.color, color: rank.color, background: `${rank.color}15` }}>
-                    MUHTEŞEM!
+                    {t('level_up_btn')}
                 </button>
             </div>
         </div>,

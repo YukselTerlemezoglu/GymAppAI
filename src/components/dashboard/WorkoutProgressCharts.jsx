@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, LineChart, Line } from 'recharts';
 import { Activity, BarChart2, TrendingUp } from 'lucide-react';
+import MuscleRadarChart from './MuscleRadarChart';
+import { useTranslation } from '../../i18n/LanguageContext';
 
 function CustomTooltip({ active, payload, label }) {
     if (active && payload && payload.length) {
@@ -19,6 +21,7 @@ function CustomTooltip({ active, payload, label }) {
 }
 
 function WorkoutProgressCharts({ workoutHistory }) {
+    const { t } = useTranslation();
     const [chartTab, setChartTab] = useState('volume'); // 'volume' | 'strength'
 
     const { weeklyVolumeData, strengthData, topExercises } = useMemo(() => {
@@ -41,7 +44,7 @@ function WorkoutProgressCharts({ workoutHistory }) {
             const weeksAgo = wDate < startOfThisWeek ? Math.floor(diffDays / 7) + 1 : 0;
 
             if (weeksAgo <= 7) {
-                const label = weeksAgo === 0 ? "Bu Hafta" : `${weeksAgo}H Önce`;
+                const label = weeksAgo === 0 ? t('charts_this_week') : t('charts_weeks_ago', { count: weeksAgo });
                 const volume = w.totalWeight || (w.maxWeight * w.bestReps * w.sets) || 0;
 
                 if (!volumeMap[label]) {
@@ -93,19 +96,17 @@ function WorkoutProgressCharts({ workoutHistory }) {
         const strengthData = Object.values(strengthMap).sort((a, b) => a.timestamp - b.timestamp);
 
         return { weeklyVolumeData, strengthData, topExercises };
-    }, [workoutHistory]);
+    }, [workoutHistory, t]);
 
     if (!workoutHistory || workoutHistory.length === 0) {
         return null;
     }
 
-
-
     return (
         <section className="fade-in" style={{ animationDelay: '0.2s', marginBottom: '2rem' }}>
             <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <h2 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                    <Activity size={20} color="var(--accent-primary)" /> Gelişim Analizi
+                    <Activity size={20} color="var(--accent-primary)" /> {t('charts_analysis_title')}
                 </h2>
 
                 <div style={{ display: 'flex', gap: '10px', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '8px' }}>
@@ -125,7 +126,7 @@ function WorkoutProgressCharts({ workoutHistory }) {
                             transition: 'all 0.2s'
                         }}
                     >
-                        <BarChart2 size={16} /> Hacim
+                        <BarChart2 size={16} /> {t('charts_volume_tab')}
                     </button>
                     <button
                         onClick={() => setChartTab('strength')}
@@ -143,7 +144,7 @@ function WorkoutProgressCharts({ workoutHistory }) {
                             transition: 'all 0.2s'
                         }}
                     >
-                        <TrendingUp size={16} /> Güç
+                        <TrendingUp size={16} /> {t('charts_strength_tab')}
                     </button>
                 </div>
             </div>
@@ -156,7 +157,7 @@ function WorkoutProgressCharts({ workoutHistory }) {
                             <XAxis dataKey="hafta" stroke="rgba(255,255,255,0.5)" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
                             <YAxis stroke="rgba(255,255,255,0.5)" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
                             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-                            <Bar dataKey="hacim" name="Toplam Hacim" fill="#00c3ff" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="hacim" name={t('charts_total_volume')} fill="#00c3ff" radius={[4, 4, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 ) : (
@@ -168,15 +169,18 @@ function WorkoutProgressCharts({ workoutHistory }) {
                             <Tooltip content={<CustomTooltip />} />
                             <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                             {topExercises[0] && (
-                                <Line type="monotone" dataKey={topExercises[0]} name={`${topExercises[0]} E1RM`} stroke="#ff0088" strokeWidth={3} dot={{ r: 4, fill: '#ff0088' }} activeDot={{ r: 6 }} connectNulls />
+                                <Line type="monotone" dataKey={topExercises[0]} name={`${topExercises[0]} (${t('charts_strength_tab')})`} stroke="#ff0088" strokeWidth={3} dot={{ r: 4, fill: '#ff0088' }} activeDot={{ r: 6 }} connectNulls />
                             )}
                             {topExercises[1] && (
-                                <Line type="monotone" dataKey={topExercises[1]} name={`${topExercises[1]} E1RM`} stroke="#00ff88" strokeWidth={3} dot={{ r: 4, fill: '#00ff88' }} activeDot={{ r: 6 }} connectNulls />
+                                <Line type="monotone" dataKey={topExercises[1]} name={`${topExercises[1]} (${t('charts_strength_tab')})`} stroke="#00ff88" strokeWidth={3} dot={{ r: 4, fill: '#00ff88' }} activeDot={{ r: 6 }} connectNulls />
                             )}
                         </LineChart>
                     </ResponsiveContainer>
                 )}
             </div>
+
+            {/* KAS DENGESİ ANALİZİ (RADAR CHART) */}
+            <MuscleRadarChart workoutHistory={workoutHistory} />
         </section>
     );
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, Check, Trophy, Info, Settings } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
@@ -26,8 +27,9 @@ function ActiveWorkoutView({
     userCoins,
     setUserCoins
 }) {
+    const { t, lang } = useLanguage();
     const [activeAiWorkoutTimer, setActiveAiWorkoutTimer] = useLocalStorage('gym_app_active_timer', 0); // in seconds
-    const [activeAiWorkoutChecked, setActiveAiWorkoutChecked] = useLocalStorage('gym_app_active_checked', {}); // { 'exIdx_setIdx': true }
+    const [activeAiWorkoutLogs, setActiveAiWorkoutLogs] = useLocalStorage('gym_app_active_logs', {}); // { [eIdx]: [ {completed, weight, reps, mode} ] }
     const [showAiFeedbackModal, setShowAiFeedbackModal] = useState(false);
     const [aiFeedbackRpe, setAiFeedbackRpe] = useState('');
     const [aiFeedbackFatigue, setAiFeedbackFatigue] = useState('');
@@ -61,28 +63,69 @@ function ActiveWorkoutView({
         return `${m}:${s}`;
     };
 
-    const handleCheckSet = (exIdx, setIdx) => {
-        const key = `${exIdx}_${setIdx}`;
-        setActiveAiWorkoutChecked(prev => {
-            const isNowChecked = !prev[key];
-            const updated = { ...prev, [key]: isNowChecked };
+    const getSetsForExercise = (eIdx, ex) => {
+        if (activeAiWorkoutLogs[eIdx]) return activeAiWorkoutLogs[eIdx];
+        const numSets = parseInt(ex.sets) || 1;
+        return Array.from({ length: numSets }).map(() => ({
+            weight: ex.weight || 0,
+            reps: ex.reps || 0,
+            mode: 'Normal',
+            completed: false
+        }));
+    };
 
-            // Eğer seti bitirdiyse (işaretlediyse) ve zamanlayıcı açıksa dinlenmeyi başlat
+    const updateSetData = (eIdx, sIdx, field, value) => {
+        setActiveAiWorkoutLogs(prev => {
+            const updated = { ...prev };
+            if (!updated[eIdx]) {
+                const ex = activeAiWorkoutDayParams.exercises[eIdx];
+                updated[eIdx] = getSetsForExercise(eIdx, ex);
+            }
+            updated[eIdx] = [...updated[eIdx]];
+            updated[eIdx][sIdx] = { ...updated[eIdx][sIdx], [field]: value };
+            return updated;
+        });
+    };
+
+    const addSet = (eIdx, ex) => {
+        setActiveAiWorkoutLogs(prev => {
+            const updated = { ...prev };
+            if (!updated[eIdx]) {
+                updated[eIdx] = getSetsForExercise(eIdx, ex);
+            }
+            updated[eIdx] = [...updated[eIdx], {
+                weight: ex.weight || 0,
+                reps: ex.reps || 0,
+                mode: 'Drop Set',
+                completed: false
+            }];
+            return updated;
+        });
+    };
+
+    const handleCheckSet = (eIdx, sIdx, ex) => {
+        setActiveAiWorkoutLogs(prev => {
+            const updated = { ...prev };
+            if (!updated[eIdx]) {
+                updated[eIdx] = getSetsForExercise(eIdx, ex);
+            }
+            updated[eIdx] = [...updated[eIdx]];
+            const isNowChecked = !updated[eIdx][sIdx].completed;
+            updated[eIdx][sIdx] = { ...updated[eIdx][sIdx], completed: isNowChecked };
+
             if (isNowChecked && isRestTimerEnabled) {
-                let totalSetsInDay = 0;
-                (activeAiWorkoutDayParams?.exercises || []).forEach(ex => {
-                    const sets = parseInt(ex.sets) || 0;
-                    totalSetsInDay += sets;
+                let allComplete = true;
+                (activeAiWorkoutDayParams?.exercises || []).forEach((loopEx, i) => {
+                    const logs = updated[i] || getSetsForExercise(i, loopEx);
+                    if (logs.some(set => !set.completed)) {
+                        allComplete = false;
+                    }
                 });
 
-                const checkedBoxesCount = Object.values(updated).filter(v => v === true).length;
-
-                // Son set değilse sayacı başlat
-                if (checkedBoxesCount < totalSetsInDay) {
-                    setRestTimeRemaining(60); // Varsayılan 60 saniye
+                if (!allComplete) {
+                    setRestTimeRemaining(60);
                     setIsRestTimerActive(true);
                 } else {
-                    // İdman bittiyse sayacı zorla kapat
                     setIsRestTimerActive(false);
                     setRestTimeRemaining(0);
                 }
@@ -93,51 +136,68 @@ function ActiveWorkoutView({
         });
     };
 
-    const checkIfAllSetsCompleted = (currentCheckedMap) => {
+    const checkIfAllSetsCompleted = (currentLogs) => {
         if (!activeAiWorkoutDayParams) return;
-
-        let totalSetsInDay = 0;
-        (activeAiWorkoutDayParams?.exercises || []).forEach(ex => {
-            const sets = parseInt(ex.sets) || 0;
-            totalSetsInDay += sets;
+        let allComplete = true;
+        (activeAiWorkoutDayParams?.exercises || []).forEach((ex, i) => {
+            const logs = currentLogs[i] || getSetsForExercise(i, ex);
+            if (logs.some(set => !set.completed)) {
+                allComplete = false;
+            }
         });
-
-        const checkedBoxesCount = Object.values(currentCheckedMap).filter(v => v === true).length;
-
-        if (checkedBoxesCount === totalSetsInDay && totalSetsInDay > 0) {
+        if (allComplete && activeAiWorkoutDayParams.exercises.length > 0) {
             setShowAiFeedbackModal(true);
         }
     };
 
     const submitAiFeedbackAndSave = () => {
         if (!aiFeedbackRpe || !aiFeedbackFatigue) {
-            setFeedbackValErr("Lütfen İdman Zorluğu (RPE) ve Yorgunluk durumunu seçin.");
+            setFeedbackValErr(lang === 'tr' ? "Lütfen İdman Zorluğu (RPE) ve Yorgunluk durumunu seçin." : "Please select Workout Difficulty (RPE) and Fatigue level.");
             return;
         }
         setFeedbackValErr('');
 
         const todayStr = new Date().toISOString().split('T')[0];
 
+        let extraXpFromDifficulty = 0;
+
         const newWorkouts = [];
         (activeAiWorkoutDayParams?.exercises || []).forEach((ex, index) => {
+            const logs = activeAiWorkoutLogs[index] || getSetsForExercise(index, ex);
+
+            let exTotalWeight = 0;
+            let exTotalReps = 0;
+            let performedSetsCount = 0;
+
+            logs.forEach(setLog => {
+                if (setLog.completed) {
+                    performedSetsCount++;
+                    const w = parseFloat(setLog.weight) || 0;
+                    const r = parseInt(setLog.reps) || 0;
+                    exTotalWeight += (w * r);
+                    exTotalReps += r;
+                    // GAMIFICATION: Zorluk Bonusu
+                    if (setLog.mode === 'Drop Set' || setLog.mode === 'AMRAP') {
+                        extraXpFromDifficulty += 10;
+                    }
+                }
+            });
+
+            // Fallback
             let parsedWeight = parseFloat(ex.weight);
             if (isNaN(parsedWeight)) parsedWeight = 0;
-
             let parsedReps = parseInt(ex.reps);
             if (isNaN(parsedReps)) parsedReps = 0;
-
-            let parsedSets = parseInt(ex.sets);
-            if (isNaN(parsedSets)) parsedSets = 1;
 
             newWorkouts.push({
                 id: Date.now() + index,
                 date: new Date().toISOString(),
-                exercise: typeof ex.name === 'string' ? ex.name : 'Bilinmeyen Egzersiz',
-                sets: parsedSets,
-                maxWeight: parsedWeight,
-                bestReps: parsedReps,
-                totalWeight: parsedWeight * parsedReps * parsedSets,
-                totalReps: parsedReps * parsedSets,
+                exercise: typeof ex.name === 'string' ? ex.name : (lang === 'tr' ? 'Bilinmeyen Egzersiz' : 'Unknown Exercise'),
+                sets: performedSetsCount > 0 ? performedSetsCount : parseInt(ex.sets) || 1,
+                maxWeight: logs.reduce((max, s) => Math.max(max, parseFloat(s.weight) || 0), parsedWeight) || parsedWeight,
+                bestReps: logs.reduce((max, s) => Math.max(max, parseInt(s.reps) || 0), parsedReps) || parsedReps,
+                totalWeight: exTotalWeight > 0 ? exTotalWeight : (parsedWeight * parsedReps * parseInt(ex.sets || 1)),
+                totalReps: exTotalReps > 0 ? exTotalReps : (parsedReps * parseInt(ex.sets || 1)),
                 avgRpe: parseFloat(aiFeedbackRpe) || 0,
                 isAiGenerated: !!savedAiProgram?.isAiGenerated
             });
@@ -179,7 +239,9 @@ function ActiveWorkoutView({
                         ex.sets = (parseInt(ex.sets) - 1).toString();
                     }
                 });
-                optimizationMessage = "AI Koçu idmanın çok zor geçtiğini fark etti. Aşırı antrenman (Overtraining) riskinden korunman için bir sonraki seansının ağırlıkları düşürüldü (Deload).";
+                optimizationMessage = lang === 'tr' 
+                    ? "AI Koçu idmanın çok zor geçtiğini fark etti. Aşırı antrenman (Overtraining) riskinden korunman için bir sonraki seansının ağırlıkları düşürüldü (Deload)."
+                    : "AI Coach noticed the workout was very difficult. To prevent overtraining, weights for your next session have been reduced (Deload).";
             }
             // 2) BİRAZ YORULDUM -> HAFİF DROPOFF
             else if (aiFeedbackFatigue.includes("Yüksek") || rpeVal === 8) {
@@ -190,7 +252,9 @@ function ActiveWorkoutView({
                         ex.weight = Math.max(0, newW).toString();
                     }
                 });
-                optimizationMessage = "AI Koçu biraz yorulduğunu seziyor. Vücudunun toparlanması adına bir dahaki seansında ağırlıkları çok hafif (-2.5kg) geri çektik.";
+                optimizationMessage = lang === 'tr'
+                    ? "AI Koçu biraz yorulduğunu seziyor. Vücudunun toparlanması adına bir dahaki seansında ağırlıkları çok hafif (-2.5kg) geri çektik."
+                    : "AI Coach senses you're a bit tired. To help your body recover, we've slightly reduced weights (-2.5kg) for your next session.";
             }
             // 3) ENERJİ DOLUYUM -> PROGRESSIVE OVERLOAD
             else if (aiFeedbackFatigue.includes("Düşük") || (rpeVal > 0 && rpeVal <= 5)) {
@@ -206,11 +270,15 @@ function ActiveWorkoutView({
                         }
                     }
                 });
-                optimizationMessage = "AI Koçu bu idmanın sana çok hafif geldiğini gördü! Gelişimini hızlandırmak için bir sonraki seansındaki ağırlıkların artırıldı. Canavarsın!";
+                optimizationMessage = lang === 'tr'
+                    ? "AI Koçu bu idmanın sana çok hafif geldiğini gördü! Gelişimini hızlandırmak için bir sonraki seansındaki ağırlıkların artırıldı. Canavarsın!"
+                    : "AI Coach saw that this workout was too easy for you! To speed up your progress, weights for your next session have been increased. You're a beast!";
             }
             // 4) NORMAL (ORTA) -> MAINTAIN
             else {
-                optimizationMessage = "İdman tam planlandığı gibi geçti! Ağırlıkların vücudun için ideal seviyede. Bir sonraki seansa aynı ağırlıklarla devam ediyoruz.";
+                optimizationMessage = lang === 'tr'
+                    ? "İdman tam planlandığı gibi geçti! Ağırlıkların vücudun için ideal seviyede. Bir sonraki seansa aynı ağırlıklarla devam ediyoruz."
+                    : "Workout went exactly as planned! Weights are at an ideal level for your body. Continuing with the same weights for the next session.";
             }
 
             // Programı güncelle
@@ -239,6 +307,9 @@ function ActiveWorkoutView({
 
             calculatedXP = Math.round(calculatedXP * streakMultiplier);
 
+            // Add extra gamification XP for AMRAP/Drop Sets
+            calculatedXP += extraXpFromDifficulty;
+
             const gainedXP = Math.max(10, Math.min(2000, calculatedXP)); // Minimum 10, maksimum 2000 XP
 
             // Dinamik Level Barajı Hesaplayıcı (Örn: Lvl 1: 500XP, Lvl 2: 700XP, Lvl 3: 900XP vs...)
@@ -264,15 +335,15 @@ function ActiveWorkoutView({
             const earnedCoins = Math.max(1, Math.round(gainedXP * 0.1));
             setUserCoins((prev) => (prev || 0) + earnedCoins);
 
-            let baseMsg = `⭐ +${gainedXP} XP Kazandın! (${newTotalXP} / ${currentRequiredXP})`;
+            let baseMsg = `⭐ ${lang === 'tr' ? `+${gainedXP} XP Kazandın! (${newTotalXP} / ${currentRequiredXP})` : `+${gainedXP} XP Earned! (${newTotalXP} / ${currentRequiredXP})`}`;
             if (streakMultiplier > 1.0) {
-                baseMsg += `\n🔥 Seri Çarpanı Aktif: ${streakMultiplier}x Bonus XP!`;
+                baseMsg += `\n🔥 ${lang === 'tr' ? `Seri Çarpanı Aktif: ${streakMultiplier}x Bonus XP!` : `Streak Multiplier Active: ${streakMultiplier}x Bonus XP!`}`;
             }
-            baseMsg += `\n🪙 +${earnedCoins} Jeton kazandın!`;
+            baseMsg += `\n🪙 ${lang === 'tr' ? `+${earnedCoins} Jeton kazandın!` : `+${earnedCoins} Coins earned!`}`;
 
-            let finalMsg = `🤖 YAPAY ZEKA OPTİMİZASYONU:\n\n${optimizationMessage}\n\n${baseMsg}`;
+            let finalMsg = `🤖 ${lang === 'tr' ? 'YAPAY ZEKA OPTİMİZASYONU' : 'AI OPTIMIZATION'}:\n\n${optimizationMessage}\n\n${baseMsg}`;
             if (leveledUp) {
-                finalMsg += `\n🎉 TEBRİKLER SEVİYE ATLADIN! Yeni Güç Seviyen: ${currentLvl}`;
+                finalMsg += `\n🎉 ${lang === 'tr' ? `TEBRİKLER SEVİYE ATLADIN! Yeni Güç Seviyen: ${currentLvl}` : `CONGRATS, YOU LEVELED UP! New Power Level: ${currentLvl}`}`;
             }
 
             // Note: In the future, we will replace this alert with a Confetti UI modal!
@@ -281,7 +352,7 @@ function ActiveWorkoutView({
         // ----------------------------------------
 
         // Reset active workout state
-        setActiveAiWorkoutChecked({});
+        setActiveAiWorkoutLogs({});
         setActiveAiWorkoutTimer(0);
         setIsRestTimerActive(false);
         setRestTimeRemaining(0);
@@ -297,14 +368,14 @@ function ActiveWorkoutView({
             <header className="top-bar fade-in" style={{ animationDelay: '0s', flexDirection: 'column', alignItems: 'center', background: 'rgba(0,0,0,0.5)', paddingBottom: '1rem', borderBottom: '1px solid var(--glass-border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '1rem' }}>
                     <button className="back-btn" onClick={() => {
-                        if (window.confirm("İdmanı bitirmeden çıkmak istediğine emin misin? (İlerlemen sıfırlanacak)")) {
-                            setActiveAiWorkoutChecked({});
+                        if (window.confirm(lang === 'tr' ? "İdmanı bitirmeden çıkmak istediğine emin misin? (İlerlemen sıfırlanacak)" : "Are you sure you want to quit without finishing the workout? (Progress will be reset)")) {
+                            setActiveAiWorkoutLogs({});
                             setActiveAiWorkoutTimer(0);
                             setIsRestTimerActive(false);
                             setCurrentView('dashboard');
                         }
                     }}>
-                        <ArrowLeft size={20} /> Çıkış
+                        <ArrowLeft size={20} /> {t('btn_exit')}
                     </button>
                     <div style={{ color: 'var(--accent-primary)', fontSize: '2rem', fontWeight: 'bold', fontFamily: 'monospace', textShadow: '0 0 10px rgba(0,255,136,0.3)' }}>
                         {formatTime(activeAiWorkoutTimer)}
@@ -316,7 +387,7 @@ function ActiveWorkoutView({
                     <button
                         onClick={() => setShowRestTimerSettings(!showRestTimerSettings)}
                         style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: isRestTimerEnabled ? 'var(--accent-primary)' : 'var(--text-muted)', padding: '8px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        title="Zamanlayıcı Ayarları"
+                        title={lang === 'tr' ? "Zamanlayıcı Ayarları" : "Timer Settings"}
                     >
                         <Settings size={20} />
                     </button>
@@ -325,56 +396,102 @@ function ActiveWorkoutView({
                 {showRestTimerSettings && (
                     <div style={{ width: '100%', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', padding: '1rem', marginTop: '1rem', border: '1px solid rgba(255,255,255,0.1)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: '#fff', fontSize: '0.9rem' }}>Otomatik Dinlenme Sayacı</span>
+                            <span style={{ color: '#fff', fontSize: '0.9rem' }}>{lang === 'tr' ? 'Otomatik Dinlenme Sayacı' : 'Auto Rest Timer'}</span>
                             <label className="toggle-switch">
                                 <input type="checkbox" checked={isRestTimerEnabled} onChange={(e) => setIsRestTimerEnabled(e.target.checked)} />
                                 <span className="slider"></span>
                             </label>
                         </div>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.5rem', margin: 0 }}>Açıksa her set bitişinde sayaç 60 saniyeden otomatik başlar.</p>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.5rem', margin: 0 }}>{lang === 'tr' ? 'Açıksa her set bitişinde sayaç 60 saniyeden otomatik başlar.' : 'If enabled, the timer starts automatically from 60 seconds after each set.'}</p>
                     </div>
                 )}
 
-                <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', width: '100%', marginTop: '1rem' }}>Setleri bitirdikçe yanlarındaki kutucuklara tıklayın.</p>
+                <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', width: '100%', marginTop: '1rem' }}>{lang === 'tr' ? 'Setleri bitirdikçe yanlarındaki kutucuklara tıklayın.' : 'Check the boxes as you complete each set.'}</p>
             </header>
 
             <div className="workout-tracker-list fade-in" style={{ paddingBottom: '100px', paddingTop: '1rem' }}>
                 {activeAiWorkoutDayParams?.exercises?.map((ex, eIdx) => {
-                    const numSets = parseInt(ex.sets) || 1;
-                    const setsArray = Array.from({ length: numSets });
+                    const setsArray = activeAiWorkoutLogs[eIdx] || getSetsForExercise(eIdx, ex);
 
                     return (
                         <div key={eIdx} className="glass-card" style={{ marginBottom: '1rem' }}>
                             <div style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <h3 style={{ color: 'var(--accent-primary)', margin: 0 }}>{ex.name}</h3>
-                                <button
-                                    onClick={() => setSelectedExerciseForModal(ex.name)}
-                                    style={{ background: 'transparent', border: 'none', color: '#00c3ff', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '0.9rem' }}
-                                >
-                                    <Info size={18} /> Bilgi
-                                </button>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <button
+                                        onClick={() => setSelectedExerciseForModal(ex.name)}
+                                        style={{ background: 'transparent', border: 'none', color: '#00c3ff', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '0.9rem' }}
+                                    >
+                                        <Info size={18} /> {t('btn_info')}
+                                    </button>
+                                </div>
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                                {setsArray.map((_, sIdx) => {
-                                    const isChecked = activeAiWorkoutChecked[`${eIdx}_${sIdx}`] || false;
+                                {setsArray.map((setLog, sIdx) => {
+                                    const isChecked = setLog.completed;
                                     return (
-                                        <div key={sIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', background: isChecked ? 'rgba(0,255,136,0.1)' : 'rgba(255,255,255,0.03)', borderRadius: '8px', borderLeft: isChecked ? '4px solid var(--accent-primary)' : '4px solid transparent', transition: 'all 0.3s ease' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                                <span style={{ color: 'rgba(255,255,255,0.5)', width: '30px', fontWeight: 'bold' }}>{sIdx + 1}</span>
-                                                <span style={{ color: '#fff', fontWeight: '600' }}>{ex.weight} kg</span>
-                                                <span style={{ color: 'var(--text-light)' }}>x {ex.reps} reps</span>
+                                        <div key={sIdx} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.5rem', background: isChecked ? 'rgba(0,255,136,0.1)' : 'rgba(255,255,255,0.03)', borderRadius: '8px', borderLeft: isChecked ? '4px solid var(--accent-primary)' : '4px solid transparent', transition: 'all 0.3s ease' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                                    <span style={{ color: 'rgba(255,255,255,0.5)', width: '20px', fontWeight: 'bold' }}>{sIdx + 1}</span>
+
+                                                    {/* Mode Selector */}
+                                                    <select
+                                                        value={setLog.mode}
+                                                        onChange={(e) => updateSetData(eIdx, sIdx, 'mode', e.target.value)}
+                                                        style={{ background: 'rgba(0,0,0,0.3)', color: setLog.mode === 'Drop Set' || setLog.mode === 'AMRAP' ? 'var(--accent-warning)' : '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '4px 8px', fontSize: '0.8rem', outline: 'none' }}
+                                                    >
+                                                        <option value="Normal">{lang === 'tr' ? 'Normal' : 'Normal'}</option>
+                                                        <option value="Warmup">{lang === 'tr' ? 'Isınma' : 'Warmup'}</option>
+                                                        <option value="Drop Set">Drop Set</option>
+                                                        <option value="AMRAP">AMRAP</option>
+                                                    </select>
+
+                                                    {/* Weight & Reps inputs container (Flex for spacing) */}
+                                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                        {/* Weight Input */}
+                                                        <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', padding: '2px 8px' }}>
+                                                            <input
+                                                                type="number"
+                                                                value={setLog.weight}
+                                                                onChange={(e) => updateSetData(eIdx, sIdx, 'weight', e.target.value)}
+                                                                style={{ width: '45px', background: 'transparent', border: 'none', color: '#fff', fontWeight: 'bold', textAlign: 'right', outline: 'none' }}
+                                                            />
+                                                            <span style={{ color: 'var(--text-light)', fontSize: '0.8rem', marginLeft: '4px' }}>kg</span>
+                                                        </div>
+
+                                                        {/* Reps Input */}
+                                                        <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', padding: '2px 8px' }}>
+                                                            <input
+                                                                type="number"
+                                                                value={setLog.reps}
+                                                                onChange={(e) => updateSetData(eIdx, sIdx, 'reps', e.target.value)}
+                                                                style={{ width: '40px', background: 'transparent', border: 'none', color: '#fff', fontWeight: 'bold', textAlign: 'right', outline: 'none' }}
+                                                            />
+                                                            <span style={{ color: 'var(--text-light)', fontSize: '0.8rem', marginLeft: '4px' }}>reps</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleCheckSet(eIdx, sIdx, ex)}
+                                                    style={{
+                                                        width: '36px', height: '36px', borderRadius: '50%', background: isChecked ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', border: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0
+                                                    }}>
+                                                    {isChecked && <Check size={20} color="#000" />}
+                                                </button>
                                             </div>
-                                            <button
-                                                onClick={() => handleCheckSet(eIdx, sIdx)}
-                                                style={{
-                                                    width: '36px', height: '36px', borderRadius: '50%', background: isChecked ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', border: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s'
-                                                }}>
-                                                {isChecked && <Check size={20} color="#000" />}
-                                            </button>
                                         </div>
                                     );
                                 })}
+                                <button
+                                    onClick={() => addSet(eIdx, ex)}
+                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.2)', color: 'var(--text-light)', padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', marginTop: '0.5rem', transition: 'all 0.2s' }}
+                                    onMouseOver={(e) => e.target.style.background = 'rgba(255,255,255,0.1)'}
+                                    onMouseOut={(e) => e.target.style.background = 'rgba(255,255,255,0.05)'}
+                                >
+                                    + {t('btn_add_set')}
+                                </button>
                             </div>
                         </div>
                     );
@@ -387,17 +504,17 @@ function ActiveWorkoutView({
                     <div className="glass-card slide-in" style={{ width: '100%', maxWidth: '400px', border: '1px solid var(--accent-primary)', background: '#1a1a2e' }}>
                         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
                             <Trophy size={48} color="var(--accent-warning)" style={{ marginBottom: '1rem' }} />
-                            <h2 style={{ color: '#fff', marginBottom: '0.5rem' }}>İdman Tamamlandı!</h2>
-                            <p style={{ color: 'var(--text-light)', opacity: 0.8 }}>Süre: <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{formatTime(activeAiWorkoutTimer)}</span></p>
-                            <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginTop: '1rem' }}>Yapay zekanın bir sonraki programını sana özel ayarlayabilmesi için bu idmanı oylamalısın.</p>
+                            <h2 style={{ color: '#fff', marginBottom: '0.5rem' }}>{lang === 'tr' ? 'İdman Tamamlandı!' : 'Workout Completed!'}</h2>
+                            <p style={{ color: 'var(--text-light)', opacity: 0.8 }}>{lang === 'tr' ? 'Süre' : 'Duration'}: <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{formatTime(activeAiWorkoutTimer)}</span></p>
+                            <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginTop: '1rem' }}>{lang === 'tr' ? 'Yapay zekanın bir sonraki programını sana özel ayarlayabilmesi için bu idmanı oylamalısın.' : 'Rate this workout so the AI can customize your next program.'}</p>
                         </div>
 
                         <div className="input-group">
-                            <label>İdman ne kadar zordu? RPE (1-10)</label>
+                            <label>{lang === 'tr' ? 'İdman ne kadar zordu? RPE (1-10)' : 'How hard was the workout? RPE (1-10)'}</label>
                             <input
                                 type="number"
                                 className="neon-input"
-                                placeholder="Örn: 8 (10 Çok Zor, 1 Çok Kolay)"
+                                placeholder={lang === 'tr' ? "Örn: 8 (10 Çok Zor, 1 Çok Kolay)" : "Ex: 8 (10 Very Hard, 1 Very Easy)"}
                                 value={aiFeedbackRpe}
                                 onChange={(e) => setAiFeedbackRpe(e.target.value)}
                                 min="1"
@@ -406,13 +523,13 @@ function ActiveWorkoutView({
                         </div>
 
                         <div className="input-group">
-                            <label>Şu anki Yorgunluğun Nasıl?</label>
+                            <label>{lang === 'tr' ? 'Şu anki Yorgunluğun Nasıl?' : 'How is your current fatigue?'}</label>
                             <select className="neon-input" value={aiFeedbackFatigue} onChange={(e) => setAiFeedbackFatigue(e.target.value)} required style={{ backgroundColor: 'rgba(0,0,0,0.5)', cursor: 'pointer' }}>
-                                <option value="">Seçiniz...</option>
-                                <option value="Düşük (Enerji Doluyum)">Düşük (Canavar gibiyim, ağırlık artır)</option>
-                                <option value="Orta (Normal)">Orta (Böyle iyiydi)</option>
-                                <option value="Yüksek (Biraz Bitkinim)">Yüksek (Beni çok zorladı, biraz hafiflet)</option>
-                                <option value="Tükendim (Deload İhtiyacı)">Tükendim (Kas ağrılarım çok olacak, Recovery/Deload yap)</option>
+                                <option value="">{lang === 'tr' ? 'Seçiniz...' : 'Select...'}</option>
+                                <option value="Düşük (Enerji Doluyum)">{lang === 'tr' ? 'Düşük (Canavar gibiyim, ağırlık artır)' : 'Low (Beast mode, increase weight)'}</option>
+                                <option value="Orta (Normal)">{lang === 'tr' ? 'Orta (Böyle iyiydi)' : 'Moderate (It was fine)'}</option>
+                                <option value="Yüksek (Biraz Bitkinim)">{lang === 'tr' ? 'Yüksek (Beni çok zorladı, biraz hafiflet)' : 'High (Very tough, lighten a bit)'}</option>
+                                <option value="Tükendim (Deload İhtiyacı)">{lang === 'tr' ? 'Tükendim (Kas ağrılarım çok olacak, Recovery/Deload yap)' : 'Exhausted (Need Recovery/Deload)'}</option>
                             </select>
                         </div>
 
@@ -423,7 +540,7 @@ function ActiveWorkoutView({
                         )}
 
                         <button onClick={submitAiFeedbackAndSave} className="neon-btn" style={{ width: '100%', padding: '1rem', marginTop: '0.5rem' }}>
-                            <Check size={20} /> İDMANI KAYDET VE BİTİR
+                            <Check size={20} /> {lang === 'tr' ? 'İDMANI KAYDET VE BİTİR' : 'SAVE AND FINISH WORKOUT'}
                         </button>
                     </div>
                 </div>,

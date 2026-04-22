@@ -1,8 +1,10 @@
 import React from 'react';
 import { X, PlayCircle, Info } from 'lucide-react';
 import { findExerciseData } from '../../data/exerciseLibrary';
+import { useTranslation } from '../../i18n/LanguageContext';
 
 function ExerciseModal({ exerciseName, onClose }) {
+    const { t } = useTranslation();
     const exData = findExerciseData(exerciseName);
 
     return (
@@ -30,12 +32,12 @@ function ExerciseModal({ exerciseName, onClose }) {
 
                             <div style={{ marginBottom: '1rem' }}>
                                 <span style={{ fontSize: '0.85rem', color: 'var(--accent-primary)', background: 'rgba(0, 195, 255, 0.1)', padding: '4px 10px', borderRadius: '20px', fontWeight: 'bold' }}>
-                                    💪 Hedef: {exData.muscle}
+                                    💪 {t('ex_modal_target')}: {exData.muscle}
                                 </span>
                             </div>
 
                             <h4 style={{ color: '#fff', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <Info size={16} color="var(--accent-warning)" /> Koçun İpuçları
+                                <Info size={16} color="var(--accent-warning)" /> {t('ex_modal_coach_tips')}
                             </h4>
 
                             <ul style={{ paddingLeft: '20px', color: 'var(--text-light)', lineHeight: '1.6' }}>
@@ -47,7 +49,7 @@ function ExerciseModal({ exerciseName, onClose }) {
                     ) : (
                         <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-light)' }}>
                             <Info size={48} color="var(--accent-secondary)" style={{ marginBottom: '1rem', opacity: 0.5 }} />
-                            <p>Bu egzersiz kütüphanede bulunamadı. Yapılışını bir antrenöre veya internete sorabilirsin!</p>
+                            <p>{t('ex_modal_not_found')}</p>
                         </div>
                     )}
                 </div>
@@ -55,7 +57,7 @@ function ExerciseModal({ exerciseName, onClose }) {
                 {/* Footer */}
                 <div style={{ padding: '1rem 1.5rem', background: 'rgba(0,0,0,0.3)', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                     <button onClick={onClose} className="neon-btn-secondary" style={{ width: '100%' }}>
-                        ANLADIM, İDMANA DÖN
+                        {t('ex_modal_close_btn')}
                     </button>
                 </div>
 

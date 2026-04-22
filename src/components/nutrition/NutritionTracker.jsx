@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { ArrowLeft, Plus, Trash2, Utensils, PieChart, Info, Bot, Loader2 } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
 
 function NutritionTracker({ onBack }) {
+    const { t, lang } = useTranslation();
     // Veri yapısı: { "2023-10-25": { meals: [{id, name, kcal, protein, carbs, fat}], goals: {kcal, protein, carbs, fat} } }
     const [nutritionData, setNutritionData] = useLocalStorage('gym_app_nutrition_v2', {});
     const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
@@ -24,7 +26,7 @@ function NutritionTracker({ onBack }) {
     const handleAddMeal = (e) => {
         e.preventDefault();
         if (!mealForm.name || !mealForm.kcal) {
-            alert("Lütfen yemek adını ve kalorisini girin.");
+            alert(t('nutrition_error_empty'));
             return;
         }
 
@@ -68,23 +70,16 @@ function NutritionTracker({ onBack }) {
 
     const handleCalculateAI = async () => {
         if (!mealForm.name) {
-            alert("Lütfen hesaplanmasını istediğiniz yiyeceği / öğünü tam olarak yazın (Örn: 1 porsiyon yulaf ezmesi ve 2 yumurta).");
+            alert(t('nutrition_ai_prompt'));
             return;
         }
 
         setIsAiLoading(true);
         try {
             const API_KEYS = [import.meta.env.VITE_GROQ_API_KEY].filter(k => k && k !== "API_ANAHTARINIZI_BURAYA_YAZIN");
-            const prompt = `Sen profesyonel bir diyetisyensin. Kullanıcı şu besinleri girdi: "${mealForm.name}". 
-Bunun ortalama kalori ve makro değerlerini (protein, karbonhidrat, yağ) gram cinsinden tahmin et.
-DİKKAT: CEvap GÖVDESİ (BODY) MUTLAKA AŞAĞIDAKİ GİBİ GEÇERLİ BİR JSON FORMATINDA OLMALIDIR. MARKDOWN KULLANMA. İÇERİSİNDE BAŞKA HİÇBİR YAZI, AÇIKLAMA OLMAYACAK SADECE JSON.
-Örnek Format:
-{
-  "kcal": 250,
-  "protein": 10,
-  "carbs": 40,
-  "fat": 5
-}`;
+            const prompt = lang === 'tr' 
+                ? `Sen profesyonel bir diyetisyensin. Kullanıcı şu besinleri girdi: "${mealForm.name}". Bunun ortalama kalori ve makro değerlerini (protein, karbonhidrat, yağ) gram cinsinden tahmin et. DİKKAT: CEvap GÖVDESİ (BODY) MUTLAKA JSON FORMATINDA OLMALIDIR. Sadece JSON.`
+                : `You are a professional dietitian. The user entered: "${mealForm.name}". Estimate average calories and macro values (protein, carbs, fat) in grams. ATTENTION: The response BODY MUST be in JSON FORMAT. Only JSON.`;
 
             let textResult = null;
 
@@ -118,7 +113,7 @@ DİKKAT: CEvap GÖVDESİ (BODY) MUTLAKA AŞAĞIDAKİ GİBİ GEÇERLİ BİR JSON 
                 }
             }
 
-            if (!textResult) throw new Error("Veri çekilemedi. API limitlerine takılmış olabilirsiniz.");
+            if (!textResult) throw new Error(t('nutrition_api_limit'));
 
             let text = textResult.replace(/```json/g, '').replace(/```/g, '').trim();
             const parsed = JSON.parse(text);
@@ -133,7 +128,7 @@ DİKKAT: CEvap GÖVDESİ (BODY) MUTLAKA AŞAĞIDAKİ GİBİ GEÇERLİ BİR JSON 
 
         } catch (err) {
             console.error(err);
-            alert("Yapay zeka ile hesaplanırken bir hata oluştu veya anahtarınızın kotası dolmuş olabilir.");
+            alert(t('nutrition_ai_error'));
         } finally {
             setIsAiLoading(false);
         }
@@ -143,13 +138,13 @@ DİKKAT: CEvap GÖVDESİ (BODY) MUTLAKA AŞAĞIDAKİ GİBİ GEÇERLİ BİR JSON 
         <div className="app-container slide-in">
             <header className="top-bar fade-in" style={{ animationDelay: '0s', flexDirection: 'column', alignItems: 'flex-start', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem' }}>
                 <button className="back-btn" onClick={onBack} style={{ marginBottom: '1rem' }}>
-                    <ArrowLeft size={20} /> Geri
+                    <ArrowLeft size={20} /> {t('btn_back')}
                 </button>
                 <div>
                     <h2 style={{ color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.8rem', fontSize: '1.8rem', margin: '0 0 0.5rem 0' }}>
-                        <Utensils size={28} /> Beslenme Takibi
+                        <Utensils size={28} /> {t('nutrition_title')}
                     </h2>
-                    <p style={{ color: 'var(--text-light)', margin: 0, fontSize: '0.9rem' }}>Makrolarını ve günlük kalori hedeflerini takip et.</p>
+                    <p style={{ color: 'var(--text-light)', margin: 0, fontSize: '0.9rem' }}> {t('nutrition_subtitle')}</p>
                 </div>
             </header>
 
@@ -167,30 +162,30 @@ DİKKAT: CEvap GÖVDESİ (BODY) MUTLAKA AŞAĞIDAKİ GİBİ GEÇERLİ BİR JSON 
 
                 {/* Macros Summary Panel */}
                 <div className="glass-card slide-in" style={{ background: 'linear-gradient(145deg, rgba(0,0,0,0.6) 0%, rgba(0, 195, 255, 0.05) 100%)', border: '1px solid rgba(0, 195, 255, 0.2)' }}>
-                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: 0, color: '#fff' }}><PieChart size={20} color="#00c3ff" /> Makro Özeti</h3>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: 0, color: '#fff' }}><PieChart size={20} color="#00c3ff" /> {t('nutrition_macro_summary')}</h3>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', textAlign: 'center' }}>
                         {/* Kalori */}
                         <div style={{ background: 'rgba(255,165,2,0.1)', padding: '10px', borderRadius: '10px', display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginBottom: '5px' }}>Kalori</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginBottom: '5px' }}>{t('nutrition_kcal')}</span>
                             <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#ffa502' }}>{Math.round(totals.kcal)}</span>
                             <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>/ {currentDayData.goals.kcal}</span>
                         </div>
                         {/* Protein */}
                         <div style={{ background: 'rgba(255,71,87,0.1)', padding: '10px', borderRadius: '10px', display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginBottom: '5px' }}>Protein</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginBottom: '5px' }}>{t('nutrition_protein')}</span>
                             <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#ff4757' }}>{Math.round(totals.protein)}g</span>
                             <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>/ {currentDayData.goals.protein}g</span>
                         </div>
                         {/* Karbonhidrat */}
                         <div style={{ background: 'rgba(0,195,255,0.1)', padding: '10px', borderRadius: '10px', display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginBottom: '5px' }}>Karb</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginBottom: '5px' }}>{t('nutrition_carbs')}</span>
                             <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#00c3ff' }}>{Math.round(totals.carbs)}g</span>
                             <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>/ {currentDayData.goals.carbs}g</span>
                         </div>
                         {/* Yağ */}
                         <div style={{ background: 'rgba(46,213,115,0.1)', padding: '10px', borderRadius: '10px', display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginBottom: '5px' }}>Yağ</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginBottom: '5px' }}>{t('nutrition_fat')}</span>
                             <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#2ed573' }}>{Math.round(totals.fat)}g</span>
                             <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>/ {currentDayData.goals.fat}g</span>
                         </div>
@@ -207,52 +202,52 @@ DİKKAT: CEvap GÖVDESİ (BODY) MUTLAKA AŞAĞIDAKİ GİBİ GEÇERLİ BİR JSON 
                 {/* Meals List */}
                 <div className="glass-card slide-in">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h3 style={{ margin: 0, color: '#fff' }}>Yemekler</h3>
+                        <h3 style={{ margin: 0, color: '#fff' }}>{t('nutrition_meals')}</h3>
                         <button onClick={() => setShowAddMeal(!showAddMeal)} className="neon-btn" style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.9rem', width: 'auto' }}>
-                            <Plus size={16} /> {/* TEXT AVOIDED TO SAVE SPACE IN SMALL SCREENS, OR KEEP IT */} Ekle
+                            <Plus size={16} /> {t('btn_add')}
                         </button>
                     </div>
 
                     {showAddMeal && (
                         <form onSubmit={handleAddMeal} style={{ background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '15px' }}>
                             <div className="input-group" style={{ marginBottom: '10px' }}>
-                                <label>Yiyecek / Öğün Adı</label>
-                                <input type="text" className="neon-input" placeholder="Örn: Yulaf Ezmesi" value={mealForm.name} onChange={e => setMealForm({ ...mealForm, name: e.target.value })} />
+                                <label>{t('nutrition_meal_name_label')}</label>
+                                <input type="text" className="neon-input" placeholder={t('nutrition_meal_name_placeholder')} value={mealForm.name} onChange={e => setMealForm({ ...mealForm, name: e.target.value })} />
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
                                 <div className="input-group" style={{ marginBottom: 0 }}>
-                                    <label>Kalori</label>
+                                    <label>{t('nutrition_kcal')}</label>
                                     <input type="number" step="0.1" className="neon-input" value={mealForm.kcal} onChange={e => setMealForm({ ...mealForm, kcal: e.target.value })} />
                                 </div>
                                 <div className="input-group" style={{ marginBottom: 0 }}>
-                                    <label>Protein (g)</label>
+                                    <label>{t('nutrition_protein')} (g)</label>
                                     <input type="number" step="0.1" className="neon-input" value={mealForm.protein} onChange={e => setMealForm({ ...mealForm, protein: e.target.value })} />
                                 </div>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
                                 <div className="input-group" style={{ marginBottom: 0 }}>
-                                    <label>Karb (g)</label>
+                                    <label>{t('nutrition_carbs')} (g)</label>
                                     <input type="number" step="0.1" className="neon-input" value={mealForm.carbs} onChange={e => setMealForm({ ...mealForm, carbs: e.target.value })} />
                                 </div>
                                 <div className="input-group" style={{ marginBottom: 0 }}>
-                                    <label>Yağ (g)</label>
+                                    <label>{t('nutrition_fat')} (g)</label>
                                     <input type="number" step="0.1" className="neon-input" value={mealForm.fat} onChange={e => setMealForm({ ...mealForm, fat: e.target.value })} />
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '10px' }}>
                                 <button type="button" onClick={handleCalculateAI} className="neon-btn-secondary" style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', color: isAiLoading ? '#fff' : 'var(--accent-primary)', borderColor: 'var(--accent-primary)', fontSize: '0.9rem' }} disabled={isAiLoading}>
                                     {isAiLoading ? <Loader2 className="spinner" size={16} /> : <Bot size={16} />}
-                                    {isAiLoading ? 'Hesaplanıyor...' : 'AI ile Doldur'}
+                                    {isAiLoading ? t('nutrition_ai_loading') : t('nutrition_ai_fill')}
                                 </button>
                                 <button type="submit" className="neon-btn" style={{ flex: 1, background: 'rgba(0, 195, 255, 0.1)', fontSize: '0.9rem' }}>
-                                    Öğünü Ekle
+                                    {t('nutrition_add_meal_btn')}
                                 </button>
                             </div>
                         </form>
                     )}
 
                     {currentDayData.meals.length === 0 ? (
-                        <p style={{ color: 'var(--text-muted)', textAlign: 'center', margin: '20px 0', fontSize: '0.9rem' }}>Henüz öğün eklenmedi.</p>
+                        <p style={{ color: 'var(--text-muted)', textAlign: 'center', margin: '20px 0', fontSize: '0.9rem' }}>{t('nutrition_no_meals')}</p>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {currentDayData.meals.map(meal => (
@@ -278,23 +273,23 @@ DİKKAT: CEvap GÖVDESİ (BODY) MUTLAKA AŞAĞIDAKİ GİBİ GEÇERLİ BİR JSON 
                 {/* Goals Settings */}
                 <div className="glass-card slide-in">
                     <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: 0, color: '#fff', fontSize: '1.1rem' }}>
-                        <Info size={18} /> Günlük Hedefler
+                        <Info size={18} /> {t('nutrition_daily_goals')}
                     </h3>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                         <div className="input-group" style={{ marginBottom: 0 }}>
-                            <label>Hedef Kalori</label>
+                            <label>{t('nutrition_goal_kcal')}</label>
                             <input type="number" className="neon-input" style={{ fontSize: '0.9rem' }} value={currentDayData.goals.kcal} onChange={(e) => handleGoalChange('kcal', e.target.value)} />
                         </div>
                         <div className="input-group" style={{ marginBottom: 0 }}>
-                            <label>Hedef Protein (g)</label>
+                            <label>{t('nutrition_goal_protein')} (g)</label>
                             <input type="number" className="neon-input" style={{ fontSize: '0.9rem' }} value={currentDayData.goals.protein} onChange={(e) => handleGoalChange('protein', e.target.value)} />
                         </div>
                         <div className="input-group" style={{ marginBottom: 0 }}>
-                            <label>Hedef Karb (g)</label>
+                            <label>{t('nutrition_goal_carbs')} (g)</label>
                             <input type="number" className="neon-input" style={{ fontSize: '0.9rem' }} value={currentDayData.goals.carbs} onChange={(e) => handleGoalChange('carbs', e.target.value)} />
                         </div>
                         <div className="input-group" style={{ marginBottom: 0 }}>
-                            <label>Hedef Yağ (g)</label>
+                            <label>{t('nutrition_goal_fat')} (g)</label>
                             <input type="number" className="neon-input" style={{ fontSize: '0.9rem' }} value={currentDayData.goals.fat} onChange={(e) => handleGoalChange('fat', e.target.value)} />
                         </div>
                     </div>

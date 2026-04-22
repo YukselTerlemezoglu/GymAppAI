@@ -1,61 +1,100 @@
-# GymAppAI - Akıllı Antrenman ve Beslenme Asistanı
+# 🚀 GymAppAI - Yapay Zeka Destekli Yeni Nesil Fitness Ekosistemi
 
-GymAppAI, antrenmanlarınızı takip etmenizi, gelişiminizi analiz etmenizi, dinlenme sürelerinizi yönetmenizi, beslenme makrolarınızı hesaplamanızı ve Yapay Zeka destekli özel programlar oluşturmanızı sağlayan kapsamlı ve tamamen mobil uyumlu (PWA) bir fitness asistanıdır.
+GymAppAI, antrenmanlarınızı, beslenmenizi ve gelişiminizi takip etme şeklinizi devrimsel bir boyuta taşıyan, mobil öncelikli (PWA) kapsamlı bir fitness asistanıdır. En modern Yapay Zeka teknolojileri ile güçlendirilen bu uygulama; kişiselleştirilmiş koçluk, gelişmiş antrenman kaydı ve derinlemesine analizler sunarak zirve performansınıza ulaşmanıza yardımcı olur.
+
+---
 
 ## 🌟 Temel Özellikler
 
-*   **🏆 Yapay Zeka Koçu:**
-    *   Geçmiş antrenman performansınızı analiz ederek size en uygun özel programı otomatik oluşturur.
-    *   `Groq API` ve `Llama 3` altyapısı kullanarak son derece hızlı ve ücretsiz tavsiyeler sunar.
-    *   Plateau (Duraklama) Analizi yapar, Off-Day (Dinlenme) önerebilir ve anlık mikro hedefler belirler.
+### 🤖 Yapay Zeka Koçu (Groq & Llama 3.3 Destekli)
+*   **Akıllı Program Oluşturma:** Hedefinize, ekipmanınıza ve seviyenize göre bilimsel temelli, periyotlandırılmış antrenman planları hazırlar.
+*   **Performans Analizi:** Son 4 haftalık verilerinizi analiz ederek plato (duraklama) dönemlerini tespit eder, deload veya ağırlık artırımı önerir.
+*   **Mikro Hedefler:** Motivasyonunuzu yüksek tutmak için "Bugün rekoruna +1 tekrar ekle" veya "20 dakika hafif kardiyo dene" gibi günlük hedefler belirler.
 
-*   **🏋️‍♂️ Antrenman Takibi & Otomatik Dinlenme Sayacı:**
-    *   Seviye atlatan detaylı bir idman giriş ekranı.
-    *   Setleri işaretledikçe otomatik sıfırlanan **Yüzen Dinlenme Sayacı (Floating Rest Timer)** ekranın altında sizi bekler.
+### 🏋️‍♂️ Gelişmiş Antrenman Kaydı
+*   **Dinamik İdman Modları:** **Drop Set**, **AMRAP (Yapabildiğin Kadar Tekrar)** ve manuel set düzenlemelerini destekler.
+*   **Yüzen Dinlenme Sayacı:** Ekranın altında sizi takip eden akıllı sayaç, set aralarınızı yönetir ve bir sonraki set zamanı geldiğinde sizi uyarır.
+*   **XP ve Oyunlaştırma:** Her set ve tekrar için XP kazanın. Seviye atlayın, rütbe (Demir Çaylak'tan Elit Titan'a) kazanın ve başarı rozetlerini toplayın.
 
-*   **📈 Gelişmiş Gelişim Analizi & Beslenme (Nutrition):**
-    *   Kalori ve Makro (Protein, Karbonhidrat, Yağ) hedeflerinizi hesaplar ve takip eder.
-    *   1 Tekrar Maksimum (1RM) Güç E-1RM değişim trendi ve Hacim (Volume) değişim tablosu.
+### 🥗 Akıllı Beslenme Takibi
+*   **Günlük Makro Takibi:** Öğünlerinizi kaydedin; Kalori, Protein, Karbonhidrat ve Yağ değerlerinizi hedeflerinize göre izleyin.
+*   **AI ile Besin Tahmini:** Sadece "1 kase yulaf ve 2 yumurta" yazın ve Yapay Zekanın makro değerlerini anında tahmin etmesini sağlayın.
+*   **Görsel Özetler:** Dashboard üzerindeki widget ile günlük beslenme durumunuzu bir bakışta görün.
 
-*   **PWA (Progressive Web App):** 
-    *   Uygulamayı telefonunuza "Ana Ekrana Ekle" diyerek yerel mobil bir uygulama gibi indirebilirsiniz. Tamamen Mobile-First (Responsive) olarak tasarlanmıştır.
+### 📊 Derinlemesine Analiz ve Gelişim
+*   **Gelişim Grafikleri:** Haftalık hacim (Volume) tabloları ve en sevdiğiniz egzersizler için güç artış trendleri.
+*   **Kas Dengesi Radarı:** Antrenmanlarınızın kas gruplarına dağılımını gösteren interaktif radar grafiği ile zayıf bölgelerinizi tespit edin.
+*   **Vücut Takibi:** Ölçümlerinizi kaydedin ve değişimini gözlemlemek için "Öncesi/Sonrası" fotoğraflarınızı saklayın.
 
-## 🛠️ Kurulum ve Çalıştırma
+### 📱 Premium Mobil Deneyim (PWA)
+*   **Yüklenebilir:** "Ana Ekrana Ekle" diyerek yerel bir iOS/Android uygulaması gibi kullanın.
+*   **Mağaza ve Temalar:** Kazandığınız jetonlarla premium temaların (Cyberpunk, Kan, Altın, Sakura vb.) kilidini açın.
+*   **Bulut Senkronizasyonu:** Verilerinizi Firebase kullanarak tüm cihazlarınızda güvenle yedekleyin ve eşitleyin.
 
-Bu projeyi yerel bilgisayarınızda çalıştırmak için:
+---
 
-1.  **Gereksinimler:** Bilgisayarınızda [Node.js](https://nodejs.org/) (Sürüm 18 veya üzeri önerilir) yüklü olmalıdır.
-2.  **Projeyi Klonlayın:**
+## 🛠️ Teknoloji Yığını
+
+*   **Frontend:** React 19 (Vite)
+*   **Stil:** Modern Vanilla CSS (Glassmorphism & Neon Estetiği)
+*   **AI Motoru:** Groq API (Llama 3.3-70B)
+*   **Veritabanı ve Auth:** Firebase (Firestore / Authentication)
+*   **Animasyonlar:** Framer Motion & Canvas Confetti
+*   **Grafikler:** Recharts
+*   **İkonlar:** Lucide React
+
+---
+
+## 🚀 Kurulum ve Çalıştırma
+
+Projeyi yerel ortamınızda çalıştırmak için şu adımları izleyin:
+
+1.  **Depoyu Klonlayın:**
     ```bash
-    git clone https://github.com/KULLANICI_ADINIZ/GymAppAI.git
+    git clone https://github.com/kullanici-adiniz/GymAppAI.git
     cd GymAppAI
     ```
-3.  **Bağımlılıkları Yükleyin:**
+
+2.  **Bağımlılıkları Yükleyin:**
     ```bash
     npm install
     ```
-4.  **API Anahtarlarını Ayarlayın (Yapay Zeka İçin Gerekli):**
-    *   Projenin ana dizinindeki `.env.example` dosyasını `.env` olarak kopyalayın.
-    *   İçerisindeki `VITE_GROQ_API_KEY` değişkenine kendi Groq API anahtarınızı yapıştırın. Yapay Zeka ve Llama modelinin çalışması için bu gereklidir.
-5.  **Geliştirici Sunucusunu Başlatın:**
+
+3.  **Çevresel Değişkenler:**
+    Ana dizinde bir `.env` dosyası oluşturun ve bilgilerinizi ekleyin:
+    ```env
+    VITE_GROQ_API_KEY="groq_api_anahtariniz"
+    VITE_ADMIN_PASSWORD="admin_panel_sifreniz"
+
+    # Firebase Yapılandırması
+    VITE_FIREBASE_API_KEY="..."
+    VITE_FIREBASE_AUTH_DOMAIN="..."
+    VITE_FIREBASE_PROJECT_ID="..."
+    VITE_FIREBASE_STORAGE_BUCKET="..."
+    VITE_FIREBASE_MESSAGING_SENDER_ID="..."
+    VITE_FIREBASE_APP_ID="..."
+    ```
+
+4.  **Geliştirici Sunucusunu Başlatın:**
     ```bash
     npm run dev
     ```
-6.  Tarayıcınızda `http://localhost:8080` adresine giderek uygulamayı görüntüleyin.
+    Uygulama `http://localhost:5173` adresinde çalışacaktır.
 
-## 📦 PWA ve Versiyon Build İşlemleri
+---
 
-Proje, Production (Canlı/Yayın) ortamı için PWA eklentisiyle birlikte derlenmeye (build) uygundur. Vite-PWA entegrasyonu sayesinde çevrimdışı önbelleğe alma (Service Worker) ve Manifest yapıları derleme sırasında otomatik üretilir.
+## 🛡️ Güvenlik ve Gizlilik
 
-```bash
-npm run build
-npm run preview
-```
+*   **Gizli Anahtarlar:** Hiçbir API anahtarı veya şifre kod içerisine gömülü değildir. Tamamı çevresel değişkenler (.env) ile yönetilir.
+*   **Admin Güvenliği:** Geliştirici araçları, çift tıklama jesti ve güvenli şifre kontrolü ile korunmaktadır.
+*   **Yerel Öncelikli Veri:** Uygulama, bulut hesabı olmasa dahi verilerinize erişebilmeniz için LocalStorage kullanır.
 
-## 🔒 Güvenlik
-
-- Projede hiçbir API anahtarı kaynak kodlara gömülü değildir. `.gitignore` dosyası aracılığıyla `.env` dosyası gizlenmiştir. Kendi verilerinizi veya API anahtarlarınızı sadece `.env` içerisinden kullanın.
+---
 
 ## 📝 Lisans
 
-Bu proje MIT Lisansı altında lisanslanmıştır. İsteğinize göre kopyalayıp geliştirmekte özgürsünüz.
+Bu proje MIT Lisansı altında lisanslanmıştır - detaylar için [LICENSE](LICENSE) dosyasına göz atın.
+
+---
+
+*💪 ve 🤖 ile GymAppAI Ekibi tarafından geliştirildi.*

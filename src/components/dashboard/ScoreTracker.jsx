@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { Trophy, Trash2 } from 'lucide-react';
 
 function ScoreTracker({ workoutHistory, streak }) {
+    const { t, lang } = useTranslation();
     const { volumeScore, prScore, streakScore, totalScore } = useMemo(() => {
         if (!workoutHistory || workoutHistory.length === 0) return { volumeScore: 0, prScore: 0, streakScore: 0, totalScore: 0 };
 
@@ -61,13 +63,13 @@ function ScoreTracker({ workoutHistory, streak }) {
                             {totalScore}
                         </span>
                         <span style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)', marginLeft: '4px' }}>/100</span>
-                        <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '1.2rem', letterSpacing: '1px' }}>GYM PUANI</div>
+                        <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '1.2rem', letterSpacing: '1px' }}>{t('score_gym_puan').toUpperCase()}</div>
                     </div>
                     {totalScore >= 80 && <Trophy size={48} color="var(--accent-warning)" style={{ filter: 'drop-shadow(0 0 10px rgba(255, 215, 0, 0.5))' }} />}
                     
                     {streak >= 3 && (
                         <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(255, 165, 0, 0.2)', border: '1px solid #ffa502', padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 'bold', color: '#ffa502', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            🔥 {streak >= 7 ? '1.5x' : '1.2x'} XP Çarpanı Aktif!
+                            🔥 {streak >= 7 ? '1.5x' : '1.2x'} {t('score_multiplier_active')}
                         </div>
                     )}
                 </div>
@@ -76,7 +78,7 @@ function ScoreTracker({ workoutHistory, streak }) {
                     {/* Volume Score Progress */}
                     <div style={{ width: '100%' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.9rem' }}>
-                            <span style={{ color: 'var(--text-light)' }}>Hacim Skoru <span style={{ opacity: 0.5 }}>(Volume)</span></span>
+                            <span style={{ color: 'var(--text-light)' }}>{t('score_volume')} <span style={{ opacity: 0.5 }}>(Volume)</span></span>
                             <span style={{ fontWeight: 'bold', color: '#fff' }}>{volumeScore}/60</span>
                         </div>
                         <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
@@ -87,7 +89,7 @@ function ScoreTracker({ workoutHistory, streak }) {
                     {/* PR Score Progress */}
                     <div style={{ width: '100%' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.9rem' }}>
-                            <span style={{ color: 'var(--text-light)' }}>Güç Skoru <span style={{ opacity: 0.5 }}>(PRs)</span></span>
+                            <span style={{ color: 'var(--text-light)' }}>{t('score_strength')} <span style={{ opacity: 0.5 }}>(PRs)</span></span>
                             <span style={{ fontWeight: 'bold', color: '#fff' }}>{prScore}/25</span>
                         </div>
                         <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
@@ -98,7 +100,7 @@ function ScoreTracker({ workoutHistory, streak }) {
                     {/* Streak Score Progress */}
                     <div style={{ width: '100%' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.9rem' }}>
-                            <span style={{ color: 'var(--text-light)' }}>İstikrar Skoru <span style={{ opacity: 0.5 }}>(Streak: {streak} Gün)</span></span>
+                            <span style={{ color: 'var(--text-light)' }}>{t('score_consistency')} <span style={{ opacity: 0.5 }}>({t('score_days_count', { count: streak })})</span></span>
                             <span style={{ fontWeight: 'bold', color: '#fff' }}>{streakScore}/15</span>
                         </div>
                         <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>

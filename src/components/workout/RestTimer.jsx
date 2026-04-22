@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { Play, Pause, X, Plus } from 'lucide-react';
 
 function RestTimer({
@@ -8,6 +9,8 @@ function RestTimer({
     setIsActive,
     onClose
 }) {
+    const { t } = useTranslation();
+    
     // Ses dosyası (Varsayılan HTML5 Audio API ile basit bir beep)
     const playBeep = () => {
         try {
@@ -42,12 +45,14 @@ function RestTimer({
             setIsActive(false);
             playBeep();
             if (Notification.permission === "granted") {
-                new Notification("Süreyi Doldurdun!", { body: "Sete girme vakti geldi, haydi canavar!" });
+                new Notification(t('timer_times_up'), { 
+                    body: t('timer_body')
+                });
             }
         }
 
         return () => clearInterval(interval);
-    }, [isActive, timeRemaining, setTimeRemaining, setIsActive]);
+    }, [isActive, timeRemaining, setTimeRemaining, setIsActive, t]);
 
     if (!isActive && timeRemaining === 0) return null;
 
@@ -81,7 +86,7 @@ function RestTimer({
                     </button>
                 )}
 
-                <button className="timer-btn stop" onClick={onClose} title="Zamanlayıcıyı Kapat">
+                <button className="timer-btn stop" onClick={onClose} title={t('btn_close')}>
                     <X size={14} />
                 </button>
             </div>

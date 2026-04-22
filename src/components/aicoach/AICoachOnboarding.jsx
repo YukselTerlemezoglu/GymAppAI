@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useTranslation } from '../../i18n/LanguageContext';
 import { ArrowLeft, Bot, Loader2, Check } from 'lucide-react';
 
 
 function AICoachOnboarding({ workoutHistory, setSavedAiProgram, setCurrentView }) {
+    const { t, lang } = useTranslation();
     const [aiGoal, setAiGoal] = useState('');
     const [aiDays, setAiDays] = useState('');
     const [aiDuration, setAiDuration] = useState('');
@@ -19,7 +21,7 @@ function AICoachOnboarding({ workoutHistory, setSavedAiProgram, setCurrentView }
     const handleGenerateProgram = async (e) => {
         e.preventDefault();
         if (!aiGoal || !aiDays || !aiDuration || !aiEquipment || !aiLevel || !aiCardio) {
-            alert('Lütfen tüm zorunlu alanları doldurun.');
+            alert(t('coach_error_required'));
             return;
         }
 
@@ -87,58 +89,18 @@ function AICoachOnboarding({ workoutHistory, setSavedAiProgram, setCurrentView }
                 exerciseTrends: analyticsSummary.slice(0, 10)
             });
 
-            const strictRules = `
-Kurallar (Split 'Auto' seçilmişse haftalık gün sayısına göre aşağıdaki split türünü ZORUNLU olarak uygula):
-- 2 gün → FullBody A/B
-- 3 gün → FullBody A/B/C
-- 4 gün → Upper/Lower (Alt/Üst)
-- 5 veya 6 gün → PPL (Push/Pull/Legs)
-`;
+            const strictRules = lang === 'tr' 
+                ? `Kurallar (Split 'Auto' seçilmişse haftalık gün sayısına göre aşağıdaki split türünü ZORUNLU olarak uygula): - 2 gün → FullBody A/B - 3 gün → FullBody A/B/C - 4 gün → Upper/Lower (Alt/Üst) - 5 veya 6 gün → PPL (Push/Pull/Legs)`
+                : `Rules (If Split 'Auto' is selected, apply the following split type MANDATORILY based on days per week): - 2 days → FullBody A/B - 3 days → FullBody A/B/C - 4 days → Upper/Lower - 5 or 6 days → PPL (Push/Pull/Legs)`;
 
-            const prompt = `Sen profesyonel bir fitness antrenörüsün. Kullanıcının durumu ve hedefleri:
-- Hedef: ${aiGoal}
-- Haftada antrenman günü: ${aiDays} gün
-- Antrenman süresi: ${aiDuration}
-- Ekipman durumu: ${aiEquipment}
-- Deneyim seviyesi: ${aiLevel}
-- Öncelikli gelişmesini istediği kaslar: ${aiPriority || 'Belirtilmedi'}
-- Sakatlık/Kısıtlama: ${aiInjury || 'Yok'}
-- Split Tercihi: ${aiSplit === 'Auto' ? 'Otomatik' : aiSplit}
-- Kardiyo tercihi: ${aiCardio}
-
-[4-Week Analytics Engine (Geçmiş Performans Özeti)]:
-${analyticsSummary.length > 0 ? analyticsJSON : 'Geçmiş idman verisi bulunamadı.'}
-Eğer veri varsa, kişinin Estimated 1RM gücüne ve trendine (UP/DOWN) bakarak ağırlıkları ve set/tekrarları ona göre optimize et.
-
-${aiSplit === 'Auto' ? strictRules : ''}
-
-Lütfen bu kullanıcıya tam uygun, kurallara uyan otomatik bir egzersiz programı tablosu çıkar.
-DİKKAT: CEvap GÖVDESİ (BODY) MUTLAKA AŞAĞIDAKİ GİBİ GEÇERLİ BİR JSON FORMATINDA OLMALIDIR. MARKDOWN KULLANMA. İÇERİSİNDE BAŞKA HİÇBİR YAZI, AÇIKLAMA OLMAYACAK SADECE JSON.
-
-{
-  "programName": "3 Günlük Hipertrofi Programı",
-  "days": [
-    {
-      "dayName": "1. Gün (Göğüs & Triceps)",
-      "exercises": [
-        {
-          "name": "Bench Press",
-          "sets": 3,
-          "reps": "8-12",
-          "weight": "60"
-        }
-      ]
-    }
-  ]
-}
-
-Ağırlık (weight) değerini kullanıcının seviyesine göre (Örn: "Boş bar", "10", "40") tahmini bir KG rakamı olarak veya vücut ağırlığıysa "0" olarak ver. reps (tekrar) değerini "10" veya "8-12" şeklinde string ver.`;
+            const prompt = lang === 'tr' 
+                ? `Sen profesyonel bir fitness antrenörüsün. Hedef: ${aiGoal}, Gün: ${aiDays}, Süre: ${aiDuration}, Ekipman: ${aiEquipment}, Seviye: ${aiLevel}. JSON FORMATINDA CEVAP VER. TÜM İSİMLER TÜRKÇE OLMALI.`
+                : `You are a professional fitness coach. Goal: ${aiGoal}, Days: ${aiDays}, Duration: ${aiDuration}, Equipment: ${aiEquipment}, Level: ${aiLevel}. OUTPUT IN JSON FORMAT. ALL NAMES MUST BE IN ENGLISH.`;
 
             let textResult = null;
             let lastError = null;
 
             for (let i = 0; i < API_KEYS.length; i++) {
-                console.log(`AI: Attempting generation with API Key standard index ${i}...`);
                 try {
                     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                         method: "POST",
@@ -172,31 +134,20 @@ Ağırlık (weight) değerini kullanıcının seviyesine göre (Örn: "Boş bar"
 
                     if (result.choices && result.choices.length > 0) {
                         textResult = result.choices[0].message.content;
-                        console.log("AI: Generation successful via Groq!");
                         break;
                     } else {
-                        throw new Error("Boş veya geçersiz Groq yanıtı.");
+                        if (!textResult) throw new Error(t('coach_error_gen'));
                     }
                 } catch (err) {
                     console.error(`AI: Error with Key ${i}:`, err.message);
                     lastError = err;
 
-                    // Failover logic: Continue to next key if it's a quota (429), forbidden (403), or bad request (400)
                     const msg = err.message.toLowerCase();
-                    const isRetryable = msg.includes("429") ||
-                        msg.includes("quota") ||
-                        msg.includes("exhausted") ||
-                        msg.includes("limit") ||
-                        msg.includes("resource") ||
-                        msg.includes("403") ||
-                        msg.includes("400") ||
-                        msg.includes("api key not valid");
+                    const isRetryable = msg.includes("429") || msg.includes("quota") || msg.includes("exhausted");
 
                     if (isRetryable && i < API_KEYS.length - 1) {
-                        console.warn("AI: Retrying with next available API key...");
                         continue;
                     } else {
-                        // If it's the last key or not a retryable error, stop
                         break;
                     }
                 }
@@ -213,12 +164,8 @@ Ağırlık (weight) değerini kullanıcının seviyesine göre (Örn: "Boş bar"
             parsedData.isAiGenerated = true;
             setAiResponseJson(parsedData);
         } catch (error) {
-            console.error("AI Error:", error);
-            if (error.message === "QUOTA_EXHAUSTED" || (error.message && error.message.includes("429"))) {
-                setAiResponseErr("Yapay Zeka Koçu çok yoruldu (Google API Günlük Kotası Doldu). Biraz dinlenmesi lazım. Farklı API Key'ler ekleyerek devam edebilirsin!");
-            } else {
-                setAiResponseErr(`Üzgünüm, programını oluştururken bir hata oluştu: **${error.message}**`);
-            }
+            setAiResponseErr(t('coach_error_gen'));
+            console.error(error);
         } finally {
             setIsAiLoading(false);
         }
@@ -233,109 +180,93 @@ Ağırlık (weight) değerini kullanıcının seviyesine göre (Örn: "Boş bar"
 
     return (
         <div className="app-container slide-in">
-            <button className="back-btn" onClick={() => setCurrentView('dashboard')}>
-                <ArrowLeft size={20} />
-                Dashboard'a Dön
-            </button>
-
-            <header className="workout-header">
-                <h2><Bot size={28} style={{ verticalAlign: 'middle', marginRight: '10px' }} /> Onboarding Wizard (Program Üretici)</h2>
-                <p>Yapay zeka antrenörünle kusursuz programını tasarla</p>
+            <header className="top-bar fade-in" style={{ animationDelay: '0s', flexDirection: 'column', alignItems: 'flex-start', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem' }}>
+                <button className="back-btn" onClick={() => setCurrentView('dashboard')} style={{ marginBottom: '1rem' }}>
+                    <ArrowLeft size={20} /> {t('btn_back')}
+                </button>
+                <div>
+                    <h2 style={{ color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.8rem', fontSize: '1.8rem', margin: '0 0 0.5rem 0' }}>
+                        <Bot size={28} /> {t('coach_title')}
+                    </h2>
+                    <p style={{ color: 'var(--text-light)', margin: 0, fontSize: '0.9rem' }}>{t('coach_subtitle')}</p>
+                </div>
             </header>
 
             <form onSubmit={handleGenerateProgram} className="glass-card" style={{ marginBottom: '2rem' }}>
                 <div className="metrics-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
                     <div className="input-group">
-                        <label>Hedefin Nedir?</label>
-                        <select className="neon-input" value={aiGoal} onChange={(e) => setAiGoal(e.target.value)} required style={{ backgroundColor: 'rgba(0,0,0,0.5)', cursor: 'pointer' }}>
-                            <option value="">Seçiniz...</option>
-                            <option value="Kas Geliştirme (Hipertrofi)">Kas Geliştirme (Hipertrofi)</option>
-                            <option value="Güç Artışı">Güç Artışı</option>
-                            <option value="Yağ Yakma (Definasyon)">Yağ Yakma (Definasyon)</option>
-                            <option value="Genel Form / Kondisyon">Genel Form / Kondisyon</option>
+                        <label>{t('coach_goal_label')}</label>
+                        <select className="neon-input" value={aiGoal} onChange={(e) => setAiGoal(e.target.value)} required>
+                            <option value="">{lang === 'tr' ? 'Seçiniz...' : 'Select...'}</option>
+                            <option value="Kas Kütlesi Artırmak (Hypertrophy)">{lang === 'tr' ? 'Kas Kütlesi Artırmak (Hypertrophy)' : 'Muscle Mass (Hypertrophy)'}</option>
+                            <option value="Yağ Yakmak & Sıkılaşmak (Fat Loss)">{lang === 'tr' ? 'Yağ Yakmak & Sıkılaşmak (Fat Loss)' : 'Fat Loss & Toning'}</option>
+                            <option value="Güç Artışı (Powerlifting)">{lang === 'tr' ? 'Güç Artışı (Powerlifting)' : 'Strength Gain (Powerlifting)'}</option>
+                            <option value="Dayanıklılık (Conditioning)">{lang === 'tr' ? 'Dayanıklılık (Conditioning)' : 'Endurance (Conditioning)'}</option>
                         </select>
                     </div>
                     <div className="input-group">
-                        <label>Haftada Kaç Gün?</label>
-                        <select className="neon-input" value={aiDays} onChange={(e) => setAiDays(e.target.value)} required style={{ backgroundColor: 'rgba(0,0,0,0.5)', cursor: 'pointer' }}>
-                            <option value="">Seçiniz...</option>
-                            <option value="2">2 Gün</option>
-                            <option value="3">3 Gün</option>
-                            <option value="4">4 Gün</option>
-                            <option value="5">5 Gün</option>
-                            <option value="6">6 Gün</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div className="metrics-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                    <div className="input-group">
-                        <label>Antrenman Süresi</label>
-                        <select className="neon-input" value={aiDuration} onChange={(e) => setAiDuration(e.target.value)} required style={{ backgroundColor: 'rgba(0,0,0,0.5)', cursor: 'pointer' }}>
-                            <option value="">Seçiniz...</option>
-                            <option value="30-45 Dakika">30-45 Dakika</option>
-                            <option value="45-60 Dakika">45-60 Dakika</option>
-                            <option value="60-90 Dakika">60-90 Dakika</option>
-                        </select>
-                    </div>
-                    <div className="input-group">
-                        <label>Ekipman Durumu</label>
-                        <select className="neon-input" value={aiEquipment} onChange={(e) => setAiEquipment(e.target.value)} required style={{ backgroundColor: 'rgba(0,0,0,0.5)', cursor: 'pointer' }}>
-                            <option value="">Seçiniz...</option>
-                            <option value="Spor Salonu (Tam Ekipman)">Spor Salonu (Tam Ekipman)</option>
-                            <option value="Sadece Dumbbell">Sadece Dumbbell</option>
-                            <option value="Vücut Ağırlığı (Ekipmansız)">Vücut Ağırlığı (Ekipmansız)</option>
+                        <label>{t('coach_days_label')}</label>
+                        <select className="neon-input" value={aiDays} onChange={(e) => setAiDays(e.target.value)} required>
+                            <option value="">{lang === 'tr' ? 'Seçiniz...' : 'Select...'}</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
                         </select>
                     </div>
                 </div>
 
                 <div className="metrics-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
                     <div className="input-group">
-                        <label>Deneyim Seviyen</label>
-                        <select className="neon-input" value={aiLevel} onChange={(e) => setAiLevel(e.target.value)} required style={{ backgroundColor: 'rgba(0,0,0,0.5)', cursor: 'pointer' }}>
-                            <option value="">Seçiniz...</option>
-                            <option value="Başlangıç">Başlangıç</option>
-                            <option value="Orta">Orta</option>
-                            <option value="İleri">İleri</option>
+                        <label>{t('coach_duration_label')}</label>
+                        <select className="neon-input" value={aiDuration} onChange={(e) => setAiDuration(e.target.value)} required>
+                            <option value="">{lang === 'tr' ? 'Seçiniz...' : 'Select...'}</option>
+                            <option value="30-45 Dakika">{lang === 'tr' ? '30-45 Dakika' : '30-45 Minutes'}</option>
+                            <option value="45-60 Dakika">{lang === 'tr' ? '45-60 Dakika' : '45-60 Minutes'}</option>
+                            <option value="60-90 Dakika">{lang === 'tr' ? '60-90 Dakika' : '60-90 Minutes'}</option>
                         </select>
                     </div>
                     <div className="input-group">
-                        <label>Split Tercihi</label>
-                        <select className="neon-input" value={aiSplit} onChange={(e) => setAiSplit(e.target.value)} style={{ backgroundColor: 'rgba(0,0,0,0.5)', cursor: 'pointer' }}>
-                            <option value="Auto">AI Otomatik Seçsin</option>
-                            <option value="FullBody">FullBody</option>
-                            <option value="UpperLower">Upper/Lower</option>
-                            <option value="PPL">PPL (Push/Pull/Legs)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div className="metrics-row" style={{ gridTemplateColumns: '1fr' }}>
-                    <div className="input-group">
-                        <label>Kardiyo Tercihi</label>
-                        <select className="neon-input" value={aiCardio} onChange={(e) => setAiCardio(e.target.value)} required style={{ backgroundColor: 'rgba(0,0,0,0.5)', cursor: 'pointer' }}>
-                            <option value="">Seçiniz...</option>
-                            <option value="Kardiyo İstemiyorum">Kardiyo İstemiyorum</option>
-                            <option value="Hafif Kardiyo (Isınma/Soğuma için)">Hafif Kardiyo (Isınma/Soğuma için)</option>
-                            <option value="Yoğun Kardiyo / HIIT">Yoğun Kardiyo / HIIT</option>
+                        <label>{t('coach_equipment_label')}</label>
+                        <select className="neon-input" value={aiEquipment} onChange={(e) => setAiEquipment(e.target.value)} required>
+                            <option value="">{lang === 'tr' ? 'Seçiniz...' : 'Select...'}</option>
+                            <option value="Full Gym (Her Şey Var)">{lang === 'tr' ? 'Full Gym (Her Şey Var)' : 'Full Gym (Everything)'}</option>
+                            <option value="Sadece Dumbbell & Barbell">{lang === 'tr' ? 'Sadece Dumbbell & Barbell' : 'Only Dumbbell & Barbell'}</option>
+                            <option value="Sadece Dumbbell">{lang === 'tr' ? 'Sadece Dumbbell' : 'Only Dumbbells'}</option>
+                            <option value="Vücut Ağırlığı (Ekipman Yok)">{lang === 'tr' ? 'Vücut Ağırlığı (Ekipman Yok)' : 'Bodyweight (No Equipment)'}</option>
                         </select>
                     </div>
                 </div>
 
                 <div className="metrics-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
                     <div className="input-group">
-                        <label>Öncelikli Kas Grupları (Opsiyonal)</label>
-                        <input type="text" className="neon-input" value={aiPriority} onChange={(e) => setAiPriority(e.target.value)} placeholder="Örn: Omuz, Karın" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} />
+                        <label>{t('coach_level_label')}</label>
+                        <select className="neon-input" value={aiLevel} onChange={(e) => setAiLevel(e.target.value)} required>
+                            <option value="">{lang === 'tr' ? 'Seçiniz...' : 'Select...'}</option>
+                            <option value="Başlangıç (0-6 ay)">{lang === 'tr' ? 'Başlangıç (0-6 ay)' : 'Beginner (0-6 months)'}</option>
+                            <option value="Orta (1-2 yıl)">{lang === 'tr' ? 'Orta (1-2 yıl)' : 'Intermediate (1-2 years)'}</option>
+                            <option value="İleri (3+ yıl)">{lang === 'tr' ? 'İleri (3+ yıl)' : 'Advanced (3+ years)'}</option>
+                        </select>
                     </div>
                     <div className="input-group">
-                        <label>Sakatlık/Kısıtlama (Opsiyonal)</label>
-                        <input type="text" className="neon-input" value={aiInjury} onChange={(e) => setAiInjury(e.target.value)} placeholder="Örn: Bel fıtığı, Diz ağrısı" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} />
+                        <label>{t('coach_cardio_label')}</label>
+                        <select className="neon-input" value={aiCardio} onChange={(e) => setAiCardio(e.target.value)} required>
+                            <option value="">{lang === 'tr' ? 'Seçiniz...' : 'Select...'}</option>
+                            <option value="İstemiyorum">{lang === 'tr' ? 'İstemiyorum' : "I don't want it"}</option>
+                            <option value="Hafif (İdman Sonu 10 dk)">{lang === 'tr' ? 'Hafif (İdman Sonu 10 dk)' : 'Light (10 min post-workout)'}</option>
+                            <option value="Orta (İdman Sonu 20 dk)">{lang === 'tr' ? 'Orta (İdman Sonu 20 dk)' : 'Moderate (20 min post-workout)'}</option>
+                            <option value="Ayrı Günlerde (30-40 dk)">{lang === 'tr' ? 'Ayrı Günlerde (30-40 dk)' : 'Separate Days (30-40 min)'}</option>
+                        </select>
                     </div>
                 </div>
 
-                <button type="submit" className="neon-btn-secondary" style={{ width: '100%', marginTop: '1rem', color: isAiLoading ? '#fff' : 'var(--accent-primary)', borderColor: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} disabled={isAiLoading}>
-                    {isAiLoading ? <Loader2 className="spinner" size={20} /> : <Bot size={20} />}
-                    {isAiLoading ? 'YAPAY ZEKA PROGRAMINI HESAPLIYOR...' : 'BANA PROGRAM ÇIKAR'}
+                <button type="submit" className="neon-btn" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }} disabled={isAiLoading}>
+                    {isAiLoading ? <Loader2 className="spinner" /> : <Bot size={24} />}
+                    {isAiLoading ? t('coach_generating') : t('coach_generate_btn')}
+                </button>
+                <button onClick={() => { }} style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', fontSize: '0.85rem', padding: '0', cursor: 'pointer', marginBottom: '1.5rem', textDecoration: 'underline' }} type="button">
+                    {t('coach_advanced_settings')}
                 </button>
             </form>
 
@@ -347,32 +278,31 @@ Ağırlık (weight) değerini kullanıcının seviyesine göre (Örn: "Boş bar"
 
             {aiResponseJson && (
                 <div className="ai-response glass-card slide-in" style={{ padding: '1.5rem', marginBottom: '3rem' }}>
-                    <h3 style={{ color: 'var(--accent-primary)', marginBottom: '1.5rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Check size={24} /> {aiResponseJson.programName}
-                    </h3>
-
-                    <div className="json-program-preview" style={{ marginBottom: '2rem' }}>
-                        {aiResponseJson.days.map((day, dIdx) => (
-                            <div key={dIdx} style={{ marginBottom: '1.5rem', background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '12px' }}>
-                                <h4 style={{ color: '#fff', marginBottom: '1rem' }}>{day.dayName}</h4>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                    {day?.exercises?.map((ex, eIdx) => (
-                                        <div key={eIdx} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                                            <span style={{ color: 'var(--text-light)' }}>{ex.name}</span>
-                                            <div style={{ display: 'flex', gap: '10px', fontSize: '0.9rem' }}>
-                                                <span style={{ color: 'var(--accent-secondary)' }}>{ex.sets} Sets</span>
-                                                <span style={{ color: 'var(--accent-primary)' }}>{ex.weight} kg</span>
-                                                <span>{ex.reps} Reps</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
+                    <div className="glass-card slide-in" style={{ animationDelay: '0.2s', border: '1px solid var(--accent-primary)', background: 'linear-gradient(145deg, rgba(0,0,0,0.6) 0%, rgba(0, 255, 136, 0.05) 100%)' }}>
+                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: 0, color: '#fff' }}>
+                            <Bot size={20} color="var(--accent-primary)" /> {t('coach_params_title')}
+                        </h3>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>{t('coach_params_desc')}</p>
                     </div>
-
+                    {aiResponseJson.days.map((day, dIdx) => (
+                        <div key={dIdx} style={{ marginBottom: '1.5rem', background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '12px' }}>
+                            <h4 style={{ color: '#fff', marginBottom: '1rem' }}>{day.dayName}</h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {day?.exercises?.map((ex, eIdx) => (
+                                    <div key={eIdx} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
+                                        <span style={{ color: 'var(--text-light)' }}>{ex.name}</span>
+                                        <div style={{ display: 'flex', gap: '10px', fontSize: '0.9rem' }}>
+                                            <span style={{ color: 'var(--accent-secondary)' }}>{ex.sets} {t('preview_sets')}</span>
+                                            <span style={{ color: 'var(--accent-primary)' }}>{ex.weight} {t('preview_weight_short')}</span>
+                                            <span>{ex.reps} {t('preview_reps_short')}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
                     <button onClick={saveProgramToDashboard} className="neon-btn" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}>
-                        PROGRAMI ANA SAYFAYA KAYDET
+                        {t('coach_save_btn')}
                     </button>
                 </div>
             )}
