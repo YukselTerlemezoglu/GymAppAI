@@ -11,6 +11,20 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+let app;
+let auth = null;
+let db = null;
+
+try {
+  if (firebaseConfig.apiKey) {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+  } else {
+    console.warn("Firebase API Key is missing. Auth and Cloud Sync will be disabled.");
+  }
+} catch (error) {
+  console.error("Firebase initialization failed:", error);
+}
+
+export { auth, db };

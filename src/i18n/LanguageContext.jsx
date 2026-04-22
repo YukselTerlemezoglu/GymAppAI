@@ -23,6 +23,10 @@ export function LanguageProvider({ children }) {
     const t = useCallback((key, params = {}) => {
         let text = translations[lang]?.[key] || translations['tr']?.[key] || key;
         
+        if (typeof text !== 'string') {
+            return String(text || key);
+        }
+
         // Handle variables like {{name}}
         Object.keys(params).forEach(param => {
             text = text.replace(new RegExp(`{{${param}}}`, 'g'), params[param]);
