@@ -12,6 +12,7 @@ const tr = {
     btn_create_program: "KENDİ PROGRAMINI YARAT",
     btn_exit: "Çıkış",
     btn_info: "Bilgi",
+    btn_back: "Geri",
     btn_add_set: "Yeni Set Ekle",
     btn_add: "Ekle",
     profile_view: "Profili Gör >",

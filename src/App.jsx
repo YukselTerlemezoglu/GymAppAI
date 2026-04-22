@@ -34,10 +34,15 @@ function AppContent() {
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-    });
-    return () => unsubscribe();
+    if (!auth) return;
+    try {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setCurrentUser(user);
+      });
+      return () => unsubscribe();
+    } catch (err) {
+      console.error("Firebase auth error:", err);
+    }
   }, []);
 
   const profileClickTimeout = useRef(null);
@@ -267,9 +272,9 @@ function AppContent() {
 
   // Framer Motion sayfa geçiş varyasyonları
   const pageVariants = {
-    initial: { opacity: 0, y: -60 },
+    initial: { opacity: 1, y: -20 },
     animate: { opacity: 1, y: 0, transition: { duration: 0.25, ease: [0.25, 0.1, 0.25, 1] } },
-    exit: { opacity: 0, y: 60, transition: { duration: 0.15 } }
+    exit: { opacity: 1, y: 20, transition: { duration: 0.15 } }
   };
 
   if (currentView !== 'dashboard') {
@@ -377,8 +382,8 @@ function AppContent() {
         exit="exit"
         style={{ width: '100%' }}
       >
-        <ErrorBoundary>
-          <div className="app-container">
+        <div className="app-container">
+          <ErrorBoundary>
             {/* Top Navigation */}
             <header className="top-bar fade-in" style={{ animationDelay: '0s' }}>
               <div className="profile-section"
@@ -393,7 +398,8 @@ function AppContent() {
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
-              userSelect: 'none'
+              userSelect: 'none',
+              touchAction: 'manipulation'
             }}
             title={t('app_profile_tooltip')}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0, 195, 255, 0.2)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
@@ -609,8 +615,8 @@ function AppContent() {
           )
         }
 
-      </div >
-        </ErrorBoundary >
+          </ErrorBoundary>
+        </div>
       </motion.div>
     </AnimatePresence>
   );
@@ -618,8 +624,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <LanguageProvider>
-      <AppContent />
-    </LanguageProvider>
+    <ErrorBoundary>
+      <LanguageProvider>
+        <AppContent />
+      </LanguageProvider>
+    </ErrorBoundary>
   );
 }

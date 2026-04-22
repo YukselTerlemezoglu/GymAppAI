@@ -1,10 +1,16 @@
 .app-container {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   padding: 1.5rem;
   max-width: 600px;
   margin: 0 auto;
+  overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
 }
 
 .top-bar {
@@ -168,9 +174,10 @@
   font-family: var(--font-body);
   font-size: 1rem;
   cursor: pointer;
-  padding: 0.5rem 0;
-  margin-bottom: 1.5rem;
+  padding: 0.8rem 1rem; /* Increased touch target */
+  margin: -0.8rem -1rem 1rem -1rem; /* Negative margin to keep alignment but increase target */
   transition: color var(--transition-fast);
+  border-radius: 8px;
 }
 
 .back-btn:hover {
