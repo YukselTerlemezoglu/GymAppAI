@@ -63,7 +63,6 @@ Projeyi yerel ortamınızda çalıştırmak için şu adımları izleyin:
 3.  **Çevresel Değişkenler:**
     Ana dizinde bir `.env` dosyası oluşturun ve bilgilerinizi ekleyin:
     ```env
-    VITE_GROQ_API_KEY="groq_api_anahtariniz"
     VITE_ADMIN_PASSWORD="admin_panel_sifreniz"
 
     # Firebase Yapılandırması
@@ -75,6 +74,10 @@ Projeyi yerel ortamınızda çalıştırmak için şu adımları izleyin:
     VITE_FIREBASE_APP_ID="..."
     ```
 
+    > ⚠️ **Groq API anahtarı `.env`'de DEĞİLDİR.**
+    > Anahtar Vercel Environment Variables'da saklanır (sunucuda).
+    > Detaylar için `docs/BACKEND_DEPLOY.md` dosyasına bakın.
+
 4.  **Geliştirici Sunucusunu Başlatın:**
     ```bash
     npm run dev
@@ -85,9 +88,12 @@ Projeyi yerel ortamınızda çalıştırmak için şu adımları izleyin:
 
 ## 🛡️ Güvenlik ve Gizlilik
 
-*   **Gizli Anahtarlar:** Hiçbir API anahtarı veya şifre kod içerisine gömülü değildir. Tamamı çevresel değişkenler (.env) ile yönetilir.
+*   **Gizli Anahtarlar:** Groq API anahtarı istemciye **asla gönderilmez**. Vercel Edge Function içinde (sunucu tarafında) Vercel Environment Variables'dan okunur.
+*   **Auth doğrulaması:** `/api/groq` endpoint'i her istekte Firebase ID Token doğrular; giriş yapmamış kullanıcılar AI özelliklerini kullanamaz.
+*   **Rate Limiting:** Kullanıcı başına dakikada 10 istek sınırı (kötüye kullanıma karşı).
 *   **Admin Güvenliği:** Geliştirici araçları, çift tıklama jesti ve güvenli şifre kontrolü ile korunmaktadır.
 *   **Yerel Öncelikli Veri:** Uygulama, bulut hesabı olmasa dahi verilerinize erişebilmeniz için LocalStorage kullanır.
+*   **Deploy:** Backend + frontend beraber Vercel'e deploy olur. Detaylar için `docs/BACKEND_DEPLOY.md`.
 
 ---
 

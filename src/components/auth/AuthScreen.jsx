@@ -4,6 +4,7 @@ import { ArrowLeft, User, Mail, Lock, LogIn, UserPlus, Type } from 'lucide-react
 import { auth } from '../../services/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { pushDataToCloud, pullDataFromCloud } from '../../utils/cloudSync';
+import { warn as logWarn, error as logError } from '../../utils/logger';
 
 function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
     const { t, lang } = useLanguage();
@@ -14,6 +15,34 @@ function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
     const [loading, setLoading] = useState(false);
     const [syncStatusText, setSyncStatusText] = useState('');
     const [error, setError] = useState('');
+
+    // Eğer Firebase auth başlatılamadıysa (apiKey eksik vb.),
+    // kullanıcıyı boşuna bekletme, net hata göster.
+    if (!auth) {
+        return (
+            <div className="app-container slide-in">
+                <header className="top-bar fade-in" style={{ paddingBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                    <button className="back-btn" onClick={onBack}>
+                        <ArrowLeft size={20} /> {t('btn_back')}
+                    </button>
+                </header>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '70vh', padding: '1rem' }}>
+                    <div className="glass-card fade-in" style={{ width: '100%', maxWidth: '500px', padding: '2rem' }}>
+                        <div style={{ background: 'rgba(255, 71, 87, 0.1)', border: '1px solid #ff4757', color: '#ff4757', padding: '1rem', borderRadius: '8px' }}>
+                            <strong>Firebase devre dışı.</strong><br /><br />
+                            <code style={{ fontSize: '0.85rem', wordBreak: 'break-all' }}>
+                                VITE_FIREBASE_API_KEY: {import.meta.env.VITE_FIREBASE_API_KEY ? `${String(import.meta.env.VITE_FIREBASE_API_KEY).slice(0, 10)}...` : '(BOŞ)'}
+                            </code><br />
+                            <code style={{ fontSize: '0.85rem', wordBreak: 'break-all' }}>
+                                VITE_FIREBASE_PROJECT_ID: {import.meta.env.VITE_FIREBASE_PROJECT_ID || '(BOŞ)'}
+                            </code><br /><br />
+                            .env dosyasını kontrol edin ve Vite'ı yeniden başlatın (Ctrl+C → npm run dev).
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -44,7 +73,7 @@ function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
                         pushDataToCloud(userCredential.user.uid);
                     }
                 } catch (syncErr) {
-                    console.warn("Giriş yapıldı ama eşitleme başarısız veya zaman aşımı:", syncErr);
+                    logWarn("Giriş yapıldı ama eşitleme başarısız veya zaman aşımı:", syncErr);
                 }
                 onLoginSuccess();
             } else {
@@ -62,17 +91,36 @@ function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
                     setSyncStatusText(t('auth_backing_up'));
                     pushDataToCloud(userCredential.user.uid);
                 } catch (syncErr) {
-                    console.warn("Kayıt olundu ama yedekleme başarısız:", syncErr);
+                    logWarn("Kayıt olundu ama yedekleme başarısız:", syncErr);
                 }
                 onLoginSuccess();
             }
         } catch (err) {
-            console.error("Auth Error:", err);
-            if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') setError(t('auth_error_not_found'));
-            else if (err.code === 'auth/wrong-password') setError(t('auth_error_wrong_password'));
-            else if (err.code === 'auth/email-already-in-use') setError(t('auth_error_email_in_use'));
-            else if (err.code === 'auth/weak-password') setError(t('auth_error_weak_password'));
-            else setError(t('auth_error_generic') + err.message);
+            logError("Auth Error:", err);
+            // Firebase hata kodları → kullanıcı dostu mesajlar
+            const errorMap = {
+                'auth/user-not-found': t('auth_error_not_found'),
+                'auth/invalid-credential': t('auth_error_not_found'),
+                'auth/wrong-password': t('auth_error_wrong_password'),
+                'auth/email-already-in-use': t('auth_error_email_in_use'),
+                'auth/weak-password': t('auth_error_weak_password'),
+                'auth/invalid-email': 'Geçersiz email formatı.',
+                'auth/missing-password': 'Şifre gerekli.',
+                'auth/operation-not-allowed': 'Email/Password girişi Firebase Console\'da kapalı. (Authentication → Sign-in method → Email/Password\'u açın)',
+                'auth/too-many-requests': 'Çok fazla deneme. Daha sonra tekrar deneyin.',
+                'auth/network-request-failed': 'Ağ hatası. İnternet bağlantınızı kontrol edin.',
+                'auth/api-key-not-valid': 'API anahtarı geçersiz. .env dosyasını kontrol edin.',
+                'auth/invalid-api-key': 'API anahtarı geçersiz. .env dosyasını kontrol edin.',
+                'auth/configuration-not-found': 'Firebase yapılandırması bulunamadı. .env değerlerini kontrol edin.',
+            };
+            const friendly = errorMap[err.code];
+            if (friendly) {
+                setError(friendly);
+            } else if (err.code) {
+                setError(`${t('auth_error_generic')} [${err.code}]`);
+            } else {
+                setError(`${t('auth_error_generic')} ${err.message || 'Bilinmeyen hata'}`);
+            }
         } finally {
             setLoading(false);
         }

@@ -182,6 +182,13 @@ const tr = {
     confirm_delete: "Bu kaydı silmek istediğinize emin misiniz?",
     saved_success: "Başarıyla kaydedildi!",
 
+    // Error Boundary & Generic UI
+    error_generic_title: "Bir şeyler ters gitti",
+    error_generic_retry: "Tekrar Dene",
+
+    // Admin Panel - Disabled State
+    admin_disabled: "Admin paneli devre dışı. Lütfen .env dosyasında VITE_ADMIN_PASSWORD tanımlayın.",
+
     // Admin Panel
     admin_title: "Admin Paneli",
     admin_subtitle: "Geliştirici kontrolleri için şifre girin.",

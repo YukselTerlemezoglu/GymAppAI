@@ -28,8 +28,12 @@ function ActiveWorkoutView({
     setUserCoins
 }) {
     const { t, lang } = useLanguage();
-    const [activeAiWorkoutTimer, setActiveAiWorkoutTimer] = useLocalStorage('gym_app_active_timer', 0); // in seconds
-    const [activeAiWorkoutLogs, setActiveAiWorkoutLogs] = useLocalStorage('gym_app_active_logs', {}); // { [eIdx]: [ {completed, weight, reps, mode} ] }
+    // Timer ve antrenman logları ARTIK bellek içi (useState).
+    // Sebep: saniyede bir IndexedDB'ye yazmak performansı bozuyordu ve
+    // kullanıcı antrenmanı yarıda bırakıp uygulamayı kapatınca,
+    // yeniden açtığında eski/stale değerle yanlış bir "devam" yaşanıyordu.
+    const [activeAiWorkoutTimer, setActiveAiWorkoutTimer] = useState(0);
+    const [activeAiWorkoutLogs, setActiveAiWorkoutLogs] = useState({});
     const [showAiFeedbackModal, setShowAiFeedbackModal] = useState(false);
     const [aiFeedbackRpe, setAiFeedbackRpe] = useState('');
     const [aiFeedbackFatigue, setAiFeedbackFatigue] = useState('');
@@ -37,12 +41,24 @@ function ActiveWorkoutView({
     const [selectedExerciseForModal, setSelectedExerciseForModal] = useState(null);
 
     // REST TIMER STATE
+    // 'isRestTimerEnabled' kullanıcının tercihidir → kalıcı olabilir.
     const [isRestTimerEnabled, setIsRestTimerEnabled] = useLocalStorage('gym_app_rest_timer_enabled', true);
     const [showRestTimerSettings, setShowRestTimerSettings] = useState(false);
     const [restTimeRemaining, setRestTimeRemaining] = useState(0);
     const [isRestTimerActive, setIsRestTimerActive] = useState(false);
 
     const timerIntervalRef = useRef(null);
+
+    // Tek seferlik temizlik: eski persistent timer/log storage anahtarları
+    // artık kullanılmıyor. Bir defaya mahsus temizleyelim (geriye dönük uyum).
+    useEffect(() => {
+        try {
+            localStorage.removeItem('gym_app_active_timer');
+            localStorage.removeItem('gym_app_active_logs');
+        } catch {
+            /* yok say */
+        }
+    }, []);
 
     // Active Timer Effect
     useEffect(() => {
@@ -54,7 +70,7 @@ function ActiveWorkoutView({
             clearInterval(timerIntervalRef.current);
         }
         return () => clearInterval(timerIntervalRef.current);
-    }, [showAiFeedbackModal, setActiveAiWorkoutTimer]);
+    }, [showAiFeedbackModal]);
 
     // Format Timer (MM:SS)
     const formatTime = (seconds) => {

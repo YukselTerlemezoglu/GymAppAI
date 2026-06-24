@@ -1,6 +1,24 @@
 import React, { useEffect } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { Play, Pause, X, Plus } from 'lucide-react';
+import { error as logError } from '../../utils/logger';
+
+// Modül skobunda tek bir AudioContext paylaş.
+// Sebep: tarayıcılar ~6 AudioContext örneklemesine izin verir; her beep'te
+// yeni context oluşturmak kotaları tüketir ve kullanıcı etkileşimi gerektirir.
+let _audioCtx = null;
+function getAudioContext() {
+    if (_audioCtx) return _audioCtx;
+    try {
+        const Ctor = window.AudioContext || window.webkitAudioContext;
+        if (!Ctor) return null;
+        _audioCtx = new Ctor();
+    } catch (err) {
+        logError('AudioContext oluşturulamadı:', err);
+        _audioCtx = null;
+    }
+    return _audioCtx;
+}
 
 function RestTimer({
     timeRemaining,
@@ -10,11 +28,16 @@ function RestTimer({
     onClose
 }) {
     const { t } = useTranslation();
-    
-    // Ses dosyası (Varsayılan HTML5 Audio API ile basit bir beep)
+
+    // Ses dosyası (cache'lenmiş AudioContext ile basit beep)
     const playBeep = () => {
         try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            // Tarayıcı Politikası: 'suspended' ise (ilk kullanıcı etkileşimi öncesi) resume() gerekir
+            if (ctx.state === 'suspended') {
+                ctx.resume().catch(() => { /* sessiz */ });
+            }
             const osc = ctx.createOscillator();
             const gainNode = ctx.createGain();
 
@@ -30,9 +53,21 @@ function RestTimer({
             osc.start();
             osc.stop(ctx.currentTime + 1);
         } catch (e) {
-            console.error("Audio play failed: ", e);
+            logError('Audio play failed:', e);
         }
     };
+
+    // Notification izni: ilk render'da sessizce talep et.
+    // 'default' ise (kullanıcı daha önce cevap vermemişse) bir kerelik sor.
+    useEffect(() => {
+        if (
+            typeof Notification !== 'undefined' &&
+            Notification.permission === 'default'
+        ) {
+            // Kullanıcıdan izin iste; reddederse sessizce devam et
+            Notification.requestPermission().catch(() => { /* yok say */ });
+        }
+    }, []);
 
     useEffect(() => {
         let interval = null;
@@ -44,10 +79,14 @@ function RestTimer({
         } else if (isActive && timeRemaining === 0) {
             setIsActive(false);
             playBeep();
-            if (Notification.permission === "granted") {
-                new Notification(t('timer_times_up'), { 
-                    body: t('timer_body')
-                });
+            if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
+                try {
+                    new Notification(t('timer_times_up'), {
+                        body: t('timer_body')
+                    });
+                } catch (e) {
+                    logError('Notification gösterilemedi:', e);
+                }
             }
         }
 

@@ -9,6 +9,7 @@ import { savePhoto, getPhoto, deletePhoto } from '../../utils/db';
 import { compressImage } from '../../utils/imageCompressor';
 import PhotoGalleryModal from './PhotoGalleryModal';
 import CloudSyncCard from '../dashboard/CloudSyncCard';
+import { error as logError } from '../../utils/logger';
 
 function BodyTracker({ onBack, currentUser, onLoginClick, userXP = 0, setUserXP, userLevel = 1, setUserLevel, workoutHistory = [], streak = 0, pinnedBadges = [], setPinnedBadges, unlockedBadges = [] }) {
     const { t, lang, setLang } = useTranslation();
@@ -45,7 +46,7 @@ function BodyTracker({ onBack, currentUser, onLoginClick, userXP = 0, setUserXP,
                         const photoData = await getPhoto(metric.id);
                         if (photoData) photos[metric.id] = photoData;
                     } catch (e) {
-                        console.error("Fotoğraf yüklenemedi", e);
+                        logError("Fotoğraf yüklenemedi", e);
                     }
                 }
             }
@@ -142,7 +143,7 @@ function BodyTracker({ onBack, currentUser, onLoginClick, userXP = 0, setUserXP,
                 await savePhoto(newMetricId, compressedBase64);
                 setHistoryPhotos(prev => ({ ...prev, [newMetricId]: compressedBase64 }));
             } catch (error) {
-                console.error("Fotoğraf kaydedilemedi:", error);
+                logError("Fotoğraf kaydedilemedi:", error);
                 alert(t('body_error_photo'));
                 newMetric.hasPhoto = false;
             }

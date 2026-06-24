@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { warn as logWarn } from '../utils/logger';
 
 const DB_NAME = 'gymapp_storage';
 const DB_VERSION = 1;
@@ -58,7 +59,7 @@ function useLocalStorage(key, initialValue) {
             const item = window.localStorage.getItem(key);
             return item ? JSON.parse(item) : initialValue;
         } catch (error) {
-            console.warn(`Error reading localStorage key "${key}":`, error);
+            logWarn(`Error reading localStorage key "${key}":`, error);
             return initialValue;
         }
     });
@@ -86,7 +87,7 @@ function useLocalStorage(key, initialValue) {
                     window.localStorage.setItem(key, JSON.stringify(valueToStore));
                 }
             } catch (error) {
-                console.warn(`Error setting localStorage key "${key}":`, error);
+                logWarn(`Error setting localStorage key "${key}":`, error);
             }
             // IndexedDB'ye asenkron yaz (ana depolama)
             idbSet(key, valueToStore);

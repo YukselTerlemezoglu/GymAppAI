@@ -1,0 +1,30 @@
+rules_version = '2';
+
+// GymAppAI - Firestore Security Rules
+//
+// Principle: each user can ONLY access their own document.
+// There is no shared/collection data, so rules are simple.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // User data: users/{uid}
+    // cloudSync.js calls setDoc/getDoc here.
+    match /users/{userId} {
+      allow read, write: if request.auth != null
+                          && request.auth.uid == userId;
+    }
+
+    // Rate-limit counters (written by Cloud Functions):
+    // rateLimits/{uid} - users cannot read their own counter; only CF (Admin SDK) writes.
+    // Admin SDK bypasses these rules; client access is closed.
+    match /rateLimits/{userId} {
+      allow read, write: if false;
+    }
+
+    // Explicit default-deny for any other path.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

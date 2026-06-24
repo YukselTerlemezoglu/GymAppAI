@@ -4,6 +4,7 @@ import { Cloud, LogIn, RefreshCcw, LogOut, CheckCircle } from 'lucide-react';
 import { auth } from '../../services/firebase';
 import { signOut } from 'firebase/auth';
 import { pushDataToCloud } from '../../utils/cloudSync';
+import { error as logError } from '../../utils/logger';
 
 function CloudSyncCard({ currentUser, onLoginClick }) {
     const { t } = useLanguage();
@@ -19,7 +20,7 @@ function CloudSyncCard({ currentUser, onLoginClick }) {
             setSyncSuccess(true);
             setTimeout(() => setSyncSuccess(false), 3000); // 3 saniye sonra başarı ikonunu kaldır
         } catch (error) {
-            console.error("Senkronizasyon hatası:", error);
+            logError("Senkronizasyon hatası:", error);
             alert(t('cloud_error'));
         } finally {
             setIsSyncing(false);
@@ -31,7 +32,7 @@ function CloudSyncCard({ currentUser, onLoginClick }) {
             try {
                 await signOut(auth);
             } catch (error) {
-                console.error("Çıkış yapılırken hata:", error);
+                logError("Çıkış yapılırken hata:", error);
             }
         }
     };

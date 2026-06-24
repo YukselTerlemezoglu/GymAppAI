@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { ArrowLeft, Plus, Trash2, Utensils, PieChart, Info, Bot, Loader2 } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
+import { estimateMacros } from '../../services/groq';
+import { error as logError } from '../../utils/logger';
 
 function NutritionTracker({ onBack }) {
     const { t, lang } = useTranslation();
@@ -76,59 +78,27 @@ function NutritionTracker({ onBack }) {
 
         setIsAiLoading(true);
         try {
-            const API_KEYS = [import.meta.env.VITE_GROQ_API_KEY].filter(k => k && k !== "API_ANAHTARINIZI_BURAYA_YAZIN");
-            const prompt = lang === 'tr' 
-                ? `Sen profesyonel bir diyetisyensin. Kullanıcı şu besinleri girdi: "${mealForm.name}". Bunun ortalama kalori ve makro değerlerini (protein, karbonhidrat, yağ) gram cinsinden tahmin et. DİKKAT: CEvap GÖVDESİ (BODY) MUTLAKA JSON FORMATINDA OLMALIDIR. Sadece JSON.`
-                : `You are a professional dietitian. The user entered: "${mealForm.name}". Estimate average calories and macro values (protein, carbs, fat) in grams. ATTENTION: The response BODY MUST be in JSON FORMAT. Only JSON.`;
-
-            let textResult = null;
-
-            for (let i = 0; i < API_KEYS.length; i++) {
-                try {
-                    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-                        method: "POST",
-                        headers: {
-                            "Authorization": `Bearer ${API_KEYS[i]}`,
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            "model": "llama-3.3-70b-versatile",
-                            "messages": [
-                                { "role": "system", "content": "You are a professional dietitian. Output JSON only." },
-                                { "role": "user", "content": prompt }
-                            ],
-                            "response_format": { "type": "json_object" },
-                            "temperature": 0.3
-                        })
-                    });
-
-                    if (!response.ok) throw new Error("API hatası");
-                    const result = await response.json();
-                    if (result.choices && result.choices.length > 0) {
-                        textResult = result.choices[0].message.content;
-                        break;
-                    }
-                } catch (e) {
-                    continue;
-                }
-            }
-
-            if (!textResult) throw new Error(t('nutrition_api_limit'));
-
-            let text = textResult.replace(/```json/g, '').replace(/```/g, '').trim();
-            const parsed = JSON.parse(text);
+            const result = await estimateMacros(mealForm.name, lang);
 
             setMealForm(prev => ({
                 ...prev,
-                kcal: parsed.kcal || '',
-                protein: parsed.protein || '',
-                carbs: parsed.carbs || '',
-                fat: parsed.fat || ''
+                kcal: result.kcal || '',
+                protein: result.protein || '',
+                carbs: result.carbs || '',
+                fat: result.fat || ''
             }));
-
         } catch (err) {
-            console.error(err);
-            alert(t('nutrition_ai_error'));
+            logError('Nutrition AI error:', err);
+
+            let userMsg = t('nutrition_ai_error');
+            if (err?.code === 'UNAUTHENTICATED' || err?.code === 'unauthenticated') {
+                userMsg = lang === 'tr'
+                    ? 'AI için giriş yapmalısınız.'
+                    : 'You must sign in to use AI.';
+            } else if (err?.code === 'RATE_LIMIT' || err?.code === 'resource-exhausted') {
+                userMsg = t('nutrition_api_limit');
+            }
+            alert(userMsg);
         } finally {
             setIsAiLoading(false);
         }

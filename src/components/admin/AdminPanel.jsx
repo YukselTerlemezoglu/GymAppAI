@@ -2,6 +2,34 @@ import React, { useState } from 'react';
 import { Shield, Save, RefreshCcw, Trash2, ArrowLeft, Cloud, LogOut } from 'lucide-react';
 import { auth } from '../../services/firebase';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { error as logError } from '../../utils/logger';
+
+// Bilinen tüm GymAppAI LocalStorage/IndexedDB anahtarları.
+// Bunların dışındaki anahtarlar ASLA silinmemeli (origin'de başka
+// uygulamalar olabilir). 'gym_app_' ön eki korunarak ileride eklenen
+// anahtarlar da yakalanır.
+const GYM_APP_STORAGE_PREFIX = 'gym_app_';
+
+function clearGymAppStorage() {
+    try {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith(GYM_APP_STORAGE_PREFIX)) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+
+        // Language ayarını koruyalım (kullanıcı tercihini sıfırlamak kötü UX)
+        // gym_app_lang zaten prefix ile silindi; varsayılanı geri yükleyelim:
+        if (!localStorage.getItem('gym_app_lang')) {
+            localStorage.setItem('gym_app_lang', 'tr');
+        }
+    } catch (err) {
+        logError('Storage temizlenirken hata:', err);
+    }
+}
 
 function AdminPanel({
     onBack,
@@ -20,8 +48,15 @@ function AdminPanel({
     const [passwordInput, setPasswordInput] = useState('');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-    // Admin password (Moved to .env)
-    const ADMIN_PASS = import.meta.env.VITE_ADMIN_PASSWORD;
+    // Admin parolası (.env'den). Placeholder veya eksikse panel erişilemez.
+    const RAW_ADMIN_PASS = import.meta.env.VITE_ADMIN_PASSWORD;
+    const PLACEHOLDER_VALUES = new Set([
+        'YOUR_ADMIN_PASSWORD',
+        'API_ANAHTARINIZI_BURAYA_YAZIN',
+        '',
+        undefined,
+    ]);
+    const ADMIN_PASS = PLACEHOLDER_VALUES.has(RAW_ADMIN_PASS) ? null : RAW_ADMIN_PASS;
 
     const [editXP, setEditXP] = useState(userXP);
     const [editLevel, setEditLevel] = useState(userLevel);
@@ -31,6 +66,11 @@ function AdminPanel({
 
     const handleLogin = (e) => {
         e.preventDefault();
+        if (!ADMIN_PASS) {
+            // .env eksik veya placeholder bırakılmış
+            alert(t('admin_disabled') || 'Admin paneli devre dışı (parola yapılandırılmamış).');
+            return;
+        }
         if (passwordInput === ADMIN_PASS) {
             setIsAuthenticated(true);
         } else {
@@ -86,11 +126,31 @@ function AdminPanel({
             if (setSavedAiProgram) setSavedAiProgram(null);
             if (setUnlockedThemes) setUnlockedThemes(['default']);
             if (setActiveTheme) setActiveTheme('default');
-            localStorage.clear(); // Tam temizlik
+            // Sadece GymApp'ye ait anahtarları sil (origin'i korumak için).
+            clearGymAppStorage();
             alert(t('admin_full_reset_success'));
             window.location.reload();
         }
     };
+
+    if (!ADMIN_PASS) {
+        return (
+            <div className="app-container slide-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', padding: '1rem' }}>
+                <div className="glass-card" style={{ width: '100%', maxWidth: '350px', padding: '2rem', textAlign: 'center', border: '1px solid #ff4757' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-start', width: '100%', marginBottom: '1rem' }}>
+                        <button type="button" className="back-btn" onClick={onBack} style={{ margin: 0 }}>
+                            <ArrowLeft size={20} /> {t('btn_back')}
+                        </button>
+                    </div>
+                    <Shield size={48} color="#ff4757" style={{ margin: '0 auto 1rem' }} />
+                    <h2 style={{ color: '#fff', margin: 0 }}>{t('admin_title')}</h2>
+                    <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                        {t('admin_disabled') || 'Admin paneli devre dışı. .env dosyasında VITE_ADMIN_PASSWORD tanımlı olmalı ve placeholder değerinde olmamalıdır.'}
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     if (!isAuthenticated) {
         return (

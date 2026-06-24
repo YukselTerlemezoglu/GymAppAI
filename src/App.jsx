@@ -21,12 +21,14 @@ import AdminPanel from './components/admin/AdminPanel';
 import AnatomyLibrary from './components/anatomy/AnatomyLibrary';
 import AuthScreen from './components/auth/AuthScreen';
 import { BADGE_LIBRARY } from './data/badges';
+import { applyTheme } from './data/themes';
 import { Zap } from 'lucide-react';
 import './App.css';
 import { getRank } from './utils/ranks';
 import { auth } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
+import { error as logError } from './utils/logger';
 
 function AppContent() {
   const { t, lang } = useLanguage();
@@ -41,12 +43,23 @@ function AppContent() {
       });
       return () => unsubscribe();
     } catch (err) {
-      console.error("Firebase auth error:", err);
+      logError("Firebase auth error:", err);
     }
   }, []);
 
   const profileClickTimeout = useRef(null);
-  
+
+  // Cleanup: eğer kullanıcı tek tıkladıktan sonra component unmount olursa,
+  // bekleyen timeout state'i güncellemeye çalışmasın.
+  useEffect(() => {
+    return () => {
+      if (profileClickTimeout.current !== null) {
+        clearTimeout(profileClickTimeout.current);
+        profileClickTimeout.current = null;
+      }
+    };
+  }, []);
+
   const handleProfileClick = () => {
     if (profileClickTimeout.current !== null) {
       // Double click detected
@@ -96,99 +109,10 @@ function AppContent() {
   const [nutritionData] = useLocalStorage('gym_app_nutrition_v2', {});
 
   // --- THEME EFFECT ---
+  // Eski 90 satırlık if/else zinciri yerine lookup tablosu.
+  // Yeni tema eklemek için src/data/themes.js düzenlenir; bu effect sabit.
   useEffect(() => {
-    const root = document.documentElement;
-    if (activeTheme === 'default') {
-      root.style.setProperty('--accent-primary', '#00ff88');
-      root.style.setProperty('--accent-secondary', '#00d4ff');
-      root.style.setProperty('--bg-dark', '#0f1115');
-      root.style.setProperty('--bg-card', 'rgba(26, 29, 36, 0.7)');
-      root.style.setProperty('--bg-card-hover', 'rgba(36, 40, 50, 0.8)');
-      root.style.setProperty('--gradient-1', 'rgba(0, 255, 136, 0.08)');
-      root.style.setProperty('--gradient-2', 'rgba(0, 212, 255, 0.08)');
-      root.style.setProperty('--neon-glow', '0 0 20px rgba(0, 255, 136, 0.15)');
-      root.style.setProperty('--neon-glow-strong', '0 0 30px rgba(0, 255, 136, 0.4)');
-    } else if (activeTheme === 'cyberpunk') {
-      root.style.setProperty('--accent-primary', '#ff00ff');
-      root.style.setProperty('--accent-secondary', '#00ffff');
-      root.style.setProperty('--bg-dark', '#090014');
-      root.style.setProperty('--bg-card', 'rgba(25, 0, 45, 0.7)');
-      root.style.setProperty('--bg-card-hover', 'rgba(40, 0, 70, 0.8)');
-      root.style.setProperty('--gradient-1', 'rgba(255, 0, 255, 0.1)');
-      root.style.setProperty('--gradient-2', 'rgba(0, 255, 255, 0.1)');
-      root.style.setProperty('--neon-glow', '0 0 20px rgba(255, 0, 255, 0.2)');
-      root.style.setProperty('--neon-glow-strong', '0 0 30px rgba(255, 0, 255, 0.5)');
-    } else if (activeTheme === 'blood') {
-      root.style.setProperty('--accent-primary', '#ff4757');
-      root.style.setProperty('--accent-secondary', '#ff6b81');
-      root.style.setProperty('--bg-dark', '#1a0505');
-      root.style.setProperty('--bg-card', 'rgba(45, 10, 10, 0.8)');
-      root.style.setProperty('--bg-card-hover', 'rgba(70, 15, 15, 0.9)');
-      root.style.setProperty('--gradient-1', 'rgba(255, 71, 87, 0.1)');
-      root.style.setProperty('--gradient-2', 'rgba(255, 107, 129, 0.1)');
-      root.style.setProperty('--neon-glow', '0 0 20px rgba(255, 71, 87, 0.2)');
-      root.style.setProperty('--neon-glow-strong', '0 0 30px rgba(255, 71, 87, 0.5)');
-    } else if (activeTheme === 'gold') {
-      root.style.setProperty('--accent-primary', '#ffd700');
-      root.style.setProperty('--accent-secondary', '#ffa502');
-      root.style.setProperty('--bg-dark', '#151205');
-      root.style.setProperty('--bg-card', 'rgba(40, 35, 10, 0.7)');
-      root.style.setProperty('--bg-card-hover', 'rgba(60, 50, 15, 0.8)');
-      root.style.setProperty('--gradient-1', 'rgba(255, 215, 0, 0.1)');
-      root.style.setProperty('--gradient-2', 'rgba(255, 165, 2, 0.1)');
-      root.style.setProperty('--neon-glow', '0 0 20px rgba(255, 215, 0, 0.15)');
-      root.style.setProperty('--neon-glow-strong', '0 0 30px rgba(255, 215, 0, 0.4)');
-    } else if (activeTheme === 'abyss') {
-      root.style.setProperty('--accent-primary', '#00cec9');
-      root.style.setProperty('--accent-secondary', '#0984e3');
-      root.style.setProperty('--bg-dark', '#010a15');
-      root.style.setProperty('--bg-card', 'rgba(5, 25, 45, 0.7)');
-      root.style.setProperty('--bg-card-hover', 'rgba(10, 40, 70, 0.8)');
-      root.style.setProperty('--gradient-1', 'rgba(0, 206, 201, 0.1)');
-      root.style.setProperty('--gradient-2', 'rgba(9, 132, 227, 0.1)');
-      root.style.setProperty('--neon-glow', '0 0 20px rgba(0, 206, 201, 0.15)');
-      root.style.setProperty('--neon-glow-strong', '0 0 30px rgba(0, 206, 201, 0.4)');
-    } else if (activeTheme === 'toxic') {
-      root.style.setProperty('--accent-primary', '#adff2f');
-      root.style.setProperty('--accent-secondary', '#7fff00');
-      root.style.setProperty('--bg-dark', '#0a1005');
-      root.style.setProperty('--bg-card', 'rgba(15, 30, 5, 0.7)');
-      root.style.setProperty('--bg-card-hover', 'rgba(25, 45, 10, 0.8)');
-      root.style.setProperty('--gradient-1', 'rgba(173, 255, 47, 0.1)');
-      root.style.setProperty('--gradient-2', 'rgba(127, 255, 0, 0.1)');
-      root.style.setProperty('--neon-glow', '0 0 20px rgba(173, 255, 47, 0.15)');
-      root.style.setProperty('--neon-glow-strong', '0 0 30px rgba(173, 255, 47, 0.4)');
-    } else if (activeTheme === 'sakura') {
-      root.style.setProperty('--accent-primary', '#ffb7b2');
-      root.style.setProperty('--accent-secondary', '#e28495');
-      root.style.setProperty('--bg-dark', '#15050a');
-      root.style.setProperty('--bg-card', 'rgba(45, 15, 25, 0.7)');
-      root.style.setProperty('--bg-card-hover', 'rgba(60, 25, 35, 0.8)');
-      root.style.setProperty('--gradient-1', 'rgba(255, 183, 178, 0.1)');
-      root.style.setProperty('--gradient-2', 'rgba(226, 132, 149, 0.1)');
-      root.style.setProperty('--neon-glow', '0 0 20px rgba(255, 183, 178, 0.15)');
-      root.style.setProperty('--neon-glow-strong', '0 0 30px rgba(255, 183, 178, 0.4)');
-    } else if (activeTheme === 'sunset') {
-      root.style.setProperty('--accent-primary', '#ff7e5f');
-      root.style.setProperty('--accent-secondary', '#feb47b');
-      root.style.setProperty('--bg-dark', '#150a05');
-      root.style.setProperty('--bg-card', 'rgba(45, 20, 10, 0.7)');
-      root.style.setProperty('--bg-card-hover', 'rgba(60, 30, 15, 0.8)');
-      root.style.setProperty('--gradient-1', 'rgba(255, 126, 95, 0.1)');
-      root.style.setProperty('--gradient-2', 'rgba(254, 180, 123, 0.1)');
-      root.style.setProperty('--neon-glow', '0 0 20px rgba(255, 126, 95, 0.15)');
-      root.style.setProperty('--neon-glow-strong', '0 0 30px rgba(255, 126, 95, 0.4)');
-    } else if (activeTheme === 'darkmatter') {
-      root.style.setProperty('--accent-primary', '#ffffff');
-      root.style.setProperty('--accent-secondary', '#888888');
-      root.style.setProperty('--bg-dark', '#000000');
-      root.style.setProperty('--bg-card', 'rgba(15, 15, 15, 0.9)');
-      root.style.setProperty('--bg-card-hover', 'rgba(30, 30, 30, 0.9)');
-      root.style.setProperty('--gradient-1', 'rgba(255, 255, 255, 0.05)');
-      root.style.setProperty('--gradient-2', 'rgba(200, 200, 200, 0.05)');
-      root.style.setProperty('--neon-glow', '0 0 20px rgba(255, 255, 255, 0.1)');
-      root.style.setProperty('--neon-glow-strong', '0 0 30px rgba(255, 255, 255, 0.3)');
-    }
+    applyTheme(activeTheme);
   }, [activeTheme]);
 
   // --- LEVEL UP EFFECT ---
@@ -231,15 +155,16 @@ function AppContent() {
   }, [workoutHistory, streak, userLevel, unlockedBadges, showBadgeUnlockModal, setUnlockedBadges]);
 
   // --- Reset Completed Days on Monday ---
+  // Bugün (YYYY-MM-DD) ve gün-of-week render başına bir kez hesaplanır;
+  // eski kod new Date() çağrısını her effect çalıştığında yineliyordu,
+  // bu da gece yarısı çift reset riski taşıyordu. Şimdi bir kez memoize.
   useEffect(() => {
     const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
     // Monday is 1
-    if (today.getDay() === 1) {
-      const todayStr = today.toISOString().split('T')[0];
-      if (lastResetDate !== todayStr) {
-        setCompletedDays([]);
-        setLastResetDate(todayStr);
-      }
+    if (today.getDay() === 1 && lastResetDate !== todayStr) {
+      setCompletedDays([]);
+      setLastResetDate(todayStr);
     }
   }, [lastResetDate, setCompletedDays, setLastResetDate]);
 
@@ -256,10 +181,17 @@ function AppContent() {
 
 
   const handleUpdateAiProgram = (dayIdx, exIdx, field, value) => {
-    const updatedProgram = { ...savedAiProgram };
-    if (!updatedProgram?.days?.[dayIdx]?.exercises?.[exIdx]) return;
-    updatedProgram.days[dayIdx].exercises[exIdx][field] = value;
-    setSavedAiProgram(updatedProgram);
+    // Önceki kod shallow copy yapıp nested mutate ediyordu (aliasing bug riski).
+    // structuredCycle güvenli derin kopya sağlar.
+    setSavedAiProgram(prev => {
+      if (!prev?.days?.[dayIdx]?.exercises?.[exIdx]) return prev;
+      // Modern tarayıcılarda structuredClone var; geri düşür JSON round-trip.
+      const clone = (typeof structuredClone === 'function')
+        ? structuredClone(prev)
+        : JSON.parse(JSON.stringify(prev));
+      clone.days[dayIdx].exercises[exIdx][field] = value;
+      return clone;
+    });
   };
 
   // --- LIVE AI WORKOUT LOGIC ---
@@ -333,7 +265,7 @@ function AppContent() {
       }
       if (currentView === 'admin') {
         return (
-          <AdminPanel 
+          <AdminPanel
             onBack={() => setCurrentView('dashboard')}
             userXP={userXP} setUserXP={setUserXP}
             userLevel={userLevel} setUserLevel={setUserLevel}
@@ -355,6 +287,8 @@ function AppContent() {
     })();
 
     if (viewContent) {
+      // Her view kendi ErrorBoundary'sine sahip olur; bir ekran çökerse
+      // tüm uygulama düşmez, kullanıcı dashboard'a dönebilir.
       return (
         <AnimatePresence mode="wait">
           <motion.div
@@ -365,7 +299,13 @@ function AppContent() {
             exit="exit"
             style={{ width: '100%' }}
           >
-            {viewContent}
+            <ErrorBoundary
+              onReset={() => setCurrentView('dashboard')}
+              fallbackMessage={t('error_generic_title')}
+              buttonLabel={t('btn_back')}
+            >
+              {viewContent}
+            </ErrorBoundary>
           </motion.div>
         </AnimatePresence>
       );

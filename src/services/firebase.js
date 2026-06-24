@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { log, warn, error } from "../utils/logger";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -21,10 +22,10 @@ try {
     auth = getAuth(app);
     db = getFirestore(app);
   } else {
-    console.warn("Firebase API Key is missing. Auth and Cloud Sync will be disabled.");
+    warn("Firebase API Key eksik. Auth ve Cloud Sync devre dışı bırakıldı.");
   }
-} catch (error) {
-  console.error("Firebase initialization failed:", error);
+} catch (err) {
+  error("Firebase başlatılamadı:", err);
 }
 
 export { auth, db };

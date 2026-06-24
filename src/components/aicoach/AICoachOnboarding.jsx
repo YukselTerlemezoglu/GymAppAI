@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
-import { ArrowLeft, Bot, Loader2, Check } from 'lucide-react';
+import { ArrowLeft, Bot, Loader2 } from 'lucide-react';
+import { generateProgram } from '../../services/groq';
+import { error as logError } from '../../utils/logger';
 
 
 function AICoachOnboarding({ workoutHistory, setSavedAiProgram, setCurrentView }) {
@@ -10,9 +12,6 @@ function AICoachOnboarding({ workoutHistory, setSavedAiProgram, setCurrentView }
     const [aiDuration, setAiDuration] = useState('');
     const [aiEquipment, setAiEquipment] = useState('');
     const [aiLevel, setAiLevel] = useState('');
-    const [aiPriority, setAiPriority] = useState('');
-    const [aiInjury, setAiInjury] = useState('');
-    const [aiSplit, setAiSplit] = useState('Auto');
     const [aiCardio, setAiCardio] = useState('');
     const [aiResponseJson, setAiResponseJson] = useState(null);
     const [aiResponseErr, setAiResponseErr] = useState('');
@@ -30,142 +29,36 @@ function AICoachOnboarding({ workoutHistory, setSavedAiProgram, setCurrentView }
         setAiResponseErr('');
 
         try {
-            const API_KEYS = [
-                import.meta.env.VITE_GROQ_API_KEY,
-            ].filter(k => k && k !== "API_ANAHTARINIZI_BURAYA_YAZIN");
-
-            // --- 4-Week Analytics Engine Calculation ---
-            const fourWeeksAgo = new Date();
-            fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
-
-            const recentWorkouts = (workoutHistory || []).filter(w => new Date(w.date) >= fourWeeksAgo);
-
-            const exerciseStats = {};
-            let totalVolume = 0;
-
-            recentWorkouts.forEach(w => {
-                const vol = w.maxWeight * w.bestReps * w.sets;
-                totalVolume += w.totalWeight || vol;
-                if (!exerciseStats[w.exercise]) {
-                    exerciseStats[w.exercise] = { maxW: 0, repsR: 0, rpes: [], records: [] };
-                }
-
-                const e1RM = Math.round(w.maxWeight * (1 + (w.bestReps / 30)));
-                exerciseStats[w.exercise].records.push({ date: new Date(w.date), e1RM });
-
-                if (w.maxWeight > exerciseStats[w.exercise].maxW) {
-                    exerciseStats[w.exercise].maxW = w.maxWeight;
-                    exerciseStats[w.exercise].repsR = w.bestReps;
-                }
-                if (w.avgRpe > 0) exerciseStats[w.exercise].rpes.push(w.avgRpe);
+            const parsedData = await generateProgram({
+                goal: aiGoal,
+                days: aiDays,
+                duration: aiDuration,
+                equipment: aiEquipment,
+                level: aiLevel,
+                cardio: aiCardio,
+                lang,
             });
 
-            const analyticsSummary = Object.keys(exerciseStats).map(ex => {
-                const stats = exerciseStats[ex];
-                const avgRPE = stats.rpes.length > 0 ? (stats.rpes.reduce((a, b) => a + b, 0) / stats.rpes.length).toFixed(1) : "N/A";
-
-                let trend = "N/A";
-                if (stats.records.length > 1) {
-                    stats.records.sort((a, b) => a.date - b.date);
-                    const firstRM = stats.records[0].e1RM;
-                    const lastRM = stats.records[stats.records.length - 1].e1RM;
-                    if (lastRM > firstRM) trend = "UP";
-                    else if (lastRM < firstRM) trend = "DOWN";
-                    else trend = "FLAT";
-                }
-                const bestEpley = Math.round(stats.maxW * (1 + (stats.repsR / 30)));
-
-                return {
-                    exercise: ex,
-                    bestSet: `${stats.maxW}kg x ${stats.repsR}`,
-                    avgRPE: avgRPE,
-                    estimated1RM: bestEpley,
-                    trend: trend
-                };
-            });
-
-            const analyticsJSON = JSON.stringify({
-                weeklyAvgVolume: Math.round(totalVolume / 4) + " kg",
-                exerciseTrends: analyticsSummary.slice(0, 10)
-            });
-
-            const strictRules = lang === 'tr' 
-                ? `Kurallar (Split 'Auto' seçilmişse haftalık gün sayısına göre aşağıdaki split türünü ZORUNLU olarak uygula): - 2 gün → FullBody A/B - 3 gün → FullBody A/B/C - 4 gün → Upper/Lower (Alt/Üst) - 5 veya 6 gün → PPL (Push/Pull/Legs)`
-                : `Rules (If Split 'Auto' is selected, apply the following split type MANDATORILY based on days per week): - 2 days → FullBody A/B - 3 days → FullBody A/B/C - 4 days → Upper/Lower - 5 or 6 days → PPL (Push/Pull/Legs)`;
-
-            const prompt = lang === 'tr' 
-                ? `Sen profesyonel bir fitness antrenörüsün. Hedef: ${aiGoal}, Gün: ${aiDays}, Süre: ${aiDuration}, Ekipman: ${aiEquipment}, Seviye: ${aiLevel}. JSON FORMATINDA CEVAP VER. TÜM İSİMLER TÜRKÇE OLMALI.`
-                : `You are a professional fitness coach. Goal: ${aiGoal}, Days: ${aiDays}, Duration: ${aiDuration}, Equipment: ${aiEquipment}, Level: ${aiLevel}. OUTPUT IN JSON FORMAT. ALL NAMES MUST BE IN ENGLISH.`;
-
-            let textResult = null;
-            let lastError = null;
-
-            for (let i = 0; i < API_KEYS.length; i++) {
-                try {
-                    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-                        method: "POST",
-                        headers: {
-                            "Authorization": `Bearer ${API_KEYS[i]}`,
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            "model": "llama-3.3-70b-versatile",
-                            "messages": [
-                                {
-                                    "role": "system",
-                                    "content": "You are a professional fitness coach. You must ONLY output a valid JSON object matching the requested schema. No other text, no markdown formatting like ```json."
-                                },
-                                {
-                                    "role": "user",
-                                    "content": prompt
-                                }
-                            ],
-                            "response_format": { "type": "json_object" },
-                            "temperature": 0.5
-                        })
-                    });
-
-                    if (!response.ok) {
-                        const errData = await response.json().catch(() => ({}));
-                        throw new Error(errData.error?.message || `HTTP error! status: ${response.status}`);
-                    }
-
-                    const result = await response.json();
-
-                    if (result.choices && result.choices.length > 0) {
-                        textResult = result.choices[0].message.content;
-                        break;
-                    } else {
-                        if (!textResult) throw new Error(t('coach_error_gen'));
-                    }
-                } catch (err) {
-                    console.error(`AI: Error with Key ${i}:`, err.message);
-                    lastError = err;
-
-                    const msg = err.message.toLowerCase();
-                    const isRetryable = msg.includes("429") || msg.includes("quota") || msg.includes("exhausted");
-
-                    if (isRetryable && i < API_KEYS.length - 1) {
-                        continue;
-                    } else {
-                        break;
-                    }
-                }
-            }
-
-            if (!textResult) {
-                throw new Error(lastError ? lastError.message : "AI could not generate content with any provided keys.");
-            }
-
-            let text = textResult;
-            text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-
-            const parsedData = JSON.parse(text);
-            parsedData.isAiGenerated = true;
             setAiResponseJson(parsedData);
-        } catch (error) {
-            setAiResponseErr(t('coach_error_gen'));
-            console.error(error);
+        } catch (err) {
+            logError('AI Coach generate error:', err);
+
+            // Kullanıcıya lokalize mesaj göster
+            let userMsg = t('coach_error_gen');
+            if (err?.code === 'UNAUTHENTICATED' || err?.code === 'unauthenticated') {
+                userMsg = lang === 'tr'
+                    ? 'AI için giriş yapmalısınız. Lütfen profil sayfasından giriş yapın.'
+                    : 'You must sign in to use AI. Please log in from the profile page.';
+            } else if (err?.code === 'RATE_LIMIT' || err?.code === 'resource-exhausted') {
+                userMsg = lang === 'tr'
+                    ? 'Çok fazla istek gönderdiniz. Lütfen bir dakika bekleyip tekrar deneyin.'
+                    : 'Too many requests. Please wait a minute and try again.';
+            } else if (err?.code === 'UNAVAILABLE' || err?.code === 'unavailable') {
+                userMsg = lang === 'tr'
+                    ? 'AI servisi şu an ulaşılamaz. Lütfen kısa süre sonra tekrar deneyin.'
+                    : 'AI service is temporarily unavailable. Please try again shortly.';
+            }
+            setAiResponseErr(userMsg);
         } finally {
             setIsAiLoading(false);
         }
@@ -264,9 +157,6 @@ function AICoachOnboarding({ workoutHistory, setSavedAiProgram, setCurrentView }
                 <button type="submit" className="neon-btn" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }} disabled={isAiLoading}>
                     {isAiLoading ? <Loader2 className="spinner" /> : <Bot size={24} />}
                     {isAiLoading ? t('coach_generating') : t('coach_generate_btn')}
-                </button>
-                <button onClick={() => { }} style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', fontSize: '0.85rem', padding: '0', cursor: 'pointer', marginBottom: '1.5rem', textDecoration: 'underline' }} type="button">
-                    {t('coach_advanced_settings')}
                 </button>
             </form>
 

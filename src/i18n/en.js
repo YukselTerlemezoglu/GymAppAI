@@ -160,6 +160,13 @@ const en = {
     confirm_delete: "Are you sure you want to delete this record?",
     saved_success: "Saved successfully!",
 
+    // Error Boundary & Generic UI
+    error_generic_title: "Something went wrong",
+    error_generic_retry: "Try Again",
+
+    // Admin Panel - Disabled State
+    admin_disabled: "Admin panel is disabled. Please set VITE_ADMIN_PASSWORD in your .env file.",
+
     // Admin Panel
     admin_title: "Admin Panel",
     admin_subtitle: "Enter password for developer controls.",

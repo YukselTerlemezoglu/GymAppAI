@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { Download, Upload } from 'lucide-react';
+import { error as logError } from '../../utils/logger';
 
 function DataSync() {
     const fileInputRef = useRef(null);
@@ -33,7 +34,7 @@ function DataSync() {
 
             alert("Verileriniz başarıyla dışa aktarıldı!");
         } catch (error) {
-            console.error("Export Error:", error);
+            logError("Export Error:", error);
             alert("Dışa aktarma sırasında bir hata oluştu.");
         }
     };
@@ -57,7 +58,7 @@ function DataSync() {
                     alert("Veriler başarıyla içe aktarıldı! Uygulama yeniden başlatılıyor...");
                     window.location.reload();
                 } catch (error) {
-                    console.error("Import Error:", error);
+                    logError("Import Error:", error);
                     alert("Geçersiz dosya formatı. Lütfen geçerli bir yedek dosyası (JSON) seçin.");
                 }
             };
