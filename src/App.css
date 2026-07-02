@@ -610,6 +610,8 @@ input:checked+.slider:before {
   }
 
   .top-bar {
+    flex-wrap: wrap;
+    gap: 0.75rem;
     margin-bottom: 1.5rem;
   }
 
@@ -711,5 +713,68 @@ input:checked+.slider:before {
   
   .orm-grid {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* =====================================================
+   Global overflow protection (tüm ekran boyutları için)
+   Mobil cihazlarda yatay kaydırmayı ve metin taşmasını önler.
+   ===================================================== */
+
+/* Uzun kelimeler/URL'ler taşmasın */
+p, span, li, label, h1, h2, h3, h4, h5, h6 {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+/* Görseller ve videolar her zaman container'a sığar */
+img, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Tablolar dar ekranlarda yataydan dikeye döner */
+table {
+  max-width: 100%;
+  display: block;
+  overflow-x: auto;
+}
+
+/* Pre/code blokları taşmasın, kaydırılabilir olsun */
+pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Flexbox container'lar children'ları daraltsın */
+.app-container,
+.glass-card,
+.top-bar,
+.stats-grid,
+.metrics-row,
+.orm-grid,
+.set-metrics,
+.activity-row {
+  min-width: 0;
+}
+
+/* Input ve butonlar her zaman container'a sığar */
+input, button, textarea, select {
+  max-width: 100%;
+}
+
+/* Dar ekran güvenliği: 480px ve altı için genel fallback */
+@media (max-width: 480px) {
+  /* Flex container'larda children gerektiğinde alt satıra insin */
+  .activity-row,
+  .rest-timer-floating,
+  .set-metrics,
+  header.top-bar > div {
+    flex-wrap: wrap;
+  }
+
+  /* Uzun başlıklar gerektiğinde kırpılsın */
+  h1, h2, h3 {
+    hyphens: auto;
   }
 }

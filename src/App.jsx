@@ -383,20 +383,30 @@ function AppContent() {
               <div style={{
                 marginTop: '1rem',
                 display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 background: 'rgba(0,0,0,0.3)',
-                padding: '10px 15px',
+                padding: '10px 12px',
                 borderRadius: '12px',
                 border: '1px solid rgba(255,255,255,0.05)'
               }}>
-                <div style={{ flex: 1, marginRight: '1rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '1.2rem' }}>{currentRank.icon}</span>
-                    <span style={{ color: currentRank.color, fontSize: '0.9rem', fontWeight: 'bold' }}>
+                {/* Sol: Rank + ilerleme çubuğu — dar ekranlarda tam genişlik kaplar */}
+                <div style={{ flex: '1 1 140px', minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', minWidth: 0 }}>
+                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>{currentRank.icon}</span>
+                    <span style={{
+                      color: currentRank.color,
+                      fontSize: '0.85rem',
+                      fontWeight: 'bold',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
                       {lang === 'tr' ? currentRank.title_tr : currentRank.title_en} <span style={{ color: '#fff' }}>({t('level')} {userLevel})</span>
                     </span>
-                    <span style={{ color: 'var(--text-light)', fontSize: '0.75rem', marginLeft: 'auto' }}>
+                    <span style={{ color: 'var(--text-light)', fontSize: '0.7rem', marginLeft: 'auto', flexShrink: 0 }}>
                       {userXP}/{reqXP}
                     </span>
                   </div>
@@ -411,29 +421,26 @@ function AppContent() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {/* Sağ: Coin + rozetler — taşarsa alt satıra geçer */}
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
                   <div
                     onClick={() => setShowShopModal(true)}
-                    style={{ background: 'rgba(255, 215, 0, 0.1)', border: '1px solid #ffd700', borderRadius: '12px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#ffd700', fontWeight: 'bold', fontSize: '0.9rem' }}
+                    style={{ background: 'rgba(255, 215, 0, 0.1)', border: '1px solid #ffd700', borderRadius: '12px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#ffd700', fontWeight: 'bold', fontSize: '0.85rem' }}
                     title={t('app_shop_tooltip')}
                   >
                     <span>🪙</span> {userCoins}
                   </div>
 
-                  {pinnedBadges.length > 0 ? (
+                  {pinnedBadges.length > 0 && (
                     pinnedBadges.map(badgeId => {
                       const bInfo = BADGE_LIBRARY.find(b => b.id === badgeId);
                       if (!bInfo) return null;
                       return (
-                        <div key={bInfo.id} title={lang === 'tr' ? bInfo.title : bInfo.title_en} style={{ fontSize: '1.5rem', background: 'rgba(0, 195, 255, 0.1)', padding: '4px', borderRadius: '8px', border: '1px solid rgba(0, 195, 255, 0.3)' }}>
+                        <div key={bInfo.id} title={lang === 'tr' ? bInfo.title : bInfo.title_en} style={{ fontSize: '1.3rem', background: 'rgba(0, 195, 255, 0.1)', padding: '4px', borderRadius: '8px', border: '1px solid rgba(0, 195, 255, 0.3)' }}>
                           {bInfo.icon}
                         </div>
                       );
                     })
-                  ) : (
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)', textAlign: 'right', fontStyle: 'italic' }}>
-                      {t('app_rank_empty')}
-                    </div>
                   )}
                 </div>
               </div>

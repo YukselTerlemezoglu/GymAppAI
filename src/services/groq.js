@@ -64,6 +64,7 @@ export async function callGroq({ kind, systemPrompt, userPrompt, temperature = 0
     let body = null;
     try { body = await resp.json(); } catch { /* json değilse yok say */ }
     const msg = body?.error || `AI servisi hatası (${resp.status}).`;
+    const detail = body?.detail ? ` [${body.detail}]` : '';
 
     if (resp.status === 401) {
       const e = new Error('AI için giriş yapmalısınız.');
@@ -76,11 +77,11 @@ export async function callGroq({ kind, systemPrompt, userPrompt, temperature = 0
       throw e;
     }
     if (resp.status === 502 || resp.status === 503) {
-      const e = new Error('AI servisi geçici olarak ulaşılamaz.');
+      const e = new Error('AI servisi geçeri olarak ulaşılamaz.');
       e.code = 'UNAVAILABLE';
       throw e;
     }
-    const e = new Error(msg);
+    const e = new Error(msg + detail);
     e.code = 'UNKNOWN';
     throw e;
   }

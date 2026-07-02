@@ -1,20 +1,22 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { ArrowLeft, User, Mail, Lock, LogIn, UserPlus, Type } from 'lucide-react';
+import { ArrowLeft, User, Mail, Lock, LogIn, UserPlus, Type, KeyRound } from 'lucide-react';
 import { auth } from '../../services/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'firebase/auth';
 import { pushDataToCloud, pullDataFromCloud } from '../../utils/cloudSync';
 import { warn as logWarn, error as logError } from '../../utils/logger';
 
 function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
     const { t, lang } = useLanguage();
     const [isLogin, setIsLogin] = useState(true);
+    const [isResetMode, setIsResetMode] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
     const [loading, setLoading] = useState(false);
     const [syncStatusText, setSyncStatusText] = useState('');
     const [error, setError] = useState('');
+    const [info, setInfo] = useState('');
 
     // Eğer Firebase auth başlatılamadıysa (apiKey eksik vb.),
     // kullanıcıyı boşuna bekletme, net hata göster.
@@ -43,6 +45,28 @@ function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
             </div>
         );
     }
+
+    // Şifre sıfırlama e-postası gönder
+    const handleResetPassword = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+        setInfo('');
+        try {
+            await sendPasswordResetEmail(auth, email);
+            setInfo(t('auth_reset_password_sent'));
+        } catch (err) {
+            logError('Reset password error:', err);
+            const errorMap = {
+                'auth/user-not-found': t('auth_reset_password_sent'), // Güvenlik: var olmayan email'i ele vermemek için aynı mesaj
+                'auth/invalid-email': t('auth_reset_password_error'),
+                'auth/missing-email': t('auth_reset_password_error'),
+            };
+            setError(errorMap[err.code] || t('auth_reset_password_error'));
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -137,12 +161,16 @@ function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '70vh', padding: '1rem' }}>
                 <div className="glass-card fade-in" style={{ width: '100%', maxWidth: '400px', padding: '2rem' }}>
                     <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                        <User size={48} color="var(--accent-primary)" style={{ marginBottom: '1rem' }} />
+                        {isResetMode ? (
+                            <KeyRound size={48} color="var(--accent-primary)" style={{ marginBottom: '1rem' }} />
+                        ) : (
+                            <User size={48} color="var(--accent-primary)" style={{ marginBottom: '1rem' }} />
+                        )}
                         <h2 style={{ color: 'white', margin: 0 }}>
-                            {isLogin ? t('auth_title_login') : t('auth_title_register')}
+                            {isResetMode ? t('auth_reset_password_title') : (isLogin ? t('auth_title_login') : t('auth_title_register'))}
                         </h2>
                         <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                            {t('cloud_description')}
+                            {isResetMode ? t('auth_reset_password_desc') : t('cloud_description')}
                         </p>
                     </div>
 
@@ -152,74 +180,139 @@ function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        {!isLogin && (
+                    {info && (
+                        <div style={{ background: 'rgba(46, 204, 113, 0.1)', border: '1px solid #2ecc71', color: '#2ecc71', padding: '0.8rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                            {info}
+                        </div>
+                    )}
+
+                    {isResetMode ? (
+                        // Şifre sıfırlama formu
+                        <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div className="input-group" style={{ marginBottom: 0 }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Type size={16} /> {t('auth_name')}</label>
-                                <input 
-                                    type="text" 
-                                    className="neon-input" 
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    required={!isLogin} 
-                                    placeholder={t('auth_name_placeholder')}
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Mail size={16} /> {t('auth_email')}</label>
+                                <input
+                                    type="email"
+                                    className="neon-input"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                    placeholder="ornek@email.com"
+                                    autoFocus
                                 />
                             </div>
-                        )}
 
-                        <div className="input-group" style={{ marginBottom: 0 }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Mail size={16} /> {t('auth_email')}</label>
-                            <input 
-                                type="email" 
-                                className="neon-input" 
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required 
-                                placeholder="ornek@email.com"
-                            />
+                            <button
+                                type="submit"
+                                className="neon-btn"
+                                disabled={loading}
+                                style={{
+                                    marginTop: '1rem',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    opacity: loading ? 0.7 : 1
+                                }}
+                            >
+                                {loading ? t('auth_processing') : <><KeyRound size={18} /> {t('auth_reset_password_btn')}</>}
+                            </button>
+
+                            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => { setIsResetMode(false); setError(''); setInfo(''); }}
+                                    style={{ background: 'none', border: 'none', color: 'var(--accent-secondary)', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.95rem' }}
+                                >
+                                    {t('auth_back_to_login')}
+                                </button>
+                            </div>
+                        </form>
+                    ) : (
+                        // Normal login/register formu
+                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {!isLogin && (
+                                <div className="input-group" style={{ marginBottom: 0 }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Type size={16} /> {t('auth_name')}</label>
+                                    <input
+                                        type="text"
+                                        className="neon-input"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        required={!isLogin}
+                                        placeholder={t('auth_name_placeholder')}
+                                    />
+                                </div>
+                            )}
+
+                            <div className="input-group" style={{ marginBottom: 0 }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Mail size={16} /> {t('auth_email')}</label>
+                                <input
+                                    type="email"
+                                    className="neon-input"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                    placeholder="ornek@email.com"
+                                />
+                            </div>
+
+                            <div className="input-group" style={{ marginBottom: 0 }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Lock size={16} /> {t('auth_password')}</label>
+                                <input
+                                    type="password"
+                                    className="neon-input"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                    placeholder="******"
+                                    minLength="6"
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="neon-btn"
+                                disabled={loading}
+                                style={{
+                                    marginTop: '1rem',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    opacity: loading ? 0.7 : 1
+                                }}
+                            >
+                                {loading ? syncStatusText || t('auth_processing') : (isLogin ? <><LogIn size={18} /> {t('auth_btn_login')}</> : <><UserPlus size={18} /> {t('auth_btn_register')}</>)}
+                            </button>
+
+                            {isLogin && (
+                                <div style={{ textAlign: 'right', marginTop: '-0.25rem' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setIsResetMode(true); setError(''); setInfo(''); }}
+                                        style={{ background: 'none', border: 'none', color: 'var(--text-light)', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.85rem' }}
+                                    >
+                                        {t('auth_forgot_password')}
+                                    </button>
+                                </div>
+                            )}
+                        </form>
+                    )}
+
+                    {!isResetMode && (
+                        <div style={{ marginTop: '1.5rem', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem' }}>
+                            <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                                {isLogin ? t('auth_switch_to_register') : t('auth_switch_to_login')}
+                            </p>
+                            <button
+                                onClick={() => { setIsLogin(!isLogin); setError(''); setInfo(''); }}
+                                style={{ background: 'none', border: 'none', color: 'var(--accent-secondary)', textDecoration: 'underline', cursor: 'pointer', fontSize: '1rem' }}
+                            >
+                                {isLogin ? t('auth_title_register') : t('auth_title_login')}
+                            </button>
                         </div>
-
-                        <div className="input-group" style={{ marginBottom: 0 }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Lock size={16} /> {t('auth_password')}</label>
-                            <input 
-                                type="password" 
-                                className="neon-input" 
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required 
-                                placeholder="******"
-                                minLength="6"
-                            />
-                        </div>
-
-                        <button 
-                            type="submit" 
-                            className="neon-btn" 
-                            disabled={loading}
-                            style={{ 
-                                marginTop: '1rem', 
-                                display: 'flex', 
-                                justifyContent: 'center', 
-                                alignItems: 'center', 
-                                gap: '8px',
-                                opacity: loading ? 0.7 : 1
-                            }}
-                        >
-                            {loading ? syncStatusText || t('auth_processing') : (isLogin ? <><LogIn size={18} /> {t('auth_btn_login')}</> : <><UserPlus size={18} /> {t('auth_btn_register')}</>)}
-                        </button>
-                    </form>
-
-                    <div style={{ marginTop: '1.5rem', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem' }}>
-                        <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                            {isLogin ? t('auth_switch_to_register') : t('auth_switch_to_login')}
-                        </p>
-                        <button 
-                            onClick={() => { setIsLogin(!isLogin); setError(''); }}
-                            style={{ background: 'none', border: 'none', color: 'var(--accent-secondary)', textDecoration: 'underline', cursor: 'pointer', fontSize: '1rem' }}
-                        >
-                            {isLogin ? t('auth_title_register') : t('auth_title_login')}
-                        </button>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>

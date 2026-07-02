@@ -101,6 +101,13 @@ const tr = {
     auth_error_email_in_use: "Bu e-posta adresi zaten kullanımda.",
     auth_error_weak_password: "Şifre çok zayıf. En az 6 karakter olmalı.",
     auth_error_generic: "Bir hata oluştu: ",
+    auth_forgot_password: "Şifremi unuttum",
+    auth_reset_password_title: "Şifre Sıfırla",
+    auth_reset_password_desc: "E-posta adresinize şifre sıfırlama bağlantısı gönderilecek.",
+    auth_reset_password_sent: "Sıfırlama bağlantısı e-postanıza gönderildi. Gelen kutunuzu kontrol edin.",
+    auth_reset_password_error: "Sıfırlama e-postası gönderilemedi. E-posta adresini kontrol edin.",
+    auth_reset_password_btn: "Sıfırlama Bağlantısı Gönder",
+    auth_back_to_login: "Girişe Dön",
 
     // Profile / Body Tracker
     profile_title: "Vücut Ölçüleri",

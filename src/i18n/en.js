@@ -82,6 +82,13 @@ const en = {
     auth_error_email_in_use: "This email is already in use.",
     auth_error_weak_password: "Password too weak. Must be at least 6 characters.",
     auth_error_generic: "An error occurred: ",
+    auth_forgot_password: "Forgot password",
+    auth_reset_password_title: "Reset Password",
+    auth_reset_password_desc: "A password reset link will be sent to your email.",
+    auth_reset_password_sent: "Reset link sent to your email. Check your inbox.",
+    auth_reset_password_error: "Could not send reset email. Check the email address.",
+    auth_reset_password_btn: "Send Reset Link",
+    auth_back_to_login: "Back to Login",
 
     // Profile / Body Tracker
     profile_title: "Body Measurements",
