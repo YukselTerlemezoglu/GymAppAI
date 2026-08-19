@@ -39,6 +39,13 @@ const en = {
     anatomy_exercises_suffix: "Exercises",
     anatomy_tips: "Important Tips",
     anatomy_no_exercises: "No exercises added for this muscle group yet.",
+    anatomy_sub_muscles: "Sub-Muscle Structure",
+    anatomy_weekly_sets: "Recommended Weekly Volume",
+    anatomy_filter_all: "All",
+    anatomy_primary: "Primary Muscles",
+    anatomy_secondary: "Secondary Muscles",
+    anatomy_rep_range: "Rep Range",
+    anatomy_mistakes: "Common Mistakes",
 
     // Body Metrics
     body_weight: "Weight",

@@ -40,6 +40,13 @@ const tr = {
     anatomy_exercises_suffix: "Egzersizleri",
     anatomy_tips: "Önemli İpuçları",
     anatomy_no_exercises: "Bu kas grubu için henüz egzersiz eklenmemiş.",
+    anatomy_sub_muscles: "Alt Kas Yapısı",
+    anatomy_weekly_sets: "Önerilen Haftalık Hacim",
+    anatomy_filter_all: "Tümü",
+    anatomy_primary: "Birincil Kaslar",
+    anatomy_secondary: "İkincil Kaslar",
+    anatomy_rep_range: "Tekrar Aralığı",
+    anatomy_mistakes: "Sık Yapılan Hatalar",
 
     // Body Metrics
     body_weight: "Kilo",
