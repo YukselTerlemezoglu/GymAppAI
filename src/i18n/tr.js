@@ -80,6 +80,13 @@ const tr = {
     pc_total: "Toplam:",
     pc_reset: "Sıfırla",
 
+    // Su Takibi
+    water_title: "Günlük Su",
+    water_add: "Bardak ekle",
+    water_remove: "Bardak çıkar",
+    water_set: "Ayarla:",
+    water_done_msg: "Günlük hedefe ulaştın, harika iş! 💧",
+
     // Body Metrics
     body_weight: "Kilo",
     body_fat: "Yağ Oranı",

@@ -79,6 +79,13 @@ const en = {
     pc_total: "Total:",
     pc_reset: "Reset",
 
+    // Water Tracker
+    water_title: "Daily Water",
+    water_add: "Add glass",
+    water_remove: "Remove glass",
+    water_set: "Set:",
+    water_done_msg: "Daily goal reached, great job! 💧",
+
     // Body Metrics
     body_weight: "Weight",
     body_fat: "Body Fat",

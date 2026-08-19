@@ -14,6 +14,7 @@ import CloudSyncCard from './components/dashboard/CloudSyncCard';
 import BodyTracker from './components/profile/BodyTracker';
 import NutritionTracker from './components/nutrition/NutritionTracker';
 import NutritionSummary from './components/dashboard/NutritionSummary';
+import WaterTrackerWidget from './components/dashboard/WaterTrackerWidget';
 import LevelUpModal from './components/ui/LevelUpModal';
 import ShopModal from './components/profile/ShopModal';
 import BadgeUnlockModal from './components/ui/BadgeUnlockModal';
@@ -459,9 +460,12 @@ function AppContent() {
 
         {/* Nutrition Summary Widget */}
         <NutritionSummary
-          nutritionData={nutritionData}
-          onClick={() => setCurrentView('nutrition')}
+            nutritionData={nutritionData}
+            onClick={() => setCurrentView('nutrition')}
         />
+
+        {/* Water Tracker Widget */}
+        <WaterTrackerWidget />
 
         {/* WORKOUT PROGRESS CHARTS */}
         {
