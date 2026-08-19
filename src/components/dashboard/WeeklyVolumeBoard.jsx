@@ -80,7 +80,7 @@ function WeeklyVolumeBoard({ workoutHistory }) {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                                 <span style={{ color: 'var(--text-primary)', fontSize: '0.85rem', fontWeight: 600 }}>
                                     {isEn ? (mg.name_en || mg.name) : mg.name}
-                                    {hint && <span style={{ color: meta.color, fontSize: '0.72rem', fontWeight: 400, marginLeft: '6px' }}>{\u00b7 }</span>}
+                                    {hint && <span style={{ color: meta.color, fontSize: '0.72rem', fontWeight: 400, marginLeft: '6px' }}>{'- ' + hint}</span>}
                                 </span>
                                 <span style={{ fontSize: '0.78rem' }}>
                                     <span style={{ color: meta.color, fontWeight: 'bold' }}>{done}</span>
