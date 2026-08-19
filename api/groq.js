@@ -19,7 +19,9 @@ function checkRateLimit(identifier) {
 
 // Firebase ID Token doğrulama: Google'ın public JWKS anahtarlarıyla
 // RS256 imza kontrolü. Imza dogrulanmadan hicbir istek kabul edilmez.
-const FIREBASE_PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID || 'gymappai';
+// NOT: VITE_FIREBASE_PROJECT_ID Vercel'de hatali deger tasiyor (appId
+// girilmis). Firebase proje kimligi sabit ve gizli olmayan bir degerdir.
+const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'gymappai';
 const JWKS_URL = `https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com`;
 
 let jwksCache = { keys: null, fetchedAt: 0 };
