@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Check, Trophy, Info, Settings } from 'lucide-react';
+import { ArrowLeft, Check, Trophy, Info, Settings, TrendingUp } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import ExerciseModal from './ExerciseModal';
 import RestTimer from './RestTimer';
+import PrCelebrationModal from '../ui/PrCelebrationModal';
+import { detectPRs, getOverloadSuggestion } from '../../utils/prTracker';
 
 function ActiveWorkoutView({
     activeAiWorkoutDayIdx,
@@ -39,6 +41,7 @@ function ActiveWorkoutView({
     const [aiFeedbackFatigue, setAiFeedbackFatigue] = useState('');
     const [feedbackValErr, setFeedbackValErr] = useState('');
     const [selectedExerciseForModal, setSelectedExerciseForModal] = useState(null);
+    const [pendingPRs, setPendingPRs] = useState(null);
 
     // REST TIMER STATE
     // 'isRestTimerEnabled' kullanıcının tercihidir → kalıcı olabilir.
@@ -220,6 +223,10 @@ function ActiveWorkoutView({
         });
 
         setWorkoutHistory([...newWorkouts.reverse(), ...workoutHistory]);
+
+        // PR TESPİTİ: yeni kayıtları eski geçmişle karşılaştır
+        const prs = detectPRs(newWorkouts, workoutHistory);
+        if (prs.length > 0) setPendingPRs(prs);
 
         // Update streaks
         const isYesterday = new Date(lastWorkoutDate).toDateString() === new Date(new Date().setDate(new Date().getDate() - 1)).toDateString();
@@ -443,6 +450,8 @@ function ActiveWorkoutView({
                                 </div>
                             </div>
 
+                            <LastPerformanceCard exerciseName={ex.name} history={workoutHistory} lang={lang} t={t} />
+
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                                 {setsArray.map((setLog, sIdx) => {
                                     const isChecked = setLog.completed;
@@ -585,6 +594,44 @@ function ActiveWorkoutView({
                 />,
                 document.body
             )}
+            {/* PR Kutlama Modalı */}
+            {pendingPRs && pendingPRs.length > 0 && (
+                <PrCelebrationModal
+                    prs={pendingPRs}
+                    onClose={() => setPendingPRs(null)}
+                />
+            )}
+        </div>
+    );
+}
+
+// Egzersiz kartında "geçen sefer + bugünün hedefi" gösteren mini kart
+function LastPerformanceCard({ exerciseName, history, lang, t }) {
+    const suggestion = useMemo(() => getOverloadSuggestion(exerciseName, history), [exerciseName, history]);
+    if (!suggestion) return null;
+    const { from, kind, targetWeight, targetReps } = suggestion;
+    return (
+        <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: '6px 12px',
+            background: 'rgba(0, 195, 255, 0.06)',
+            border: '1px solid rgba(0, 195, 255, 0.15)',
+            borderRadius: '8px',
+            padding: '8px 12px',
+            marginBottom: '0.8rem',
+            fontSize: '0.8rem'
+        }}>
+            <TrendingUp size={14} color="#00c3ff" style={{ flexShrink: 0 }} />
+            <span style={{ color: 'var(--text-light)' }}>
+                {t('po_last_time')}: <strong style={{ color: 'var(--text-primary)' }}>{from.weight}kg × {from.reps}</strong>
+            </span>
+            <span style={{ color: '#00ff88', fontWeight: 600 }}>
+                {kind === 'weight'
+                    ? t('po_target_weight').replace('{w}', targetWeight).replace('{r}', targetReps)
+                    : t('po_target_reps').replace('{w}', targetWeight).replace('{r}', targetReps)}
+            </span>
         </div>
     );
 }

@@ -48,6 +48,16 @@ const tr = {
     anatomy_rep_range: "Tekrar Aralığı",
     anatomy_mistakes: "Sık Yapılan Hatalar",
 
+    // PR / Progressive Overload
+    pr_title: "YENİ REKOR! 🏆",
+    pr_multi_title: "REKORLAR KIRILDI! 🏆",
+    pr_subtitle: "Kendini geçtin, devamını getir!",
+    pr_previous: "Önceki",
+    pr_cta: "EFSANESİN!",
+    po_last_time: "Geçen sefer",
+    po_target_weight: "Hedef: {w}kg × {r} tekrar (kilo artır)",
+    po_target_reps: "Hedef: {w}kg × {r} tekrar (+1)",
+
     // Body Metrics
     body_weight: "Kilo",
     body_fat: "Yağ Oranı",

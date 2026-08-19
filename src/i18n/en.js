@@ -47,6 +47,16 @@ const en = {
     anatomy_rep_range: "Rep Range",
     anatomy_mistakes: "Common Mistakes",
 
+    // PR / Progressive Overload
+    pr_title: "NEW RECORD! 🏆",
+    pr_multi_title: "RECORDS BROKEN! 🏆",
+    pr_subtitle: "You beat yourself — keep it coming!",
+    pr_previous: "Previous",
+    pr_cta: "LEGENDARY!",
+    po_last_time: "Last time",
+    po_target_weight: "Target: {w}kg × {r} reps (add weight)",
+    po_target_reps: "Target: {w}kg × {r} reps (+1)",
+
     // Body Metrics
     body_weight: "Weight",
     body_fat: "Body Fat",
