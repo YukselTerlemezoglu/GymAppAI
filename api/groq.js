@@ -17,16 +17,65 @@ function checkRateLimit(identifier) {
   return entry.count <= RATE_LIMIT_MAX;
 }
 
-function verifyFirebaseToken(idToken) {
+// Firebase ID Token doğrulama: Google'ın public JWKS anahtarlarıyla
+// RS256 imza kontrolü. Imza dogrulanmadan hicbir istek kabul edilmez.
+const FIREBASE_PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID || 'gymappai';
+const JWKS_URL = `https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com`;
+
+let jwksCache = { keys: null, fetchedAt: 0 };
+const JWKS_CACHE_MS = 60 * 60 * 1000; // 1 saat
+
+function base64UrlToBuffer(str) {
+  const b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  return Buffer.from(b64, 'base64');
+}
+
+async function getJwks() {
+  if (jwksCache.keys && Date.now() - jwksCache.fetchedAt < JWKS_CACHE_MS) {
+    return jwksCache.keys;
+  }
+  const resp = await fetch(JWKS_URL);
+  if (!resp.ok) throw new Error(`JWKS fetch failed: ${resp.status}`);
+  const data = await resp.json();
+  jwksCache = { keys: data.keys || [], fetchedAt: Date.now() };
+  return jwksCache.keys;
+}
+
+async function verifyFirebaseToken(idToken) {
   if (!idToken || typeof idToken !== 'string') return null;
 
   try {
     const parts = idToken.split('.');
     if (parts.length !== 3) return null;
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+    const [headerB64, payloadB64, signatureB64] = parts;
 
+    const header = JSON.parse(base64UrlToBuffer(headerB64).toString('utf-8'));
+    const payload = JSON.parse(base64UrlToBuffer(payloadB64).toString('utf-8'));
+
+    // Algoritma ve issuer kontrolü (alg confusion saldırisini önler)
+    if (header.alg !== 'RS256') return null;
+    if (header.typ !== 'JWT') return null;
+    const expectedIssuer = `https://securetoken.google.com/${FIREBASE_PROJECT_ID}`;
+    if (payload.iss !== expectedIssuer) return null;
+    if (payload.aud !== FIREBASE_PROJECT_ID) return null;
+
+    // Zaman kontrolü (60sn saat kaymasi toleransi)
     const now = Math.floor(Date.now() / 1000);
-    if (payload.exp && payload.exp < now) return null;
+    if (payload.exp && payload.exp < now - 60) return null;
+    if (payload.iat && payload.iat > now + 60) return null;
+
+    // Imza dogrulama: header.payload'in RS256 imzasi
+    const jwks = await getJwks();
+    const jwk = jwks.find(k => k.kid === header.kid);
+    if (!jwk) return null;
+
+    const { createPublicKey, createVerify } = await import('node:crypto');
+    const publicKey = createPublicKey({ key: jwk, format: 'jwk' });
+    const verifier = createVerify('RSA-SHA256');
+    verifier.update(`${headerB64}.${payloadB64}`);
+    const signature = base64UrlToBuffer(signatureB64);
+    const isValid = verifier.verify(publicKey, signature);
+    if (!isValid) return null;
 
     const uid = payload.user_id || payload.sub;
     if (!uid) return null;
@@ -66,7 +115,7 @@ export default async function handler(req, res) {
 
   const body = req.body || {};
 
-  const user = verifyFirebaseToken(body.idToken);
+  const user = await verifyFirebaseToken(body.idToken);
   if (!user) {
     return res.status(401).json({ error: 'Yetkisiz. Lütfen giriş yapın.' });
   }
