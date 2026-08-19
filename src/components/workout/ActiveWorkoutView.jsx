@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Check, Trophy, Info, Settings, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Check, Trophy, Info, Settings, TrendingUp, Calculator } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import ExerciseModal from './ExerciseModal';
 import RestTimer from './RestTimer';
 import PrCelebrationModal from '../ui/PrCelebrationModal';
+import PlateCalculator from '../ui/PlateCalculator';
 import { detectPRs, getOverloadSuggestion } from '../../utils/prTracker';
 
 function ActiveWorkoutView({
@@ -42,6 +43,7 @@ function ActiveWorkoutView({
     const [feedbackValErr, setFeedbackValErr] = useState('');
     const [selectedExerciseForModal, setSelectedExerciseForModal] = useState(null);
     const [pendingPRs, setPendingPRs] = useState(null);
+    const [showPlateCalc, setShowPlateCalc] = useState(false);
 
     // REST TIMER STATE
     // 'isRestTimerEnabled' kullanıcının tercihidir → kalıcı olabilir.
@@ -407,13 +409,22 @@ function ActiveWorkoutView({
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                     <h2 style={{ color: '#fff', textAlign: 'left', margin: 0 }}>🔥 {activeAiWorkoutDayParams.dayName}</h2>
-                    <button
-                        onClick={() => setShowRestTimerSettings(!showRestTimerSettings)}
-                        style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: isRestTimerEnabled ? 'var(--accent-primary)' : 'var(--text-muted)', padding: '8px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        title={lang === 'tr' ? "Zamanlayıcı Ayarları" : "Timer Settings"}
-                    >
-                        <Settings size={20} />
-                    </button>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                            onClick={() => setShowPlateCalc(true)}
+                            style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#ffd700', padding: '8px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            title={lang === 'tr' ? "Pul Hesaplayıcı" : "Plate Calculator"}
+                        >
+                            <Calculator size={20} />
+                        </button>
+                        <button
+                            onClick={() => setShowRestTimerSettings(!showRestTimerSettings)}
+                            style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: isRestTimerEnabled ? 'var(--accent-primary)' : 'var(--text-muted)', padding: '8px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            title={lang === 'tr' ? "Zamanlayıcı Ayarları" : "Timer Settings"}
+                        >
+                            <Settings size={20} />
+                        </button>
+                    </div>
                 </div>
 
                 {showRestTimerSettings && (
@@ -600,6 +611,11 @@ function ActiveWorkoutView({
                     prs={pendingPRs}
                     onClose={() => setPendingPRs(null)}
                 />
+            )}
+
+            {/* Pul Hesaplayıcı */}
+            {showPlateCalc && (
+                <PlateCalculator onClose={() => setShowPlateCalc(false)} />
             )}
         </div>
     );

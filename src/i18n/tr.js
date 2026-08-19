@@ -66,6 +66,20 @@ const tr = {
     wvb_low_hint: "Bu hafta ekle",
     wvb_high_hint: "Biraz dinlendir",
 
+    // Plate Calculator
+    pc_title: "Pul Hesaplayıcı",
+    pc_mode_target: "Hedeften Pullara",
+    pc_mode_plates: "Pullardan Hedefe",
+    pc_bar_weight: "Bar Ağırlığı",
+    pc_target_weight: "Hedef Toplam Ağırlık (kg)",
+    pc_per_side: "Taraf başına:",
+    pc_bar_only: "Sadece bar yeterli!",
+    pc_leftover: "Tam kurulamayan fark: {x}kg (en yakın pul 1.25kg)",
+    pc_too_light: "Hedef, bar ağırlığından düşük olamaz.",
+    pc_pick_plates: "Her tarafa tıklayarak pul ekle (0-5 arası döner):",
+    pc_total: "Toplam:",
+    pc_reset: "Sıfırla",
+
     // Body Metrics
     body_weight: "Kilo",
     body_fat: "Yağ Oranı",

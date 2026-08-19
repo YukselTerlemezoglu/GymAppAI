@@ -65,6 +65,20 @@ const en = {
     wvb_low_hint: "add this week",
     wvb_high_hint: "ease off a bit",
 
+    // Plate Calculator
+    pc_title: "Plate Calculator",
+    pc_mode_target: "Target → Plates",
+    pc_mode_plates: "Plates → Total",
+    pc_bar_weight: "Bar Weight",
+    pc_target_weight: "Target Total Weight (kg)",
+    pc_per_side: "Per side:",
+    pc_bar_only: "Empty bar is enough!",
+    pc_leftover: "Unreachable difference: {x}kg (smallest plate is 1.25kg)",
+    pc_too_light: "Target cannot be lower than bar weight.",
+    pc_pick_plates: "Tap plates to add per side (cycles 0-5):",
+    pc_total: "Total:",
+    pc_reset: "Reset",
+
     // Body Metrics
     body_weight: "Weight",
     body_fat: "Body Fat",
