@@ -1713,3 +1713,147 @@ export const getExercisesByMuscle = (muscleId) =>
 
 export const getMuscleGroup = (muscleId) =>
   MUSCLE_GROUPS.find(mg => mg.id === muscleId);
+
+// ============================================================
+// Egzersiz eslestirme (tek kaynak): substring yerine
+// normalize edilmis tam ad + alias eslestirmesi.
+// ============================================================
+
+const ALIASES = {
+  'bench-press': ['bench press', 'bench', 'barbell press', 'dumbbell bench press', 'db bench press'],
+  'incline-db-press': ['incline press', 'incline bench press'],
+  'cable-crossover': ['crossover', 'cable fly', 'fly', 'dumbbell fly', 'pec deck'],
+  'chest-dips': ['dips', 'chest dip'],
+  'pushup': ['push up', 'pushup', 'sinav', 'sınav', 'şınav'],
+  'pull-up': ['pull up', 'pullup', 'barfiks', 'chin up', 'chinup'],
+  'barbell-row': ['row', 'barbell row', 'bent over row'],
+  'lat-pulldown': ['lat pulldown', 'pulldown', 'pulldown machine'],
+  'deadlift': ['deadlift', 'dead lift', 'olu cekis', 'ölü çekiş', 'conventional deadlift'],
+  'seated-cable-row': ['cable row', 'seated row'],
+  'face-pull-back': ['face pull'],
+  'overhead-press': ['overhead press', 'military press', 'omuz press', 'shoulder press', 'ohp'],
+  'lateral-raise': ['lateral raise', 'side raise', 'side lateral raise', 'yanraise'],
+  'face-pull': ['rear delt face pull', 'reverse fly', 'rear delt fly'],
+  'arnold-press': ['arnold'],
+  'bicep-curl': ['bicep curl', 'curl', 'dumbbell curl', 'barbell curl', 'standing curl'],
+  'hammer-curl': ['hammer'],
+  'incline-db-curl': ['incline curl'],
+  'preacher-curl': ['preacher', 'scott curl'],
+  'tricep-pushdown': ['tricep pushdown', 'pushdown', 'tricep extension', 'triceps pushdown', 'cable pushdown'],
+  'overhead-extension': ['overhead extension', 'tricep overhead extension', 'db extension'],
+  'skullcrusher': ['skull crusher', 'skullcrusher', 'french press', 'lying extension'],
+  'close-grip-bench': ['close grip bench', 'close grip press', 'cg bench'],
+  'squat': ['squat', 'back squat', 'barbell squat', 'front squat'],
+  'leg-press': ['leg press'],
+  'romanian-deadlift': ['romanian deadlift', 'rdl', 'stiff leg deadlift'],
+  'bulgarian-split-squat': ['bulgarian', 'split squat', 'lunge', 'forward lunge', 'walking lunge'],
+  'leg-extension': ['leg extension', 'extensions'],
+  'leg-curl': ['leg curl', 'hamstring curl', 'lying leg curl'],
+  'hip-thrust': ['hip thrust', 'barbell hip thrust'],
+  'glute-bridge': ['glute bridge', 'bridge'],
+  'cable-kickback': ['kickback', 'glute kickback'],
+  'hip-abduction': ['abduction', 'abductor'],
+  'standing-calf-raise': ['calf raise', 'calf raises', 'standing calf'],
+  'seated-calf-raise': ['seated calf'],
+  'plank': ['plank', 'front plank'],
+  'hanging-leg-raise': ['leg raise', 'hanging leg raises', 'leg raises', 'knee raise'],
+  'cable-crunch': ['crunch', 'cable crunch', 'karin crunch'],
+  'ab-wheel': ['ab wheel', 'rollout', 'ab roller'],
+  'russian-twist': ['russian twist', 'twist'],
+  'wrist-curl': ['wrist curl', 'wrist curls'],
+  'reverse-curl': ['reverse wrist curl'],
+  'farmers-carry': ['farmers walk', 'farmers carry', 'farmer carry']
+};
+
+// Türkce karakterleri latincelestir ve noktalama/isaretleri temizle
+export const normalizeName = (s) => String(s || '')
+  .toLowerCase()
+  .replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g')
+  .replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c')
+  .replace(/İ/g, 'i').replace(/i\u0307/g, 'i')
+  .replace(/[^a-z0-9 ]/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+// On-islenmis arama indeksi (id, normalize edilmis adlar)
+const _lookup = EXERCISES_DB.map(ex => ({
+  ex,
+  names: [ex.name, ex.name_en, ...(ALIASES[ex.id] || [])]
+    .filter(Boolean)
+    .map(normalizeName)
+}));
+
+/**
+ * Isimden egzersizi bul. Once tam eslesme (ad + alias),
+ * sonra kelime bazli eslesme (sorgunun TUM kelimeleri adda geciyorsa).
+ * Bulunamazsa null doner — tahmin yurutme YOK.
+ */
+export function findExerciseByName(query) {
+  if (!query) return null;
+  const q = normalizeName(query);
+  if (!q) return null;
+
+  // 1) Tam eslesme
+  for (const { ex, names } of _lookup) {
+    if (names.includes(q)) return ex;
+  }
+
+  // 2) Kelime bazli eslesme (tek kelimelik sorgularda guvensiz oldugu icin 2+ kelime sart)
+  const qWords = q.split(' ');
+  if (qWords.length >= 2) {
+    for (const { ex, names } of _lookup) {
+      if (names.some(n => qWords.every(w => n.includes(w)))) return ex;
+    }
+  }
+
+  return null;
+}
+
+// Radar/kas analizi icin kelime-siniri (word boundary) tabanli yedek eslesme.
+// 'lat' artik 'lateral' icinde yakalanamaz; sadece bagimsiz kelime olarak.
+const _KEYWORD_FALLBACK = [
+  // Cok kelimeli ozel durumlar once
+  ['leg raise', 'core'], ['leg curl', 'legs'], ['leg extension', 'legs'], ['leg press', 'legs'],
+  ['calf raise', 'calves'], ['hip thrust', 'glutes'], ['face pull', 'back'],
+  // Omuz
+  ['overhead', 'shoulders'], ['military', 'shoulders'], ['lateral', 'shoulders'],
+  ['shoulder', 'shoulders'], ['omuz', 'shoulders'], ['raise', 'shoulders'], ['delt', 'shoulders'], ['arnold', 'shoulders'],
+  // Gogus
+  ['bench', 'chest'], ['fly', 'chest'], ['chest', 'chest'], ['gogus', 'chest'], ['sinav', 'chest'], ['pushup', 'chest'], ['push up', 'chest'], ['crossover', 'chest'], ['dip', 'chest'],
+  // Sirt
+  ['pulldown', 'back'], ['barfiks', 'back'], ['pullup', 'back'], ['pull up', 'back'], ['deadlift', 'back'],
+  ['row', 'back'], ['lat', 'back'], ['back', 'back'], ['sirt', 'back'], ['shrug', 'back'], ['trap', 'back'],
+  // Bacak
+  ['squat', 'legs'], ['lunge', 'legs'], ['rdl', 'legs'], ['romanian', 'legs'], ['leg', 'legs'],
+  ['bacak', 'legs'], ['quad', 'legs'], ['hamstring', 'legs'], ['calf', 'calves'], ['baldir', 'calves'],
+  // Kalca
+  ['glute', 'glutes'], ['hip', 'glutes'], ['abduction', 'glutes'], ['kalca', 'glutes'], ['kickback', 'glutes'],
+  // Kollar
+  ['tricep', 'triceps'], ['bicep', 'biceps'], ['pushdown', 'triceps'], ['skullcrusher', 'triceps'],
+  ['hammer', 'biceps'], ['preacher', 'biceps'], ['curl', 'biceps'], ['arm', 'biceps'], ['kol', 'biceps'],
+  ['wrist', 'forearms'], ['grip', 'forearms'], ['farmers', 'forearms'],
+  // Core
+  ['plank', 'core'], ['crunch', 'core'], ['situp', 'core'], ['sit up', 'core'], ['abs', 'core'],
+  ['core', 'core'], ['karin', 'core'], ['mekik', 'core'], ['twist', 'core'], ['rollout', 'core'],
+  // En genel (en son)
+  ['press', 'chest'], ['push', 'chest'], ['extension', 'triceps'], ['carry', 'forearms']
+];
+
+/**
+ * Verilen egzersiz adi icin kas grup ID'sini dondurur.
+ * Once veritabani eslestirmesi, sonra kelime-siniri yedegi.
+ * Hiçbir sey bulunamazsa null.
+ */
+export function findMuscleGroupIdForExercise(query) {
+  const db = findExerciseByName(query);
+  if (db) return db.muscleGroupId;
+
+  const q = normalizeName(query);
+  if (!q) return null;
+
+  for (const [keyword, group] of _KEYWORD_FALLBACK) {
+    const re = new RegExp(`\\b${keyword}\\b`);
+    if (re.test(q)) return group;
+  }
+  return null;
+}
