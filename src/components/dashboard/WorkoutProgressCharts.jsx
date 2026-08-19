@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, LineChart, Line } from 'recharts';
 import { Activity, BarChart2, TrendingUp } from 'lucide-react';
 import MuscleRadarChart from './MuscleRadarChart';
+import WeeklyVolumeBoard from './WeeklyVolumeBoard';
 import { useTranslation } from '../../i18n/LanguageContext';
 
 function CustomTooltip({ active, payload, label }) {
@@ -181,6 +182,9 @@ function WorkoutProgressCharts({ workoutHistory }) {
 
             {/* KAS DENGESİ ANALİZİ (RADAR CHART) */}
             <MuscleRadarChart workoutHistory={workoutHistory} />
+
+            {/* HAFTALIK KAS HACMİ PANOSU */}
+            <WeeklyVolumeBoard workoutHistory={workoutHistory} />
         </section>
     );
 }

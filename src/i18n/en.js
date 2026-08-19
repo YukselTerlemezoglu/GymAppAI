@@ -57,6 +57,14 @@ const en = {
     po_target_weight: "Target: {w}kg × {r} reps (add weight)",
     po_target_reps: "Target: {w}kg × {r} reps (+1)",
 
+    // Weekly Volume Board
+    wvb_title: "Weekly Muscle Volume (Last 7 Days)",
+    wvb_subtitle: "Compared with science-based set recommendations from the anatomy library",
+    wvb_no_data: "No workout history yet. Complete your first session to fill this board!",
+    wvb_sets: "sets",
+    wvb_low_hint: "add this week",
+    wvb_high_hint: "ease off a bit",
+
     // Body Metrics
     body_weight: "Weight",
     body_fat: "Body Fat",

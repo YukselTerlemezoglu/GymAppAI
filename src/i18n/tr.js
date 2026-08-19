@@ -58,6 +58,14 @@ const tr = {
     po_target_weight: "Hedef: {w}kg × {r} tekrar (kilo artır)",
     po_target_reps: "Hedef: {w}kg × {r} tekrar (+1)",
 
+    // Haftalık Kas Hacim Panosu
+    wvb_title: "Haftalık Kas Hacmi (Son 7 Gün)",
+    wvb_subtitle: "Anatomi kütüphanesindeki bilimsel set önerileriyle karşılaştırma",
+    wvb_no_data: "Henüz antrenman kaydı yok. İlk idmanını tamamla, panel dolsun!",
+    wvb_sets: "set",
+    wvb_low_hint: "Bu hafta ekle",
+    wvb_high_hint: "Biraz dinlendir",
+
     // Body Metrics
     body_weight: "Kilo",
     body_fat: "Yağ Oranı",
