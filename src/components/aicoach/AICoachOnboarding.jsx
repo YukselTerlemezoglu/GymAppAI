@@ -3,6 +3,7 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import { ArrowLeft, Bot, Loader2 } from 'lucide-react';
 import { generateProgram } from '../../services/groq';
 import { error as logError } from '../../utils/logger';
+import { normalizeAiProgram } from '../../utils/aiNormalizer';
 
 
 function AICoachOnboarding({ workoutHistory, setSavedAiProgram, setCurrentView }) {
@@ -39,7 +40,7 @@ function AICoachOnboarding({ workoutHistory, setSavedAiProgram, setCurrentView }
                 lang,
             });
 
-            setAiResponseJson(parsedData);
+            setAiResponseJson(normalizeAiProgram(parsedData));
         } catch (err) {
             logError('AI Coach generate error:', err);
 

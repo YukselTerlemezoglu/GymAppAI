@@ -8,6 +8,7 @@ import RestTimer from './RestTimer';
 import PrCelebrationModal from '../ui/PrCelebrationModal';
 import PlateCalculator from '../ui/PlateCalculator';
 import { detectPRs, getOverloadSuggestion } from '../../utils/prTracker';
+import { normalizeAiWeight, normalizeAiReps } from '../../utils/aiNormalizer';
 
 function ActiveWorkoutView({
     activeAiWorkoutDayIdx,
@@ -46,11 +47,14 @@ function ActiveWorkoutView({
     const [showPlateCalc, setShowPlateCalc] = useState(false);
 
     // REST TIMER STATE
-    // 'isRestTimerEnabled' kullanıcının tercihidir → kalıcı olabilir.
-    const [isRestTimerEnabled, setIsRestTimerEnabled] = useLocalStorage('gym_app_rest_timer_enabled', true);
+    // Varsayilan KAPALI: isteyen antrenman basinda ayarlardan acar.
+    const [isRestTimerEnabled, setIsRestTimerEnabled] = useLocalStorage('gym_app_rest_timer_enabled', false);
     const [showRestTimerSettings, setShowRestTimerSettings] = useState(false);
     const [restTimeRemaining, setRestTimeRemaining] = useState(0);
     const [isRestTimerActive, setIsRestTimerActive] = useState(false);
+
+    // TAKIP MODU: set set isaretleme + mola sayaci. Varsayilan kapali (Hizli Mod).
+    const [isTrackingMode, setIsTrackingMode] = useLocalStorage('gym_app_tracking_mode', false);
 
     const timerIntervalRef = useRef(null);
 
@@ -87,9 +91,13 @@ function ActiveWorkoutView({
     const getSetsForExercise = (eIdx, ex) => {
         if (activeAiWorkoutLogs[eIdx]) return activeAiWorkoutLogs[eIdx];
         const numSets = parseInt(ex.sets) || 1;
+        // Eski kayitli programlarda weight "15kg"/"Vücut Ağırlığı" gibi string olabilir;
+        // input alanini temiz tutmak icin normalize edilir.
+        const cleanWeight = normalizeAiWeight(ex.weight);
+        const weightVal = cleanWeight === 'BW' ? 'BW' : (cleanWeight === '' ? '' : cleanWeight);
         return Array.from({ length: numSets }).map(() => ({
-            weight: ex.weight || 0,
-            reps: ex.reps || 0,
+            weight: weightVal,
+            reps: normalizeAiReps(ex.reps),
             mode: 'Normal',
             completed: false
         }));
@@ -134,7 +142,7 @@ function ActiveWorkoutView({
             const isNowChecked = !updated[eIdx][sIdx].completed;
             updated[eIdx][sIdx] = { ...updated[eIdx][sIdx], completed: isNowChecked };
 
-            if (isNowChecked && isRestTimerEnabled) {
+            if (isNowChecked && isTrackingMode && isRestTimerEnabled) {
                 let allComplete = true;
                 (activeAiWorkoutDayParams?.exercises || []).forEach((loopEx, i) => {
                     const logs = updated[i] || getSetsForExercise(i, loopEx);
@@ -152,7 +160,7 @@ function ActiveWorkoutView({
                 }
             }
 
-            checkIfAllSetsCompleted(updated);
+            if (isTrackingMode) checkIfAllSetsCompleted(updated);
             return updated;
         });
     };
@@ -191,7 +199,10 @@ function ActiveWorkoutView({
             let performedSetsCount = 0;
 
             logs.forEach(setLog => {
-                if (setLog.completed) {
+                // Hızlı Mod'da (isTrackingMode kapalı) tüm setler "yapıldı" sayılır;
+                // Takip Modu'nda yalnız işaretlenenler.
+                const performed = isTrackingMode ? setLog.completed : true;
+                if (performed) {
                     performedSetsCount++;
                     const w = parseFloat(setLog.weight) || 0;
                     const r = parseInt(setLog.reps) || 0;
@@ -420,7 +431,7 @@ function ActiveWorkoutView({
                         <button
                             onClick={() => setShowRestTimerSettings(!showRestTimerSettings)}
                             style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: isRestTimerEnabled ? 'var(--accent-primary)' : 'var(--text-muted)', padding: '8px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            title={lang === 'tr' ? "Zamanlayıcı Ayarları" : "Timer Settings"}
+                            title={lang === 'tr' ? "Antrenman Ayarları" : "Workout Settings"}
                         >
                             <Settings size={20} />
                         </button>
@@ -430,17 +441,35 @@ function ActiveWorkoutView({
                 {showRestTimerSettings && (
                     <div style={{ width: '100%', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', padding: '1rem', marginTop: '1rem', border: '1px solid rgba(255,255,255,0.1)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: '#fff', fontSize: '0.9rem' }}>{lang === 'tr' ? 'Otomatik Dinlenme Sayacı' : 'Auto Rest Timer'}</span>
+                            <span style={{ color: '#fff', fontSize: '0.9rem' }}>{lang === 'tr' ? 'Takip Modu (set set işaretle)' : 'Tracking Mode (set-by-set)'}</span>
                             <label className="toggle-switch">
-                                <input type="checkbox" checked={isRestTimerEnabled} onChange={(e) => setIsRestTimerEnabled(e.target.checked)} />
+                                <input type="checkbox" checked={isTrackingMode} onChange={(e) => setIsTrackingMode(e.target.checked)} />
                                 <span className="slider"></span>
                             </label>
                         </div>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.5rem', margin: 0 }}>{lang === 'tr' ? 'Açıksa her set bitişinde sayaç 60 saniyeden otomatik başlar.' : 'If enabled, the timer starts automatically from 60 seconds after each set.'}</p>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.5rem', margin: 0 }}>{lang === 'tr' ? 'Açıksa her seti tek tek işaretlersin; PR tespiti ve gerçek hacim kaydı çalışır. Kapalıysa sadece antrenman süresi takip edilir.' : 'If on, you check off each set; PR detection and real volume logging work. If off, only the workout timer runs.'}</p>
+
+                        {isTrackingMode && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.8rem', paddingTop: '0.8rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                                <span style={{ color: '#fff', fontSize: '0.9rem' }}>{lang === 'tr' ? 'Otomatik Dinlenme Sayacı' : 'Auto Rest Timer'}</span>
+                                <label className="toggle-switch">
+                                    <input type="checkbox" checked={isRestTimerEnabled} onChange={(e) => setIsRestTimerEnabled(e.target.checked)} />
+                                    <span className="slider"></span>
+                                </label>
+                            </div>
+                        )}
+                        {isTrackingMode && (
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.5rem', margin: 0 }}>{lang === 'tr' ? 'Açıksa her set bitişinde sayaç 60 saniyeden otomatik başlar.' : 'If enabled, the timer starts automatically from 60 seconds after each set.'}</p>
+                        )}
                     </div>
                 )}
 
-                <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', width: '100%', marginTop: '1rem' }}>{lang === 'tr' ? 'Setleri bitirdikçe yanlarındaki kutucuklara tıklayın.' : 'Check the boxes as you complete each set.'}</p>
+                {isTrackingMode && (
+                    <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', width: '100%', marginTop: '1rem' }}>{lang === 'tr' ? 'Setleri bitirdikçe yanlarındaki kutucuklara tıklayın.' : 'Check the boxes as you complete each set.'}</p>
+                )}
+                {!isTrackingMode && (
+                    <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', width: '100%', marginTop: '1rem' }}>{lang === 'tr' ? 'Hızlı mod: ağırlık/tekrar alanlarını istersen güncelle, bitince aşağıdan idmanı bitir.' : 'Quick mode: optionally update weight/reps, then finish the workout below.'}</p>
+                )}
             </header>
 
             <div className="workout-tracker-list fade-in" style={{ paddingBottom: '100px', paddingTop: '1rem' }}>
@@ -489,19 +518,23 @@ function ActiveWorkoutView({
                                                         {/* Weight Input */}
                                                         <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', padding: '2px 8px' }}>
                                                             <input
-                                                                type="number"
-                                                                value={setLog.weight}
+                                                                type="text"
+                                                                inputMode="decimal"
+                                                                placeholder="kg"
+                                                                value={setLog.weight === 'BW' ? 'BW' : setLog.weight}
                                                                 onChange={(e) => updateSetData(eIdx, sIdx, 'weight', e.target.value)}
                                                                 style={{ width: '45px', background: 'transparent', border: 'none', color: '#fff', fontWeight: 'bold', textAlign: 'right', outline: 'none' }}
                                                             />
-                                                            <span style={{ color: 'var(--text-light)', fontSize: '0.8rem', marginLeft: '4px' }}>kg</span>
+                                                            <span style={{ color: 'var(--text-light)', fontSize: '0.8rem', marginLeft: '4px' }}>{setLog.weight === 'BW' ? '(vücut)' : 'kg'}</span>
                                                         </div>
 
                                                         {/* Reps Input */}
                                                         <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', padding: '2px 8px' }}>
                                                             <input
-                                                                type="number"
-                                                                value={setLog.reps}
+                                                                type="text"
+                                                                inputMode="decimal"
+                                                                placeholder="reps"
+                                                                value={setLog.reps === 'MAX' ? 'MAX' : setLog.reps}
                                                                 onChange={(e) => updateSetData(eIdx, sIdx, 'reps', e.target.value)}
                                                                 style={{ width: '40px', background: 'transparent', border: 'none', color: '#fff', fontWeight: 'bold', textAlign: 'right', outline: 'none' }}
                                                             />
@@ -509,13 +542,15 @@ function ActiveWorkoutView({
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <button
-                                                    onClick={() => handleCheckSet(eIdx, sIdx, ex)}
-                                                    style={{
-                                                        width: '36px', height: '36px', borderRadius: '50%', background: isChecked ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', border: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0
-                                                    }}>
-                                                    {isChecked && <Check size={20} color="#000" />}
-                                                </button>
+                                                {isTrackingMode && (
+                                                    <button
+                                                        onClick={() => handleCheckSet(eIdx, sIdx, ex)}
+                                                        style={{
+                                                            width: '36px', height: '36px', borderRadius: '50%', background: isChecked ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', border: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0
+                                                        }}>
+                                                        {isChecked && <Check size={20} color="#000" />}
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -532,6 +567,15 @@ function ActiveWorkoutView({
                         </div>
                     );
                 })}
+
+                {/* İDMANI BİTİR BUTONU (Hızlı modda ana akış; Takip modunda setler işaretlenince modal otomatik açılır) */}
+                <button
+                    onClick={() => setShowAiFeedbackModal(true)}
+                    className="neon-btn"
+                    style={{ width: '100%', padding: '1rem', fontSize: '1rem', marginTop: '0.5rem' }}
+                >
+                    <Check size={20} /> {lang === 'tr' ? 'İDMANI BİTİR' : 'FINISH WORKOUT'}
+                </button>
             </div>
 
             {/* Feedback Modal Overlay */}

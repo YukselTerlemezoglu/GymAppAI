@@ -11,7 +11,7 @@ function SavedProgramPreview({
     startActiveAiWorkout,
     handleUpdateAiProgram
 }) {
-    const { t } = useTranslation();
+    const { t, lang } = useTranslation();
     const [selectedExerciseForModal, setSelectedExerciseForModal] = React.useState(null);
 
     if (!savedAiProgram || showCustomBuilder) return null;
@@ -69,9 +69,9 @@ function SavedProgramPreview({
                                                     type="text"
                                                     value={ex.weight}
                                                     onChange={(e) => handleUpdateAiProgram(dIdx, eIdx, 'weight', e.target.value)}
-                                                    style={{ width: '40px', background: 'transparent', border: 'none', color: 'var(--accent-primary)', textAlign: 'right', fontWeight: 'bold' }}
+                                                    style={{ width: ex.weight === 'BW' ? '30px' : '40px', background: 'transparent', border: 'none', color: 'var(--accent-primary)', textAlign: 'right', fontWeight: 'bold' }}
                                                 />
-                                                <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>{t('preview_weight_short')}</span>
+                                                <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>{ex.weight === 'BW' ? (lang === 'tr' ? 'vücut' : 'body') : t('preview_weight_short')}</span>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', padding: '2px 6px' }}>
                                                 <input
