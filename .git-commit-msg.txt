@@ -1,7 +1,0 @@
-UX paketi: toast bildirimleri, temali onay kutulari, alt navigasyon, onboarding turu, haptik
-
-- ToastProvider: success/error/info/warning toast + confirmDialog (window.confirm/alert kaldirildi)
-- Sabit alt nav: Bugun/Antrenman/Gelisim/Profil (safe-area destekli)
-- Ilk acilis rehberi: 4 adimli tur (bir kez gosterilir)
-- Haptik geri bildirim: set, PR, su, antrenman sonu
-- Antrenman sonu alert'i toast'lara cevrildi
