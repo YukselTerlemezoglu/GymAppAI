@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
-import { ArrowLeft, Save, Trash2, LineChart as LineChartIcon, TrendingUp, Award, Zap, RefreshCcw, Camera, X, Image as ImageIcon } from 'lucide-react';
+import { Save, Trash2, LineChart as LineChartIcon, TrendingUp, Award, Zap, RefreshCcw, Camera, X, Image as ImageIcon } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { BADGE_LIBRARY } from '../../data/badges';
@@ -216,9 +216,6 @@ function BodyTracker({ onBack, currentUser, onLoginClick, userXP = 0, setUserXP,
     return (
         <div className="app-container slide-in">
             <header className="top-bar fade-in" style={{ animationDelay: '0s', flexDirection: 'column', alignItems: 'flex-start', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem' }}>
-                <button className="back-btn" onClick={onBack} style={{ marginBottom: '1rem' }}>
-                    <ArrowLeft size={20} /> {t('btn_back')}
-                </button>
                 <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                         <h2 style={{ color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.8rem', fontSize: '1.8rem', margin: '0 0 0.5rem 0' }}>

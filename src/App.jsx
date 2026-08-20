@@ -223,6 +223,17 @@ function AppContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Alt nav her ekranda gorunur; aktif antrenman ve giris akisinda gizlenir
+  const showBottomNav = currentView !== 'activeAiWorkout' && currentView !== 'auth';
+  const bottomNavEl = showBottomNav && (
+    <BottomNav
+      currentView={currentView}
+      dashboardTab={dashboardTab}
+      onGoHome={handleNavGoProfile}
+      onSelectTab={handleNavSelectTab}
+    />
+  );
+
   // Framer Motion sayfa geçiş varyasyonları
   const pageVariants = {
     initial: { opacity: 1, y: -20 },
@@ -314,24 +325,27 @@ function AppContent() {
       // Her view kendi ErrorBoundary'sine sahip olur; bir ekran çökerse
       // tüm uygulama düşmez, kullanıcı dashboard'a dönebilir.
       return (
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentView}
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            style={{ width: '100%' }}
-          >
-            <ErrorBoundary
-              onReset={() => setCurrentView('dashboard')}
-              fallbackMessage={t('error_generic_title')}
-              buttonLabel={t('btn_back')}
+        <>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentView}
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              style={{ width: '100%' }}
             >
-              {viewContent}
-            </ErrorBoundary>
-          </motion.div>
-        </AnimatePresence>
+              <ErrorBoundary
+                onReset={() => setCurrentView('dashboard')}
+                fallbackMessage={t('error_generic_title')}
+                buttonLabel={t('btn_back')}
+              >
+                {viewContent}
+              </ErrorBoundary>
+            </motion.div>
+          </AnimatePresence>
+          {bottomNavEl}
+        </>
       );
     }
   }
@@ -346,7 +360,7 @@ function AppContent() {
         exit="exit"
         style={{ width: '100%' }}
       >
-        <div className="app-container" style={{ paddingBottom: '90px' }}>
+        <div className="app-container">
           <ErrorBoundary>
             {/* Top Navigation */}
             <header className="top-bar fade-in" style={{ animationDelay: '0s' }}>
@@ -636,14 +650,6 @@ function AppContent() {
           </ErrorBoundary>
         </div>
 
-        {/* Sabit alt navigasyon */}
-        <BottomNav
-          currentView={currentView}
-          dashboardTab={dashboardTab}
-          onGoHome={handleNavGoProfile}
-          onSelectTab={handleNavSelectTab}
-        />
-
         {/* Ilk acilis rehberi */}
         <AnimatePresence>
           {!hasOnboarded && (
@@ -651,6 +657,7 @@ function AppContent() {
           )}
         </AnimatePresence>
       </motion.div>
+      {bottomNavEl}
     </AnimatePresence>
   );
 }
