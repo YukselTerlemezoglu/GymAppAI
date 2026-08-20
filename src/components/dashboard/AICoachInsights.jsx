@@ -3,7 +3,7 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import { Bot, Clock, Activity, Flame } from 'lucide-react';
 
 function AICoachInsights({ workoutHistory }) {
-    const { t, lang } = useTranslation();
+    const { t } = useTranslation();
     const localAiCoachData = useMemo(() => {
         if (!workoutHistory || workoutHistory.length === 0) {
             return {

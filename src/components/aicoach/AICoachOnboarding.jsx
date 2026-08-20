@@ -7,7 +7,7 @@ import { error as logError } from '../../utils/logger';
 import { normalizeAiProgram } from '../../utils/aiNormalizer';
 
 
-function AICoachOnboarding({ workoutHistory, setSavedAiProgram, setCurrentView }) {
+function AICoachOnboarding({ setSavedAiProgram, setCurrentView }) {
     const { t, lang } = useTranslation();
     const { toast } = useToast();
     const [aiGoal, setAiGoal] = useState('');

@@ -5,6 +5,7 @@ import { CheckCircle2, XCircle, Info, AlertTriangle, X } from 'lucide-react';
 
 const ToastContext = createContext(null);
 
+/* eslint-disable react-refresh/only-export-components -- provider + hook + haptic ayni dosyada bilincli olarak tutuluyor */
 // Kisa dokunsal geri bildirim (destekleyen cihazlarda)
 export const haptic = (pattern = 15) => {
     try {
@@ -244,3 +245,4 @@ export function useToast() {
     }
     return ctx;
 }
+/* eslint-enable react-refresh/only-export-components */

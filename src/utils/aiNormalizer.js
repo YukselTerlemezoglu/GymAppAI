@@ -5,7 +5,6 @@
 const BODYWEIGHT_TR = ['vücut ağırlığı', 'vucut agirligi', 'vücut agırlığı', 'beden ağırlığı', 'vücut ağırlığıyla', 'bodyweight', 'body weight', 'bw', 'kendi ağırlığın', 'kendi ağırlığı'];
 
 // Sayi gorunumlu mu? ("50", "8-12", "12,5")
-const isNumericish = (s) => /^[0-9]+([.,][0-9]+)?(-[0-9]+([.,][0-9]+)?)?$/.test(s);
 
 /**
  * Agirlik alanini normalize eder:

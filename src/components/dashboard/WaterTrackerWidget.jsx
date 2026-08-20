@@ -18,7 +18,7 @@ function getTodayKey() {
  * - Bardak tabanli sayac (250ml), gun degisince otomatik sifirlanir
  */
 function WaterTrackerWidget() {
-    const { t, lang } = useLanguage();
+    const { t } = useLanguage();
     const { haptic } = useToast();
     const [waterState, setWaterState] = useLocalStorage('gym_app_water', { date: getTodayKey(), ml: 0 });
     const [goalSetting, setGoalSetting] = useLocalStorage('gym_app_water_goal', null); // { mode: 'auto'|'manual', ml: number }

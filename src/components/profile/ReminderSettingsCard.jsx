@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Bell, BellOff } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
@@ -20,7 +20,7 @@ function ReminderSettingsCard() {
     const { t, lang } = useLanguage();
     const { toast } = useToast();
     const [settings, setSettings] = useState(getReminderSettings());
-    const [permission, setPermission] = useState(
+    const [, setPermission] = useState(
         typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
     );
 

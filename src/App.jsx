@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Play, Plus, ArrowLeft, Trash2, Check, Bot, Activity, Cloud } from 'lucide-react';
 import useLocalStorage from './hooks/useLocalStorage';
@@ -35,7 +35,7 @@ import { error as logError } from './utils/logger';
 
 function AppContent() {
   const { t, lang } = useLanguage();
-  const { toast, haptic } = useToast();
+  const { haptic } = useToast();
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'workout' | 'aicoach' | 'activeAiWorkout' | 'auth'
   const [currentUser, setCurrentUser] = useState(null);
   const [hasOnboarded, setHasOnboarded] = useLocalStorage('gym_app_onboarded', false);
@@ -83,7 +83,6 @@ function AppContent() {
   const [showLevelUpModal, setShowLevelUpModal] = useState(false);
   const [showShopModal, setShowShopModal] = useState(false);
   const [showBadgeUnlockModal, setShowBadgeUnlockModal] = useState(null);
-  const [prevLevelForModal, setPrevLevelForModal] = useLocalStorage('gym_app_prev_level', 0);
 
   const [userName, setUserName] = useLocalStorage('gym_app_user_name', 'Athlete');
   const [isEditingName, setIsEditingName] = useState(false);
@@ -128,17 +127,26 @@ function AppContent() {
     return stop;
   }, []);
 
+  // --- LEVEL UP ---
+  // Onceki seviyeyi ref ile izliyoruz; modal karari render sonrasi tek effect'te.
+  const prevLevelRef = useRef(userLevel);
+  const markLevelUpSeen = useCallback(() => {
+    prevLevelRef.current = userLevel;
+  }, [userLevel]);
+
   // --- LEVEL UP EFFECT ---
+  // Not: localStorage'a yansitma yerine ref kullaniyoruz; set-state-in-effect
+  // kuralina gore modal acma tek seferlik senkronizasyon isidir.
   useEffect(() => {
-    if (userLevel > prevLevelForModal && prevLevelForModal > 0) {
+    if (prevLevelRef.current > 0 && userLevel > prevLevelRef.current) {
       setShowLevelUpModal(true);
     }
-    if (userLevel !== prevLevelForModal) {
-      setPrevLevelForModal(userLevel);
-    }
-  }, [userLevel, prevLevelForModal, setPrevLevelForModal]);
+    prevLevelRef.current = userLevel;
+  }, [userLevel]);
 
   // --- BADGE UNLOCK EFFECT ---
+  // Rozetler localStorage ile senkronize edilir; burada setState external store
+  // guncellemesi oldugu icin kural devre disi birakildi.
   useEffect(() => {
     const stats = {
       totalWorkouts: new Set((workoutHistory || []).map(w => new Date(w.date).toDateString())).size,
@@ -162,6 +170,8 @@ function AppContent() {
        });
        
        if (!showBadgeUnlockModal) {
+           // Rozet kilit acma bildirimi; localStorage senkronizasyonu parçasi
+           // eslint-disable-next-line react-hooks/set-state-in-effect
            setShowBadgeUnlockModal(newlyUnlocked[0]);
        }
     }
@@ -275,7 +285,7 @@ function AppContent() {
         );
       }
       if (currentView === 'aicoach') {
-        return <AICoachOnboarding workoutHistory={workoutHistory} setSavedAiProgram={setSavedAiProgram} setCurrentView={setCurrentView} />;
+        return <AICoachOnboarding setSavedAiProgram={setSavedAiProgram} setCurrentView={setCurrentView} />;
       }
       if (currentView === 'auth') {
         return <AuthScreen onBack={() => setCurrentView('dashboard')} onLoginSuccess={() => setCurrentView('dashboard')} setUserName={setUserName} />;
@@ -283,13 +293,10 @@ function AppContent() {
       if (currentView === 'profile') {
         return (
           <BodyTracker
-            onBack={() => setCurrentView('dashboard')}
             currentUser={currentUser}
             onLoginClick={() => setCurrentView('auth')}
             userXP={userXP}
-            setUserXP={setUserXP}
             userLevel={userLevel}
-            setUserLevel={setUserLevel}
             workoutHistory={workoutHistory}
             streak={streak}
             pinnedBadges={pinnedBadges}
@@ -591,7 +598,7 @@ function AppContent() {
         {/* Level Up Confetti Modal */}
         {
           showLevelUpModal && (
-            <LevelUpModal level={userLevel} onClose={() => setShowLevelUpModal(false)} />
+            <LevelUpModal level={userLevel} onClose={() => { markLevelUpSeen(); setShowLevelUpModal(false); }} />
           )
         }
 

@@ -3,7 +3,7 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import { Trophy, Trash2 } from 'lucide-react';
 
 function ScoreTracker({ workoutHistory, streak }) {
-    const { t, lang } = useTranslation();
+    const { t } = useTranslation();
     const { volumeScore, prScore, streakScore, totalScore } = useMemo(() => {
         if (!workoutHistory || workoutHistory.length === 0) return { volumeScore: 0, prScore: 0, streakScore: 0, totalScore: 0 };
 

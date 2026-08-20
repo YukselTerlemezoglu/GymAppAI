@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Shield, Save, RefreshCcw, Trash2, ArrowLeft, Cloud, LogOut } from 'lucide-react';
-import { auth } from '../../services/firebase';
+
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
 import { error as logError } from '../../utils/logger';

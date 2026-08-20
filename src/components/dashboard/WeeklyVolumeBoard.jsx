@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Layers } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { MUSCLE_GROUPS, findMuscleGroupIdForExercise } from '../../data/exercises';
+import { useCutoff } from '../../hooks/useToday';
 
 /**
  * Haftalık Kas Hacim Panosu
@@ -11,9 +12,10 @@ import { MUSCLE_GROUPS, findMuscleGroupIdForExercise } from '../../data/exercise
 function WeeklyVolumeBoard({ workoutHistory }) {
     const { t, lang } = useLanguage();
     const isEn = lang === 'en';
+    const cutoff7 = useCutoff(7);
 
     const rows = useMemo(() => {
-        const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        const cutoff = cutoff7;
         const counts = Object.fromEntries(MUSCLE_GROUPS.map(mg => [mg.id, 0]));
 
         (workoutHistory || []).forEach(w => {
@@ -40,7 +42,7 @@ function WeeklyVolumeBoard({ workoutHistory }) {
             else if (recMax > 0 && done > recMax * 1.25) status = 'high';
             return { mg, done, recMin, recMax, pct, status };
         });
-    }, [workoutHistory]);
+    }, [workoutHistory, cutoff7]);
 
     if (!workoutHistory || workoutHistory.length === 0) {
         return (

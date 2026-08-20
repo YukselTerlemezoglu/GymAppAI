@@ -110,12 +110,12 @@ const en = {
     body_waist: "Waist",
     body_arms: "Arms",
     body_legs: "Legs",
-    profile_history: "History Logs",
+    profile_history: "History",
 
     // Cloud Sync
     cloud_title: "Cloud Sync",
     cloud_logged_in: "Cloud Active",
-    cloud_logged_out: "Cloud Disconnected",
+    cloud_logged_out: "Signed out.",
     cloud_backup_now: "BACKUP NOW",
     cloud_login: "Sign In or Register",
     cloud_logout: "Sign Out",
@@ -126,23 +126,23 @@ const en = {
     confirm_logout: "Are you sure you want to sign out? (Local data will not be deleted)",
 
     // Auth Screen
-    auth_title_login: "Sign In",
+    auth_title_login: "Login",
     auth_title_register: "Register",
-    auth_email: "Email Address",
+    auth_email: "Email",
     auth_password: "Password",
-    auth_name: "Your Name (In-App Name)",
-    auth_name_placeholder: "Your Athlete Name",
-    auth_switch_to_register: "Don't have an account? Register",
-    auth_switch_to_login: "Already have an account? Sign In",
+    auth_name: "Full Name",
+    auth_name_placeholder: "Enter your name",
+    auth_switch_to_register: "Don't have an account yet?",
+    auth_switch_to_login: "Already have an account?",
     auth_processing: "Processing...",
-    auth_btn_login: "SIGN IN",
+    auth_btn_login: "LOGIN",
     auth_btn_register: "REGISTER",
     auth_optional: "Optional Cloud Account",
     auth_optional_desc: "Create an account to sync your data across all your devices. You can use the app without an account.",
-    auth_error_not_found: "User not found or incorrect password.",
+    auth_error_not_found: "User not found or incorrect credentials.",
     auth_error_wrong_password: "Incorrect password.",
-    auth_error_email_in_use: "This email is already in use.",
-    auth_error_weak_password: "Password too weak. Must be at least 6 characters.",
+    auth_error_email_in_use: "This email address is already in use.",
+    auth_error_weak_password: "Password is too weak (min 6 characters).",
     auth_error_generic: "An error occurred: ",
     auth_forgot_password: "Forgot password",
     auth_reset_password_title: "Reset Password",
@@ -162,7 +162,6 @@ const en = {
     profile_secret_badge: "Secret Achievement",
     profile_secret_desc: "Follow the clues to discover this achievement!",
     profile_add_measurement: "Add Measurement",
-    profile_history: "History",
     profile_no_records: "No records yet.",
     profile_gallery: "Before/After Gallery",
     profile_weight: "Weight (kg)",
@@ -187,7 +186,7 @@ const en = {
     muscle_core: "Core",
 
     // Nutrition
-    nutrition_title: "Nutrition Tracker",
+    nutrition_title: "Nutrition Tracking",
     nutrition_calories: "Calories",
     nutrition_protein: "Protein",
     nutrition_carbs: "Carbs",
@@ -205,22 +204,6 @@ const en = {
     auth_data_synced: "Data Synced, Refreshing...",
     auth_backing_up: "Backing up Data...",
     auth_creating_account: "Creating Account...",
-    auth_processing: "Processing...",
-    auth_title_login: "Login",
-    auth_title_register: "Register",
-    auth_email: "Email",
-    auth_password: "Password",
-    auth_name: "Full Name",
-    auth_name_placeholder: "Enter your name",
-    auth_btn_login: "LOGIN",
-    auth_btn_register: "REGISTER",
-    auth_switch_to_register: "Don't have an account yet?",
-    auth_switch_to_login: "Already have an account?",
-    auth_error_not_found: "User not found or incorrect credentials.",
-    auth_error_wrong_password: "Incorrect password.",
-    auth_error_email_in_use: "This email address is already in use.",
-    auth_error_weak_password: "Password is too weak (min 6 characters).",
-    auth_error_generic: "An error occurred: ",
 
     lang_label: "Language",
     lang_tr: "Türkçe",
@@ -325,7 +308,6 @@ const en = {
     charts_strength_tab: "Strength",
     charts_week_label: "Week",
     charts_weeks_ago: "{{count}}W Ago",
-    charts_this_week: "This Week",
     charts_total_volume: "Total Volume",
 
     // Score Tracker
@@ -376,7 +358,6 @@ const en = {
     ex_modal_not_found: "This exercise was not found in the library. You can ask a trainer or check online for instructions!",
     ex_modal_close_btn: "UNDERSTOOD, BACK TO WORKOUT",
 
-    ex_modal_close_btn: "UNDERSTOOD, BACK TO WORKOUT",
 
     // AI Coach Insights
     ai_coach_start_title: "Full Body Starter",
@@ -407,13 +388,9 @@ const en = {
     ai_coach_type_endurance: "Endurance",
 
     // Nutrition
-    nutrition_title: "Nutrition Tracking",
     nutrition_subtitle: "Track your daily macros and calories.",
     nutrition_macro_summary: "Macro Summary",
     nutrition_kcal: "Calories",
-    nutrition_protein: "Protein",
-    nutrition_carbs: "Carbs",
-    nutrition_fat: "Fat",
     nutrition_meals: "Meals",
     nutrition_add_meal_btn: "Add Meal",
     nutrition_daily_goals: "Daily Goals",
@@ -486,7 +463,6 @@ const en = {
     body_reset_gamification_title: "Reset gamification",
     confirm_delete_ok: "Delete",
     cloud_synced: "Your data has been uploaded to the cloud.",
-    cloud_logged_out: "Signed out.",
 
     // --- Reminders ---
     rem_title: "Reminders",
@@ -499,6 +475,8 @@ const en = {
     rem_days: "Workout days",
     rem_time: "Reminder time",
     rem_water: "Water reminder",
+    rem_disable: "Disable reminders",
+    cloud_logout_toast: "Signed out.",
 };
 
 export default en;

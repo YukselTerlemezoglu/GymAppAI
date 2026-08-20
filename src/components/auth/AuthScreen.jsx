@@ -7,7 +7,7 @@ import { pushDataToCloud, pullDataFromCloud } from '../../utils/cloudSync';
 import { warn as logWarn, error as logError } from '../../utils/logger';
 
 function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
-    const { t, lang } = useLanguage();
+    const { t } = useLanguage();
     const [isLogin, setIsLogin] = useState(true);
     const [isResetMode, setIsResetMode] = useState(false);
     const [email, setEmail] = useState('');

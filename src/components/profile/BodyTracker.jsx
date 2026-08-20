@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
 import ReminderSettingsCard from './ReminderSettingsCard';
@@ -13,7 +13,7 @@ import PhotoGalleryModal from './PhotoGalleryModal';
 import CloudSyncCard from '../dashboard/CloudSyncCard';
 import { error as logError } from '../../utils/logger';
 
-function BodyTracker({ onBack, currentUser, onLoginClick, userXP = 0, setUserXP, userLevel = 1, setUserLevel, workoutHistory = [], streak = 0, pinnedBadges = [], setPinnedBadges, unlockedBadges = [] }) {
+function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, pinnedBadges = [], setPinnedBadges, unlockedBadges = [] }) {
     const { t, lang, setLang } = useTranslation();
     const { toast, confirmDialog } = useToast();
     const [bodyMetrics, setBodyMetrics] = useLocalStorage('gym_app_body_metrics', []);
@@ -40,11 +40,17 @@ function BodyTracker({ onBack, currentUser, onLoginClick, userXP = 0, setUserXP,
     const [showGallery, setShowGallery] = useState(false);
 
     // Load photos from IndexedDB
+    // Not: historyPhotos yalnizca cache kontrolu icin okunur; fonksiyonel
+    // guncelleme + ref sayesinde dep listesine eklemek gerekmez.
+    const historyPhotosRef = useRef(historyPhotos);
+    useEffect(() => {
+        historyPhotosRef.current = historyPhotos;
+    }, [historyPhotos]);
     useEffect(() => {
         const loadPhotos = async () => {
             const photos = {};
             for (const metric of bodyMetrics) {
-                if (metric.hasPhoto && !historyPhotos[metric.id]) {
+                if (metric.hasPhoto && !historyPhotosRef.current[metric.id]) {
                     try {
                         const photoData = await getPhoto(metric.id);
                         if (photoData) photos[metric.id] = photoData;
@@ -93,21 +99,7 @@ function BodyTracker({ onBack, currentUser, onLoginClick, userXP = 0, setUserXP,
         }
     };
 
-    const handleResetGamification = async () => {
-        const ok = await confirmDialog({
-            title: t('body_reset_gamification_title'),
-            message: t('body_reset_gamification_confirm'),
-            confirmLabel: t('confirm_delete_ok'),
-            cancelLabel: t('aw_exit_cancel'),
-            danger: true
-        });
-        if (ok) {
-            if (setUserXP) setUserXP(0);
-            if (setUserLevel) setUserLevel(1);
-            if (setPinnedBadges) setPinnedBadges([]);
-            toast.success(t('body_reset_gamification_success'));
-        }
-    };
+    ;
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;

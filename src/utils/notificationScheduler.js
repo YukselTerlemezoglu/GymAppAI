@@ -85,7 +85,6 @@ export function tickReminders() {
         const last = localStorage.getItem(NOTIFIED_KEY);
         if (last !== todayStr()) {
             localStorage.setItem(NOTIFIED_KEY, todayStr());
-            const dayNames = { tr: ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'], en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] };
             const lang = (navigator.language || 'tr').startsWith('tr') ? 'tr' : 'en';
             const msg = lang === 'tr'
                 ? 'Antrenman saatin geldi! Bugünkü programını kontrol et. 💪'

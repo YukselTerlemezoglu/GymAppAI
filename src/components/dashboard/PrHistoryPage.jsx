@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { ArrowLeft, Trophy, TrendingUp } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { getBestSet, estimate1RM } from '../../utils/prTracker';
+import { estimate1RM } from '../../utils/prTracker';
 
 function formatDate(isoStr, lang) {
     try {

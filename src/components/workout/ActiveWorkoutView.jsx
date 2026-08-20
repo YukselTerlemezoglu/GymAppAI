@@ -29,7 +29,7 @@ function ActiveWorkoutView({
     setUserXP,
     userLevel,
     setUserLevel,
-    userCoins,
+    
     setUserCoins
 }) {
     const { t, lang } = useLanguage();
@@ -681,7 +681,7 @@ function ActiveWorkoutView({
 }
 
 // Egzersiz kartında "geçen sefer + bugünün hedefi" gösteren mini kart
-function LastPerformanceCard({ exerciseName, history, lang, t }) {
+function LastPerformanceCard({ exerciseName, history, t }) {
     const suggestion = useMemo(() => getOverloadSuggestion(exerciseName, history), [exerciseName, history]);
     if (!suggestion) return null;
     const { from, kind, targetWeight, targetReps } = suggestion;

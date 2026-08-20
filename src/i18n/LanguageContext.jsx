@@ -17,7 +17,7 @@ export function LanguageProvider({ children }) {
 
     const setLang = useCallback((newLang) => {
         setLangState(newLang);
-        try { localStorage.setItem('gym_app_lang', newLang); } catch {}
+        try { localStorage.setItem('gym_app_lang', newLang); } catch { /* ozel mod/gizli modda yazma engelli olabilir */ }
     }, []);
 
     const t = useCallback((key, params = {}) => {
@@ -44,6 +44,7 @@ export function LanguageProvider({ children }) {
     );
 }
 
+/* eslint-disable react-refresh/only-export-components -- context + hook ayni dosyada bilincli olarak tutuluyor */
 export function useLanguage() {
     const context = useContext(LanguageContext);
     if (!context) {
@@ -54,3 +55,4 @@ export function useLanguage() {
 
 // Alias for convenience
 export const useTranslation = useLanguage;
+/* eslint-enable react-refresh/only-export-components */

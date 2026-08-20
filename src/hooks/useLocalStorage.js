@@ -71,7 +71,7 @@ function useLocalStorage(key, initialValue) {
             if (!cancelled && idbValue !== undefined) {
                 setStoredValue(idbValue);
                 // LocalStorage cache'ini de güncelle
-                try { window.localStorage.setItem(key, JSON.stringify(idbValue)); } catch {}
+                try { window.localStorage.setItem(key, JSON.stringify(idbValue)); } catch { /* kota dolu olabilir; sessizce yoksay */ }
             }
         });
         return () => { cancelled = true; };

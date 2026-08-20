@@ -3,6 +3,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { Target } from 'lucide-react';
 import { MUSCLE_GROUPS, findMuscleGroupIdForExercise } from '../../data/exercises';
+import { useCutoff } from '../../hooks/useToday';
 
 function CustomRadarTooltip({ active, payload, t }) {
     if (active && payload && payload.length) {
@@ -21,6 +22,7 @@ function CustomRadarTooltip({ active, payload, t }) {
 function MuscleRadarChart({ workoutHistory }) {
     const { t, lang } = useLanguage();
     const isEn = lang === 'en';
+    const cutoff30 = useCutoff(30);
 
     const radarData = useMemo(() => {
         if (!workoutHistory || workoutHistory.length === 0) return [];
@@ -29,7 +31,7 @@ function MuscleRadarChart({ workoutHistory }) {
         const counts = Object.fromEntries(MUSCLE_GROUPS.map(mg => [mg.id, 0]));
 
         // Son 30 gunun antrenmanlari (daha eski kayitlar radar'i bozmasin)
-        const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+        const cutoff = cutoff30;
         workoutHistory.forEach(w => {
             if (!w.exercise || !w.sets) return;
             if (w.date && !isNaN(new Date(w.date)) && new Date(w.date).getTime() < cutoff) return;
@@ -53,7 +55,7 @@ function MuscleRadarChart({ workoutHistory }) {
 
         return dataArray.map(item => ({ ...item, fullMark: maxValue * 1.2 || 10 }));
 
-    }, [workoutHistory, isEn]);
+    }, [workoutHistory, isEn, cutoff30]);
 
     if (!radarData || radarData.length === 0 || radarData.every(d => d.sets === 0)) {
         return (

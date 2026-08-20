@@ -40,7 +40,7 @@ function CloudSyncCard({ currentUser, onLoginClick }) {
         if (ok) {
             try {
                 await signOut(auth);
-                toast.info(t('cloud_logged_out'));
+                toast.info(t('cloud_logout_toast'));
             } catch (error) {
                 logError("Çıkış yapılırken hata:", error);
             }

@@ -10,7 +10,7 @@ const PLATES_KG = [25, 20, 15, 10, 5, 2.5, 1.25];
  * İki mod: hedeften pullara, pullardan hedefe.
  */
 function PlateCalculator({ onClose }) {
-    const { t, lang } = useLanguage();
+    const { t } = useLanguage();
     const [mode, setMode] = useState('targetToPlates'); // 'targetToPlates' | 'platesToTarget'
     const [barWeight, setBarWeight] = useState(20);
     const [targetWeight, setTargetWeight] = useState(60);
