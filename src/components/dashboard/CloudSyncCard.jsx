@@ -5,9 +5,11 @@ import { auth } from '../../services/firebase';
 import { signOut } from 'firebase/auth';
 import { pushDataToCloud } from '../../utils/cloudSync';
 import { error as logError } from '../../utils/logger';
+import { useToast } from '../ui/ToastProvider';
 
 function CloudSyncCard({ currentUser, onLoginClick }) {
     const { t } = useLanguage();
+    const { toast, confirmDialog } = useToast();
     const [isSyncing, setIsSyncing] = useState(false);
     const [syncSuccess, setSyncSuccess] = useState(false);
 
@@ -18,19 +20,27 @@ function CloudSyncCard({ currentUser, onLoginClick }) {
         try {
             await pushDataToCloud(currentUser.uid);
             setSyncSuccess(true);
+            toast.success(t('cloud_synced'));
             setTimeout(() => setSyncSuccess(false), 3000); // 3 saniye sonra başarı ikonunu kaldır
         } catch (error) {
             logError("Senkronizasyon hatası:", error);
-            alert(t('cloud_error'));
+            toast.error(t('cloud_error'));
         } finally {
             setIsSyncing(false);
         }
     };
 
     const handleLogout = async () => {
-        if (window.confirm(t('confirm_logout'))) {
+        const ok = await confirmDialog({
+            title: t('confirm_logout_title'),
+            message: t('confirm_logout'),
+            confirmLabel: t('cloud_logout'),
+            cancelLabel: t('aw_exit_cancel')
+        });
+        if (ok) {
             try {
                 await signOut(auth);
+                toast.info(t('cloud_logged_out'));
             } catch (error) {
                 logError("Çıkış yapılırken hata:", error);
             }

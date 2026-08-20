@@ -1,9 +1,11 @@
 import React, { useRef } from 'react';
 import { Download, Upload } from 'lucide-react';
 import { error as logError } from '../../utils/logger';
+import { useToast } from '../ui/ToastProvider';
 
 function DataSync() {
     const fileInputRef = useRef(null);
+    const { toast, confirmDialog } = useToast();
 
     const exportData = () => {
         try {
@@ -16,7 +18,7 @@ function DataSync() {
             }
 
             if (Object.keys(dataToExport).length === 0) {
-                alert("Dışa aktarılacak GymAppAI verisi bulunamadı.");
+                toast.warning("Dışa aktarılacak GymAppAI verisi bulunamadı.");
                 return;
             }
 
@@ -32,18 +34,26 @@ function DataSync() {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            alert("Verileriniz başarıyla dışa aktarıldı!");
+            toast.success("Verileriniz başarıyla dışa aktarıldı!");
         } catch (error) {
             logError("Export Error:", error);
-            alert("Dışa aktarma sırasında bir hata oluştu.");
+            toast.error("Dışa aktarma sırasında bir hata oluştu.");
         }
     };
 
-    const importData = (event) => {
+    const importData = async (event) => {
         const file = event.target.files[0];
         if (!file) return;
 
-        if (window.confirm("İçe aktaracağınız bu veri, mevcut uygulama verilerinizin üzerine yazılacaktır. Devam etmek istiyor musunuz?")) {
+        const ok = await confirmDialog({
+            title: "İçe aktarma onayı",
+            message: "İçe aktaracağınız bu veri, mevcut uygulama verilerinizin üzerine yazılacaktır. Devam etmek istiyor musunuz?",
+            confirmLabel: "Üzerine yaz",
+            cancelLabel: "Vazgeç",
+            danger: true
+        });
+
+        if (ok) {
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
@@ -55,11 +65,11 @@ function DataSync() {
                         }
                     });
 
-                    alert("Veriler başarıyla içe aktarıldı! Uygulama yeniden başlatılıyor...");
-                    window.location.reload();
+                    toast.success("Veriler başarıyla içe aktarıldı! Uygulama yenileniyor...");
+                    setTimeout(() => window.location.reload(), 900);
                 } catch (error) {
                     logError("Import Error:", error);
-                    alert("Geçersiz dosya formatı. Lütfen geçerli bir yedek dosyası (JSON) seçin.");
+                    toast.error("Geçersiz dosya formatı. Lütfen geçerli bir yedek dosyası (JSON) seçin.");
                 }
             };
             reader.readAsText(file);

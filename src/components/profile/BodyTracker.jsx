@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { useToast } from '../ui/ToastProvider';
 import { ArrowLeft, Save, Trash2, LineChart as LineChartIcon, TrendingUp, Award, Zap, RefreshCcw, Camera, X, Image as ImageIcon } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -13,6 +14,7 @@ import { error as logError } from '../../utils/logger';
 
 function BodyTracker({ onBack, currentUser, onLoginClick, userXP = 0, setUserXP, userLevel = 1, setUserLevel, workoutHistory = [], streak = 0, pinnedBadges = [], setPinnedBadges, unlockedBadges = [] }) {
     const { t, lang, setLang } = useTranslation();
+    const { toast, confirmDialog } = useToast();
     const [bodyMetrics, setBodyMetrics] = useLocalStorage('gym_app_body_metrics', []);
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
@@ -83,19 +85,26 @@ function BodyTracker({ onBack, currentUser, onLoginClick, userXP = 0, setUserXP,
             setPinnedBadges(pinnedBadges.filter(id => id !== badgeId));
         } else {
             if (pinnedBadges.length >= 3) {
-                alert(t('body_badges_max_error'));
+                toast.warning(t('body_badges_max_error'));
                 return;
             }
             setPinnedBadges([...pinnedBadges, badgeId]);
         }
     };
 
-    const handleResetGamification = () => {
-        if (window.confirm(t('body_reset_gamification_confirm'))) {
+    const handleResetGamification = async () => {
+        const ok = await confirmDialog({
+            title: t('body_reset_gamification_title'),
+            message: t('body_reset_gamification_confirm'),
+            confirmLabel: t('confirm_delete_ok'),
+            cancelLabel: t('aw_exit_cancel'),
+            danger: true
+        });
+        if (ok) {
             if (setUserXP) setUserXP(0);
             if (setUserLevel) setUserLevel(1);
             if (setPinnedBadges) setPinnedBadges([]);
-            alert(t('body_reset_gamification_success'));
+            toast.success(t('body_reset_gamification_success'));
         }
     };
 
@@ -119,7 +128,7 @@ function BodyTracker({ onBack, currentUser, onLoginClick, userXP = 0, setUserXP,
         e.preventDefault();
 
         if (!formData.weight && !formData.bodyFat && !formData.chest && !formData.waist && !formData.arms && !formData.legs && !formData.shoulders && !selectedPhoto) {
-            alert(t('body_error_empty'));
+            toast.warning(t('body_error_empty'));
             return;
         }
 
@@ -144,7 +153,7 @@ function BodyTracker({ onBack, currentUser, onLoginClick, userXP = 0, setUserXP,
                 setHistoryPhotos(prev => ({ ...prev, [newMetricId]: compressedBase64 }));
             } catch (error) {
                 logError("Fotoğraf kaydedilemedi:", error);
-                alert(t('body_error_photo'));
+                toast.error(t('body_error_photo'));
                 newMetric.hasPhoto = false;
             }
         }
@@ -157,11 +166,18 @@ function BodyTracker({ onBack, currentUser, onLoginClick, userXP = 0, setUserXP,
 
         setSelectedPhoto(null);
         setPhotoPreview(null);
-        alert(t('saved_success'));
+        toast.success(t('saved_success'));
     };
 
     const handleDeleteMetric = async (id) => {
-        if (window.confirm(t('confirm_delete'))) {
+        const ok = await confirmDialog({
+            title: t('confirm_delete_title'),
+            message: t('confirm_delete'),
+            confirmLabel: t('confirm_delete_ok'),
+            cancelLabel: t('aw_exit_cancel'),
+            danger: true
+        });
+        if (ok) {
             setBodyMetrics(prev => prev.filter(m => m.id !== id));
             await deletePhoto(id);
             setHistoryPhotos(prev => {

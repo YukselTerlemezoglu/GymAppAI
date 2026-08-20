@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { X, Check, Lock, Palette } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { useToast } from '../ui/ToastProvider';
 
 const THEME_SHOP = [
     { id: 'default', name_tr: 'Klasik Neon (Zümrüt)', name_en: 'Classic Neon (Emerald)', price: 0, color1: '#00ff88', color2: '#00d4ff' },
@@ -25,22 +26,31 @@ function ShopModal({
     setActiveTheme
 }) {
     const { t, lang } = useTranslation();
-    
-    const handleBuyOrEquipTheme = (theme) => {
+    const { toast, confirmDialog } = useToast();
+
+    const handleBuyOrEquipTheme = async (theme) => {
         const themeName = lang === 'tr' ? theme.name_tr : theme.name_en;
         if (unlockedThemes.includes(theme.id)) {
             // Equip
             setActiveTheme(theme.id);
+            toast.success(t('shop_equip_ok', { name: themeName }));
         } else {
             // Buy
             if (userCoins >= theme.price) {
-                if (window.confirm(t('shop_buy_confirm', { name: themeName, price: theme.price }))) {
+                const ok = await confirmDialog({
+                    title: t('shop_buy_title'),
+                    message: t('shop_buy_confirm', { name: themeName, price: theme.price }),
+                    confirmLabel: t('shop_buy_yes'),
+                    cancelLabel: t('shop_buy_no')
+                });
+                if (ok) {
                     setUserCoins(userCoins - theme.price);
                     setUnlockedThemes([...unlockedThemes, theme.id]);
                     setActiveTheme(theme.id);
+                    toast.success(t('shop_buy_ok', { name: themeName }));
                 }
             } else {
-                alert(t('shop_insufficient_coins', { needed: theme.price - userCoins }));
+                toast.warning(t('shop_insufficient_coins', { needed: theme.price - userCoins }));
             }
         }
     };

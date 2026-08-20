@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Droplets, Plus, Minus, Check, Settings2 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import useLocalStorage from '../../hooks/useLocalStorage';
+import { useToast } from '../ui/ToastProvider';
 
 const GLASS_ML = 250;
 const FALLBACK_GOAL_ML = 2500;
@@ -18,6 +19,7 @@ function getTodayKey() {
  */
 function WaterTrackerWidget() {
     const { t, lang } = useLanguage();
+    const { haptic } = useToast();
     const [waterState, setWaterState] = useLocalStorage('gym_app_water', { date: getTodayKey(), ml: 0 });
     const [goalSetting, setGoalSetting] = useLocalStorage('gym_app_water_goal', null); // { mode: 'auto'|'manual', ml: number }
     const [bodyMetrics] = useLocalStorage('gym_app_body_metrics', []);
@@ -52,6 +54,7 @@ function WaterTrackerWidget() {
     const update = (deltaMl) => {
         const newMl = Math.max(0, currentMl + deltaMl);
         setWaterState({ date: today, ml: newMl });
+        haptic(deltaMl > 0 ? 12 : 8);
     };
 
     const glassStatus = (i) => {

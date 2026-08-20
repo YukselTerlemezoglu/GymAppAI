@@ -468,6 +468,41 @@ const tr = {
     coach_save_btn: "PROGRAMI ANA SAYFAYA KAYDET",
     coach_error_required: "Lütfen tüm zorunlu alanları doldurun.",
     coach_error_gen: "Program oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.",
+
+    // --- UX: Alt navigasyon ---
+    nav_profile: "Profil",
+
+    // --- UX: Onboarding ---
+    onb_step1_title: "Hoş geldin! 👋",
+    onb_step1_text: "Bugün sekmesinde günlük özetini görürsün: seri, beslenme ve su takibi. Her şey tek bakışta.",
+    onb_step2_title: "Antrenmanını yönet",
+    onb_step2_text: "Antrenman sekmesinde AI koçun programı, kendi programların ve kas anatomisi kütüphanesi seni bekliyor.",
+    onb_step3_title: "Gelişimini izle",
+    onb_step3_text: "Gelişim sekmesinde grafikler, rekorların ve kas dengen. İlerledikçe burası dolacak!",
+    onb_step4_title: "Profilin ve ödüllerin",
+    onb_step4_text: "Profil sekmesinden ölçümlerini kaydet, rozetlerini topla, temalarını aç. Hazırsan başlayalım!",
+    onb_skip: "Atla",
+    onb_next: "İleri",
+    onb_start: "Başla!",
+
+    // --- UX: Temalı onay kutuları ---
+    aw_exit_title: "Antrenmandan çık",
+    aw_exit_msg: "İdmanı bitirmeden çıkmak istediğine emin misin? İlerlemen sıfırlanacak.",
+    aw_exit_confirm: "Çık",
+    aw_exit_cancel: "Vazgeç",
+    confirm_delete_title: "Kaydı sil",
+    confirm_logout_title: "Çıkış yap",
+    shop_buy_title: "Temayı satın al",
+    shop_buy_yes: "Satın al",
+    shop_buy_no: "Vazgeç",
+    shop_buy_ok: "{name} satın alındı ve aktif edildi!",
+    shop_equip_ok: "{name} teması aktif edildi.",
+    admin_save_title: "Değişiklikleri kaydet",
+    admin_full_reset_title: "TAM SIFIRLAMA",
+    body_reset_gamification_title: "Oyunlaştırmayı sıfırla",
+    confirm_delete_ok: "Sil",
+    cloud_synced: "Verilerin buluta yüklendi.",
+    cloud_logged_out: "Çıkış yapıldı.",
 };
 
 export default tr;

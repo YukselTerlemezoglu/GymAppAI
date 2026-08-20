@@ -2,15 +2,17 @@ import React from 'react';
 import { Dumbbell, Trash2, Plus, Check } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { useToast } from '../ui/ToastProvider';
 
 function CustomProgramBuilder({ setSavedAiProgram, setShowCustomBuilder }) {
     const { t } = useTranslation();
+    const { toast } = useToast();
     const [customProgramName, setCustomProgramName] = useLocalStorage('gym_app_custom_name', '');
     const [customDays, setCustomDays] = useLocalStorage('gym_app_custom_days', [{ dayName: t('builder_default_day_with_focus', { num: 1 }), exercises: [] }]);
 
     const handleAddCustomDay = () => {
         if (customDays.length >= 7) {
-            alert(t('builder_max_days_error', { max: 7 }));
+            toast.warning(t('builder_max_days_error', { max: 7 }));
             return;
         }
         setCustomDays([...customDays, { dayName: t('builder_default_day_name', { num: customDays.length + 1 }), exercises: [] }]);
@@ -36,7 +38,7 @@ function CustomProgramBuilder({ setSavedAiProgram, setShowCustomBuilder }) {
 
     const handleSaveCustomProgram = () => {
         if (!customProgramName.trim()) {
-            alert(t('builder_name_error'));
+            toast.warning(t('builder_name_error'));
             return;
         }
         const program = {

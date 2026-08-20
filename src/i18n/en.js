@@ -451,6 +451,41 @@ const en = {
     nutrition_protein_short: "Prot",
     nutrition_carbs_short: "Carb",
     nutrition_fat_short: "Fat",
+
+    // --- UX: Bottom navigation ---
+    nav_profile: "Profile",
+
+    // --- UX: Onboarding ---
+    onb_step1_title: "Welcome! 👋",
+    onb_step1_text: "The Today tab shows your daily summary: streak, nutrition and water tracking. Everything at a glance.",
+    onb_step2_title: "Manage your training",
+    onb_step2_text: "The Train tab has your AI coach program, your custom programs and the muscle anatomy library.",
+    onb_step3_title: "Track your progress",
+    onb_step3_text: "The Progress tab holds your charts, records and muscle balance. It fills up as you go!",
+    onb_step4_title: "Profile & rewards",
+    onb_step4_text: "Log measurements, collect badges and unlock themes in the Profile tab. Ready? Let's go!",
+    onb_skip: "Skip",
+    onb_next: "Next",
+    onb_start: "Start!",
+
+    // --- UX: Themed confirm dialogs ---
+    aw_exit_title: "Leave workout",
+    aw_exit_msg: "Are you sure you want to quit without finishing the workout? Your progress will be reset.",
+    aw_exit_confirm: "Quit",
+    aw_exit_cancel: "Cancel",
+    confirm_delete_title: "Delete entry",
+    confirm_logout_title: "Sign out",
+    shop_buy_title: "Buy theme",
+    shop_buy_yes: "Buy",
+    shop_buy_no: "Cancel",
+    shop_buy_ok: "{name} purchased and equipped!",
+    shop_equip_ok: "{name} theme equipped.",
+    admin_save_title: "Save changes",
+    admin_full_reset_title: "FULL RESET",
+    body_reset_gamification_title: "Reset gamification",
+    confirm_delete_ok: "Delete",
+    cloud_synced: "Your data has been uploaded to the cloud.",
+    cloud_logged_out: "Signed out.",
 };
 
 export default en;

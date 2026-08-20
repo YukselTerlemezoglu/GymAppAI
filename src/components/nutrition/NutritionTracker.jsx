@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { useToast } from '../ui/ToastProvider';
 import { ArrowLeft, Plus, Trash2, Utensils, PieChart, Info, Bot, Loader2 } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { estimateMacros } from '../../services/groq';
@@ -7,6 +8,7 @@ import { error as logError } from '../../utils/logger';
 
 function NutritionTracker({ onBack }) {
     const { t, lang } = useTranslation();
+    const { toast } = useToast();
     // Veri yapısı: { "2023-10-25": { meals: [{id, name, kcal, protein, carbs, fat}], goals: {kcal, protein, carbs, fat} } }
     const [nutritionData, setNutritionData] = useLocalStorage('gym_app_nutrition_v2', {});
     const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
@@ -28,7 +30,7 @@ function NutritionTracker({ onBack }) {
     const handleAddMeal = (e) => {
         e.preventDefault();
         if (!mealForm.name || !mealForm.kcal) {
-            alert(t('nutrition_error_empty'));
+            toast.warning(t('nutrition_error_empty'));
             return;
         }
 
@@ -72,7 +74,7 @@ function NutritionTracker({ onBack }) {
 
     const handleCalculateAI = async () => {
         if (!mealForm.name) {
-            alert(t('nutrition_ai_prompt'));
+            toast.warning(t('nutrition_ai_prompt'));
             return;
         }
 
@@ -98,12 +100,11 @@ function NutritionTracker({ onBack }) {
             } else if (err?.code === 'RATE_LIMIT' || err?.code === 'resource-exhausted') {
                 userMsg = t('nutrition_api_limit');
             }
-            alert(userMsg);
+            toast.error(userMsg);
         } finally {
             setIsAiLoading(false);
         }
     };
-
     return (
         <div className="app-container slide-in">
             <header className="top-bar fade-in" style={{ animationDelay: '0s', flexDirection: 'column', alignItems: 'flex-start', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem' }}>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useToast } from '../ui/ToastProvider';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, Check, Trophy, Info, Settings, TrendingUp, Calculator } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
@@ -32,6 +33,7 @@ function ActiveWorkoutView({
     setUserCoins
 }) {
     const { t, lang } = useLanguage();
+    const { toast, confirmDialog, haptic } = useToast();
     // Timer ve antrenman logları ARTIK bellek içi (useState).
     // Sebep: saniyede bir IndexedDB'ye yazmak performansı bozuyordu ve
     // kullanıcı antrenmanı yarıda bırakıp uygulamayı kapatınca,
@@ -133,6 +135,7 @@ function ActiveWorkoutView({
     };
 
     const handleCheckSet = (eIdx, sIdx, ex) => {
+        haptic(10);
         setActiveAiWorkoutLogs(prev => {
             const updated = { ...prev };
             if (!updated[eIdx]) {
@@ -239,7 +242,10 @@ function ActiveWorkoutView({
 
         // PR TESPİTİ: yeni kayıtları eski geçmişle karşılaştır
         const prs = detectPRs(newWorkouts, workoutHistory);
-        if (prs.length > 0) setPendingPRs(prs);
+        if (prs.length > 0) {
+            setPendingPRs(prs);
+            haptic([30, 50, 30, 50, 60]); // rekor! guclu titreme
+        }
 
         // Update streaks
         const isYesterday = new Date(lastWorkoutDate).toDateString() === new Date(new Date().setDate(new Date().getDate() - 1)).toDateString();
@@ -371,19 +377,20 @@ function ActiveWorkoutView({
             const earnedCoins = Math.max(1, Math.round(gainedXP * 0.1));
             setUserCoins((prev) => (prev || 0) + earnedCoins);
 
-            let baseMsg = `⭐ ${lang === 'tr' ? `+${gainedXP} XP Kazandın! (${newTotalXP} / ${currentRequiredXP})` : `+${gainedXP} XP Earned! (${newTotalXP} / ${currentRequiredXP})`}`;
+            let baseMsg = `${lang === 'tr' ? `+${gainedXP} XP` : `+${gainedXP} XP`}`;
             if (streakMultiplier > 1.0) {
-                baseMsg += `\n🔥 ${lang === 'tr' ? `Seri Çarpanı Aktif: ${streakMultiplier}x Bonus XP!` : `Streak Multiplier Active: ${streakMultiplier}x Bonus XP!`}`;
+                baseMsg += ` · 🔥 ${streakMultiplier}x`;
             }
-            baseMsg += `\n🪙 ${lang === 'tr' ? `+${earnedCoins} Jeton kazandın!` : `+${earnedCoins} Coins earned!`}`;
+            baseMsg += ` · 🪙 +${earnedCoins}`;
 
-            let finalMsg = `🤖 ${lang === 'tr' ? 'YAPAY ZEKA OPTİMİZASYONU' : 'AI OPTIMIZATION'}:\n\n${optimizationMessage}\n\n${baseMsg}`;
+            // Seviye atlama ve optimizasyon mesaji toast'larla gosterilir
             if (leveledUp) {
-                finalMsg += `\n🎉 ${lang === 'tr' ? `TEBRİKLER SEVİYE ATLADIN! Yeni Güç Seviyen: ${currentLvl}` : `CONGRATS, YOU LEVELED UP! New Power Level: ${currentLvl}`}`;
+                toast.success(`🎉 ${lang === 'tr' ? `Seviye atladın! Yeni seviye: ${currentLvl}` : `Level up! New level: ${currentLvl}`}`, { duration: 4200 });
             }
-
-            // Note: In the future, we will replace this alert with a Confetti UI modal!
-            alert(finalMsg);
+            toast.success(`${baseMsg} ${lang === 'tr' ? 'kazandın!' : 'earned!'}`, { duration: 3200 });
+            if (optimizationMessage && optimizationMessage.trim()) {
+                toast.info(`🤖 ${optimizationMessage.slice(0, 120)}`, { duration: 4600 });
+            }
         }
         // ----------------------------------------
 
@@ -392,6 +399,7 @@ function ActiveWorkoutView({
         setActiveAiWorkoutTimer(0);
         setIsRestTimerActive(false);
         setRestTimeRemaining(0);
+        haptic([20, 60, 20]);
 
         setCurrentView('dashboard');
         setShowAiFeedbackModal(false);
@@ -403,8 +411,15 @@ function ActiveWorkoutView({
         <div className="app-container slide-in">
             <header className="top-bar fade-in" style={{ animationDelay: '0s', flexDirection: 'column', alignItems: 'center', background: 'rgba(0,0,0,0.5)', paddingBottom: '1rem', borderBottom: '1px solid var(--glass-border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '1rem' }}>
-                    <button className="back-btn" onClick={() => {
-                        if (window.confirm(lang === 'tr' ? "İdmanı bitirmeden çıkmak istediğine emin misin? (İlerlemen sıfırlanacak)" : "Are you sure you want to quit without finishing the workout? (Progress will be reset)")) {
+                    <button className="back-btn" onClick={async () => {
+                        const ok = await confirmDialog({
+                            title: t('aw_exit_title'),
+                            message: t('aw_exit_msg'),
+                            confirmLabel: t('aw_exit_confirm'),
+                            cancelLabel: t('aw_exit_cancel'),
+                            danger: true
+                        });
+                        if (ok) {
                             setActiveAiWorkoutLogs({});
                             setActiveAiWorkoutTimer(0);
                             setIsRestTimerActive(false);

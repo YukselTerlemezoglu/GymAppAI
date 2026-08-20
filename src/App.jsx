@@ -15,6 +15,9 @@ import NutritionTracker from './components/nutrition/NutritionTracker';
 import NutritionSummary from './components/dashboard/NutritionSummary';
 import WaterTrackerWidget from './components/dashboard/WaterTrackerWidget';
 import PrHistoryPage from './components/dashboard/PrHistoryPage';
+import BottomNav from './components/ui/BottomNav';
+import OnboardingOverlay from './components/ui/OnboardingOverlay';
+import { ToastProvider, useToast } from './components/ui/ToastProvider';
 import LevelUpModal from './components/ui/LevelUpModal';
 import ShopModal from './components/profile/ShopModal';
 import BadgeUnlockModal from './components/ui/BadgeUnlockModal';
@@ -33,8 +36,10 @@ import { error as logError } from './utils/logger';
 
 function AppContent() {
   const { t, lang } = useLanguage();
+  const { toast, haptic } = useToast();
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'workout' | 'aicoach' | 'activeAiWorkout' | 'auth'
   const [currentUser, setCurrentUser] = useState(null);
+  const [hasOnboarded, setHasOnboarded] = useLocalStorage('gym_app_onboarded', false);
 
   useEffect(() => {
     if (!auth) return;
@@ -204,6 +209,20 @@ function AppContent() {
   };
   // ------------------------------
 
+  // Alt navigasyon: sekmeye gec veya profil ekranina git
+  const handleNavSelectTab = (tabId) => {
+    haptic(8);
+    setDashboardTab(tabId);
+    if (currentView !== 'dashboard') setCurrentView('dashboard');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleNavGoProfile = () => {
+    haptic(8);
+    setCurrentView('profile');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // Framer Motion sayfa geçiş varyasyonları
   const pageVariants = {
     initial: { opacity: 1, y: -20 },
@@ -327,7 +346,7 @@ function AppContent() {
         exit="exit"
         style={{ width: '100%' }}
       >
-        <div className="app-container">
+        <div className="app-container" style={{ paddingBottom: '90px' }}>
           <ErrorBoundary>
             {/* Top Navigation */}
             <header className="top-bar fade-in" style={{ animationDelay: '0s' }}>
@@ -616,6 +635,21 @@ function AppContent() {
 
           </ErrorBoundary>
         </div>
+
+        {/* Sabit alt navigasyon */}
+        <BottomNav
+          currentView={currentView}
+          dashboardTab={dashboardTab}
+          onGoHome={handleNavGoProfile}
+          onSelectTab={handleNavSelectTab}
+        />
+
+        {/* Ilk acilis rehberi */}
+        <AnimatePresence>
+          {!hasOnboarded && (
+            <OnboardingOverlay onFinish={() => setHasOnboarded(true)} />
+          )}
+        </AnimatePresence>
       </motion.div>
     </AnimatePresence>
   );
@@ -625,7 +659,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <LanguageProvider>
-        <AppContent />
+        <ToastProvider>
+          <AppContent />
+        </ToastProvider>
       </LanguageProvider>
     </ErrorBoundary>
   );

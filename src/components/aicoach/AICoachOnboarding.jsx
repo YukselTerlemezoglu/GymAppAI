@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { useToast } from '../ui/ToastProvider';
 import { ArrowLeft, Bot, Loader2 } from 'lucide-react';
 import { generateProgram } from '../../services/groq';
 import { error as logError } from '../../utils/logger';
@@ -8,6 +9,7 @@ import { normalizeAiProgram } from '../../utils/aiNormalizer';
 
 function AICoachOnboarding({ workoutHistory, setSavedAiProgram, setCurrentView }) {
     const { t, lang } = useTranslation();
+    const { toast } = useToast();
     const [aiGoal, setAiGoal] = useState('');
     const [aiDays, setAiDays] = useState('');
     const [aiDuration, setAiDuration] = useState('');
@@ -21,7 +23,7 @@ function AICoachOnboarding({ workoutHistory, setSavedAiProgram, setCurrentView }
     const handleGenerateProgram = async (e) => {
         e.preventDefault();
         if (!aiGoal || !aiDays || !aiDuration || !aiEquipment || !aiLevel || !aiCardio) {
-            alert(t('coach_error_required'));
+            toast.warning(t('coach_error_required'));
             return;
         }
 

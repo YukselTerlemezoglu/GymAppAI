@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Shield, Save, RefreshCcw, Trash2, ArrowLeft, Cloud, LogOut } from 'lucide-react';
 import { auth } from '../../services/firebase';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { useToast } from '../ui/ToastProvider';
 import { error as logError } from '../../utils/logger';
 
 // Bilinen tüm GymAppAI LocalStorage/IndexedDB anahtarları.
@@ -45,6 +46,7 @@ function AdminPanel({
     setActiveTheme
 }) {
     const { t } = useTranslation();
+    const { toast, confirmDialog } = useToast();
     const [passwordInput, setPasswordInput] = useState('');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
@@ -68,23 +70,29 @@ function AdminPanel({
         e.preventDefault();
         if (!ADMIN_PASS) {
             // .env eksik veya placeholder bırakılmış
-            alert(t('admin_disabled') || 'Admin paneli devre dışı (parola yapılandırılmamış).');
+            toast.warning(t('admin_disabled') || 'Admin paneli devre dışı (parola yapılandırılmamış).');
             return;
         }
         if (passwordInput === ADMIN_PASS) {
             setIsAuthenticated(true);
         } else {
-            alert(t('admin_wrong_pass'));
+            toast.error(t('admin_wrong_pass'));
             setPasswordInput('');
         }
     };
 
-    const handleSaveModifications = () => {
-        if (window.confirm(t('admin_save_confirm'))) {
+    const handleSaveModifications = async () => {
+        const ok = await confirmDialog({
+            title: t('admin_save_title'),
+            message: t('admin_save_confirm'),
+            confirmLabel: t('admin_xp_btn'),
+            cancelLabel: t('aw_exit_cancel')
+        });
+        if (ok) {
             setUserXP(Number(editXP));
             setUserLevel(Number(editLevel));
             setUserCoins(Number(editCoins));
-            alert(t('admin_save_success'));
+            toast.success(t('admin_save_success'));
         }
     };
 
@@ -107,15 +115,22 @@ function AdminPanel({
         const earnedCoins = Math.max(1, Math.round(Number(simulateXP) * 0.1));
         setUserCoins((prev) => (prev || 0) + earnedCoins);
 
-        alert(t('admin_simulate_success', { 
-            xp: simulateXP, 
-            coins: earnedCoins, 
-            level: currentLvl 
+        toast.success(t('admin_simulate_success', {
+            xp: simulateXP,
+            coins: earnedCoins,
+            level: currentLvl
         }));
     };
 
-    const handleFullReset = () => {
-        if (window.confirm(t('admin_full_reset_warning'))) {
+    const handleFullReset = async () => {
+        const ok = await confirmDialog({
+            title: t('admin_full_reset_title'),
+            message: t('admin_full_reset_warning'),
+            confirmLabel: t('admin_hard_reset_btn'),
+            cancelLabel: t('aw_exit_cancel'),
+            danger: true
+        });
+        if (ok) {
             setUserXP(0);
             setUserLevel(1);
             setUserCoins(0);
@@ -128,8 +143,8 @@ function AdminPanel({
             if (setActiveTheme) setActiveTheme('default');
             // Sadece GymApp'ye ait anahtarları sil (origin'i korumak için).
             clearGymAppStorage();
-            alert(t('admin_full_reset_success'));
-            window.location.reload();
+            toast.success(t('admin_full_reset_success'));
+            setTimeout(() => window.location.reload(), 900);
         }
     };
 
