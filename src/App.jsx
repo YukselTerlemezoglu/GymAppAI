@@ -27,10 +27,8 @@ import AnatomyLibrary from './components/anatomy/AnatomyLibrary';
 import AuthScreen from './components/auth/AuthScreen';
 import { BADGE_LIBRARY } from './data/badges';
 import { applyTheme } from './data/themes';
-import { Zap } from 'lucide-react';
 import './App.css';
-import { getRank } from './utils/ranks';
-import { auth } from './services/firebase';
+import { getRank } from './utils/ranks';import { auth } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import { error as logError } from './utils/logger';
@@ -493,39 +491,6 @@ function AppContent() {
             );
           })()}
         </header>
-
-        {/* Sekme navigasyonu: Bugün / Antrenman / Gelişim */}
-        <nav className="fade-in" style={{ animationDelay: '0.05s', display: 'flex', gap: '6px', background: 'rgba(0,0,0,0.3)', padding: '5px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)', marginBottom: '1.25rem' }}>
-          {[
-            { id: 'today', icon: <Zap size={15} />, label: t('tab_today') },
-            { id: 'train', icon: <Bot size={15} />, label: t('tab_train') },
-            { id: 'progress', icon: <Trophy size={15} />, label: t('tab_progress') }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setDashboardTab(tab.id)}
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                padding: '9px 4px',
-                borderRadius: '9px',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '0.85rem',
-                fontWeight: dashboardTab === tab.id ? 700 : 500,
-                background: dashboardTab === tab.id ? 'linear-gradient(135deg, rgba(0,195,255,0.22), rgba(255,0,136,0.18))' : 'transparent',
-                color: dashboardTab === tab.id ? '#fff' : 'var(--text-light)',
-                boxShadow: dashboardTab === tab.id ? '0 2px 12px rgba(0,195,255,0.25)' : 'none',
-                transition: 'all 0.2s'
-              }}
-            >
-              {tab.icon} {tab.label}
-            </button>
-          ))}
-        </nav>
 
         {/* ============ BUGÜN ============ */}
         {dashboardTab === 'today' && (
