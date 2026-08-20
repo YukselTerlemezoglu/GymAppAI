@@ -1815,26 +1815,37 @@ const _KEYWORD_FALLBACK = [
   // Cok kelimeli ozel durumlar once
   ['leg raise', 'core'], ['leg curl', 'legs'], ['leg extension', 'legs'], ['leg press', 'legs'],
   ['calf raise', 'calves'], ['hip thrust', 'glutes'], ['face pull', 'back'],
+  ['good morning', 'back'], ['hip thrust', 'glutes'],
+  ['nordic curl', 'legs'], ['glute ham', 'legs'],
   // Omuz
   ['overhead', 'shoulders'], ['military', 'shoulders'], ['lateral', 'shoulders'],
   ['shoulder', 'shoulders'], ['omuz', 'shoulders'], ['raise', 'shoulders'], ['delt', 'shoulders'], ['arnold', 'shoulders'],
+  ['upright row', 'shoulders'],
   // Gogus
   ['bench', 'chest'], ['fly', 'chest'], ['chest', 'chest'], ['gogus', 'chest'], ['sinav', 'chest'], ['pushup', 'chest'], ['push up', 'chest'], ['crossover', 'chest'], ['dip', 'chest'],
+  ['pec deck', 'chest'], ['butterfly', 'chest'], ['pullover', 'chest'], ['pull over', 'chest'],
   // Sirt
   ['pulldown', 'back'], ['barfiks', 'back'], ['pullup', 'back'], ['pull up', 'back'], ['deadlift', 'back'],
   ['row', 'back'], ['lat', 'back'], ['back', 'back'], ['sirt', 'back'], ['shrug', 'back'], ['trap', 'back'],
+  ['hyperextension', 'back'], ['back extension', 'back'], ['chin up', 'back'], ['chinup', 'back'],
+  ['trapez', 'back'], ['cekilis', 'back'], ['dominant', 'back'],
   // Bacak
   ['squat', 'legs'], ['lunge', 'legs'], ['rdl', 'legs'], ['romanian', 'legs'], ['leg', 'legs'],
   ['bacak', 'legs'], ['quad', 'legs'], ['hamstring', 'legs'], ['calf', 'calves'], ['baldir', 'calves'],
+  ['hack squat', 'legs'], ['sumo', 'legs'],
   // Kalca
   ['glute', 'glutes'], ['hip', 'glutes'], ['abduction', 'glutes'], ['kalca', 'glutes'], ['kickback', 'glutes'],
+  ['glute bridge', 'glutes'],
   // Kollar
   ['tricep', 'triceps'], ['bicep', 'biceps'], ['pushdown', 'triceps'], ['skullcrusher', 'triceps'],
   ['hammer', 'biceps'], ['preacher', 'biceps'], ['curl', 'biceps'], ['arm', 'biceps'], ['kol', 'biceps'],
-  ['wrist', 'forearms'], ['grip', 'forearms'], ['farmers', 'forearms'],
+  ['wrist', 'forearms'], ['grip', 'forearms'], ['farmers', 'forearms'], ['dead hang', 'forearms'],
   // Core
   ['plank', 'core'], ['crunch', 'core'], ['situp', 'core'], ['sit up', 'core'], ['abs', 'core'],
   ['core', 'core'], ['karin', 'core'], ['mekik', 'core'], ['twist', 'core'], ['rollout', 'core'],
+  ['mountain climber', 'core'], ['climber', 'core'], ['hanging knee', 'core'],
+  // Tek kelimelik dogrudan grup adlari (AI bazen boyle uretir)
+  ['triceps', 'triceps'], ['biceps', 'biceps'], ['forearm', 'forearms'],
   // En genel (en son)
   ['press', 'chest'], ['push', 'chest'], ['extension', 'triceps'], ['carry', 'forearms']
 ];
