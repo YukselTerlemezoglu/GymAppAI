@@ -18,6 +18,7 @@ import PrHistoryPage from './components/dashboard/PrHistoryPage';
 import BottomNav from './components/ui/BottomNav';
 import OnboardingOverlay from './components/ui/OnboardingOverlay';
 import { ToastProvider, useToast } from './components/ui/ToastProvider';
+import { startReminderTicker } from './utils/notificationScheduler';
 import LevelUpModal from './components/ui/LevelUpModal';
 import ShopModal from './components/profile/ShopModal';
 import BadgeUnlockModal from './components/ui/BadgeUnlockModal';
@@ -121,6 +122,13 @@ function AppContent() {
   useEffect(() => {
     applyTheme(activeTheme);
   }, [activeTheme]);
+
+  // --- PWA HATIRLATMA TICKER'I ---
+  // Uygulama acikken antrenman/su hatirlatmalarini kontrol eder
+  useEffect(() => {
+    const stop = startReminderTicker();
+    return stop;
+  }, []);
 
   // --- LEVEL UP EFFECT ---
   useEffect(() => {

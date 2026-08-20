@@ -44,3 +44,4 @@ functions/
 # Vercel
 .vercel
 .env*
+.git-commit-msg.txt

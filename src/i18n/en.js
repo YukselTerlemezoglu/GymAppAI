@@ -482,10 +482,23 @@ const en = {
     shop_equip_ok: "{name} theme equipped.",
     admin_save_title: "Save changes",
     admin_full_reset_title: "FULL RESET",
+    admin_locked: "Too many failed attempts. Wait {sec} seconds.",
     body_reset_gamification_title: "Reset gamification",
     confirm_delete_ok: "Delete",
     cloud_synced: "Your data has been uploaded to the cloud.",
     cloud_logged_out: "Signed out.",
+
+    // --- Reminders ---
+    rem_title: "Reminders",
+    rem_subtitle: "Workout and water reminders (work while the app is open)",
+    rem_enable: "Enable notifications",
+    rem_enabled_ok: "Reminders enabled!",
+    rem_blocked: "Notification permission is blocked. Allow it in your browser settings.",
+    rem_unsupported: "This browser doesn't support notifications.",
+    rem_disabled: "Reminders disabled.",
+    rem_days: "Workout days",
+    rem_time: "Reminder time",
+    rem_water: "Water reminder",
 };
 
 export default en;

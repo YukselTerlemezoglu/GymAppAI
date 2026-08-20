@@ -5,6 +5,16 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
 import { error as logError } from '../../utils/logger';
 
+// Admin parolasinin SHA-256 hex hash'i (.env: VITE_ADMIN_PASSWORD_HASH).
+// Parola kendisi degil hash'i bundle'a gomulur; duz metin sifre expose edilmez.
+// Not: Istemci-tarafi kontrol gercek guvenlik degildir; butun veriler
+// zaten localStorage'da (kullanicinin kendi cihazi). Bu, merakli
+// kullanicilari engellemek icin makul bir seviyedir.
+async function sha256Hex(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // Bilinen tüm GymAppAI LocalStorage/IndexedDB anahtarları.
 // Bunların dışındaki anahtarlar ASLA silinmemeli (origin'de başka
 // uygulamalar olabilir). 'gym_app_' ön eki korunarak ileride eklenen
@@ -50,15 +60,23 @@ function AdminPanel({
     const [passwordInput, setPasswordInput] = useState('');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-    // Admin parolası (.env'den). Placeholder veya eksikse panel erişilemez.
+    // Admin parolasi: once hash (.env: VITE_ADMIN_PASSWORD_HASH, format: hex64),
+    // geriye donuk uyumluluk icin duz metin (.env: VITE_ADMIN_PASSWORD).
+    // Placeholder/eksikse panel erisilemez.
+    const RAW_ADMIN_HASH = import.meta.env.VITE_ADMIN_PASSWORD_HASH;
     const RAW_ADMIN_PASS = import.meta.env.VITE_ADMIN_PASSWORD;
     const PLACEHOLDER_VALUES = new Set([
         'YOUR_ADMIN_PASSWORD',
+        'YOUR_ADMIN_PASSWORD_HASH',
         'API_ANAHTARINIZI_BURAYA_YAZIN',
         '',
         undefined,
     ]);
+    const ADMIN_HASH = (RAW_ADMIN_HASH && !PLACEHOLDER_VALUES.has(RAW_ADMIN_HASH) && /^[0-9a-f]{64}$/i.test(RAW_ADMIN_HASH))
+        ? RAW_ADMIN_HASH.toLowerCase()
+        : null;
     const ADMIN_PASS = PLACEHOLDER_VALUES.has(RAW_ADMIN_PASS) ? null : RAW_ADMIN_PASS;
+    const ADMIN_CONFIGURED = !!(ADMIN_HASH || ADMIN_PASS);
 
     const [editXP, setEditXP] = useState(userXP);
     const [editLevel, setEditLevel] = useState(userLevel);
@@ -66,17 +84,36 @@ function AdminPanel({
 
     const [simulateXP, setSimulateXP] = useState(1000);
 
-    const handleLogin = (e) => {
+    // Brute-force korumasi: 5 hatali denemeden sonra 60 sn kilitleme (session bazli)
+    const [failedAttempts, setFailedAttempts] = useState(0);
+    const [lockUntil, setLockUntil] = useState(0);
+
+    const handleLogin = async (e) => {
         e.preventDefault();
-        if (!ADMIN_PASS) {
-            // .env eksik veya placeholder bırakılmış
+        if (!ADMIN_CONFIGURED) {
             toast.warning(t('admin_disabled') || 'Admin paneli devre dışı (parola yapılandırılmamış).');
             return;
         }
-        if (passwordInput === ADMIN_PASS) {
+        if (Date.now() < lockUntil) {
+            const waitSec = Math.ceil((lockUntil - Date.now()) / 1000);
+            toast.warning(t('admin_locked', { sec: waitSec }));
+            return;
+        }
+        const inputHash = await sha256Hex(passwordInput);
+        const ok = (ADMIN_HASH && inputHash === ADMIN_HASH) || (ADMIN_PASS && passwordInput === ADMIN_PASS);
+        if (ok) {
             setIsAuthenticated(true);
+            setFailedAttempts(0);
         } else {
-            toast.error(t('admin_wrong_pass'));
+            const next = failedAttempts + 1;
+            setFailedAttempts(next);
+            if (next >= 5) {
+                setLockUntil(Date.now() + 60 * 1000);
+                setFailedAttempts(0);
+                toast.error(t('admin_locked', { sec: 60 }));
+            } else {
+                toast.error(t('admin_wrong_pass'));
+            }
             setPasswordInput('');
         }
     };
@@ -148,7 +185,7 @@ function AdminPanel({
         }
     };
 
-    if (!ADMIN_PASS) {
+    if (!ADMIN_CONFIGURED) {
         return (
             <div className="app-container slide-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', padding: '1rem' }}>
                 <div className="glass-card" style={{ width: '100%', maxWidth: '350px', padding: '2rem', textAlign: 'center', border: '1px solid #ff4757' }}>

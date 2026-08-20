@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
+import ReminderSettingsCard from './ReminderSettingsCard';
 import { Save, Trash2, LineChart as LineChartIcon, TrendingUp, Award, Zap, RefreshCcw, Camera, X, Image as ImageIcon } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -679,12 +680,15 @@ function BodyTracker({ onBack, currentUser, onLoginClick, userXP = 0, setUserXP,
 
             {/* Öncesi/Sonrası Gelişim Galerisi Modal */}
             {showGallery && (
-                <PhotoGalleryModal 
-                    photos={historyPhotos} 
-                    metrics={bodyMetrics} 
-                    onClose={() => setShowGallery(false)} 
+                <PhotoGalleryModal
+                    photos={historyPhotos}
+                    metrics={bodyMetrics}
+                    onClose={() => setShowGallery(false)}
                 />
             )}
+
+            {/* Bildirim / Hatirlatma Ayarlari */}
+            <ReminderSettingsCard />
         </div >
     );
 }

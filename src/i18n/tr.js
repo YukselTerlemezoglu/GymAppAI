@@ -499,10 +499,23 @@ const tr = {
     shop_equip_ok: "{name} teması aktif edildi.",
     admin_save_title: "Değişiklikleri kaydet",
     admin_full_reset_title: "TAM SIFIRLAMA",
+    admin_locked: "Çok fazla hatalı deneme. {sec} saniye bekle.",
     body_reset_gamification_title: "Oyunlaştırmayı sıfırla",
     confirm_delete_ok: "Sil",
     cloud_synced: "Verilerin buluta yüklendi.",
     cloud_logged_out: "Çıkış yapıldı.",
+
+    // --- Bildirim/Hatırlatma ---
+    rem_title: "Hatırlatmalar",
+    rem_subtitle: "Antrenman ve su hatırlatmaları (uygulama açıkken çalışır)",
+    rem_enable: "Bildirimleri Aç",
+    rem_enabled_ok: "Hatırlatmalar açıldı!",
+    rem_blocked: "Bildirim izni engellenmiş. Tarayıcı ayarlarından izin vermelisin.",
+    rem_unsupported: "Bu tarayıcı bildirimleri desteklemiyor.",
+    rem_disabled: "Hatırlatmalar kapatıldı.",
+    rem_days: "Antrenman günleri",
+    rem_time: "Hatırlatma saati",
+    rem_water: "Su hatırlatması",
 };
 
 export default tr;
