@@ -292,12 +292,18 @@ const tr = {
     preview_exercise_info: "Egzersiz Bilgisi",
 
     // App Titles
-    app_profile_tooltip: "Profile gitmek için tek, Geliştirici Ayarları için çift tıklayın!",
-    app_edit_name_tooltip: "İsmini Değiştir",
+    app_admin_tooltip: "Çift tıkla: Geliştirici Ayarları",
     app_shop_tooltip: "Mağazayı Aç (Tema ve Avatar Al)",
-    app_profile_view: "Profilini Gör",
     app_rank_empty: "Henüz sergilenen rozet yok.",
     app_logout_tooltip: "Çıkış Yap",
+
+    // Settings (Profil > Ayarlar)
+    set_title: "Ayarlar",
+    set_name_label: "İsmin",
+    set_save: "Kaydet",
+    set_name_error: "İsim boş olamaz.",
+    set_name_saved: "Merhaba {{name}}! İsmin güncellendi.",
+    set_lang_label: "Dil",
 
     // Shop
     shop_title: "Tema Mağazası",

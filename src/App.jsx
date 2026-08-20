@@ -65,17 +65,17 @@ function AppContent() {
     };
   }, []);
 
+  // Profil kartina artik tek tikla navigasyon YOK (alt nav var);
+  // sadece cift tikla admin paneline giris korunuyor.
   const handleProfileClick = () => {
     if (profileClickTimeout.current !== null) {
-      // Double click detected
+      // Cift tik -> admin paneli
       clearTimeout(profileClickTimeout.current);
       profileClickTimeout.current = null;
       setCurrentView('admin');
     } else {
-      // Single click detected
       profileClickTimeout.current = setTimeout(() => {
         profileClickTimeout.current = null;
-        setCurrentView('profile');
       }, 300);
     }
   };
@@ -85,7 +85,6 @@ function AppContent() {
   const [showBadgeUnlockModal, setShowBadgeUnlockModal] = useState(null);
 
   const [userName, setUserName] = useLocalStorage('gym_app_user_name', 'Athlete');
-  const [isEditingName, setIsEditingName] = useState(false);
 
   const [userCoins, setUserCoins] = useLocalStorage('gym_app_coins', 0);
   const [unlockedThemes, setUnlockedThemes] = useLocalStorage('gym_app_unlocked_themes', ['default']);
@@ -302,6 +301,8 @@ function AppContent() {
             pinnedBadges={pinnedBadges}
             setPinnedBadges={setPinnedBadges}
             unlockedBadges={unlockedBadges}
+            userName={userName}
+            setUserName={setUserName}
           />
         );
       }
@@ -395,7 +396,7 @@ function AppContent() {
                   userSelect: 'none',
                   touchAction: 'manipulation'
                 }}
-                title={t('app_profile_tooltip')}
+                title={t('app_admin_tooltip')}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0, 195, 255, 0.2)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0, 195, 255, 0.1)'; e.currentTarget.style.transform = 'translateY(0)'; }}
               >
@@ -404,26 +405,7 @@ function AppContent() {
                 </div>
 
                 <div className="greeting" style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minWidth: 0 }}>
-                  {isEditingName ? (
-                    <input
-                      type="text"
-                      autoFocus
-                      style={{ background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--accent-primary)', borderRadius: '4px', outline: 'none', padding: '2px 4px', fontSize: '1.1rem', width: '120px', marginBottom: '2px' }}
-                      value={userName}
-                      onChange={(e) => setUserName(e.target.value)}
-                      onBlur={() => setIsEditingName(false)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') setIsEditingName(false); }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  ) : (
-                    <div
-                      style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}
-                      onClick={(e) => { e.stopPropagation(); setIsEditingName(true); }}
-                    >
-                      <h1 style={{ fontSize: '1.05rem', margin: 0, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</h1>
-                      <span style={{ fontSize: '0.75rem', opacity: 0.5, flexShrink: 0 }} title={t('app_edit_name_tooltip')}>✏️</span>
-                    </div>
-                  )}
+                  <h1 style={{ fontSize: '1.05rem', margin: 0, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</h1>
                   {/* Rank + seviye + XP tek satırda */}
                   {(() => {
                     const currentRank = getRank(userLevel) || { icon: '🛡️', color: '#fff', title_tr: '...', title_en: '...' };

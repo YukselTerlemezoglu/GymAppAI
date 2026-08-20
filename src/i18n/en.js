@@ -275,12 +275,18 @@ const en = {
     preview_exercise_info: "Exercise Info",
 
     // App Titles
-    app_profile_tooltip: "Single click for Profile, double click for Developer Settings!",
-    app_edit_name_tooltip: "Edit Name",
+    app_admin_tooltip: "Double click: Developer Settings",
     app_shop_tooltip: "Open Shop (Get Themes and Avatars)",
-    app_profile_view: "View Profile",
     app_rank_empty: "No badges showcased yet.",
     app_logout_tooltip: "Log Out",
+
+    // Settings (Profile > Settings)
+    set_title: "Settings",
+    set_name_label: "Your Name",
+    set_save: "Save",
+    set_name_error: "Name cannot be empty.",
+    set_name_saved: "Hello {{name}}! Your name has been updated.",
+    set_lang_label: "Language",
 
     // Shop
     shop_title: "Theme Shop",

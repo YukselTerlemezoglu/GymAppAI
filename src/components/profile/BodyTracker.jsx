@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
 import ReminderSettingsCard from './ReminderSettingsCard';
-import { Save, Trash2, LineChart as LineChartIcon, TrendingUp, Award, Zap, RefreshCcw, Camera, X, Image as ImageIcon } from 'lucide-react';
+import { Save, Trash2, LineChart as LineChartIcon, TrendingUp, Award, Zap, RefreshCcw, Camera, X, Image as ImageIcon, Settings, Type, Globe } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { BADGE_LIBRARY } from '../../data/badges';
@@ -13,9 +13,24 @@ import PhotoGalleryModal from './PhotoGalleryModal';
 import CloudSyncCard from '../dashboard/CloudSyncCard';
 import { error as logError } from '../../utils/logger';
 
-function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, pinnedBadges = [], setPinnedBadges, unlockedBadges = [] }) {
+function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName }) {
     const { t, lang, setLang } = useTranslation();
     const { toast, confirmDialog } = useToast();
+    const [nameDraft, setNameDraft] = useState(userName);
+
+    const saveName = () => {
+        const trimmed = nameDraft.trim();
+        if (!trimmed) {
+            toast.warning(t('set_name_error'));
+            return;
+        }
+        setUserName(trimmed);
+        // Firebase profilini de guncelle (girisliyse); hata olsa da yerel isim guncellenmis olur
+        if (currentUser && typeof currentUser.updateProfile === 'function') {
+            currentUser.updateProfile({ displayName: trimmed }).catch(() => {});
+        }
+        toast.success(t('set_name_saved', { name: trimmed }));
+    };
     const [bodyMetrics, setBodyMetrics] = useLocalStorage('gym_app_body_metrics', []);
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
@@ -209,46 +224,82 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
     return (
         <div className="app-container slide-in">
             <header className="top-bar fade-in" style={{ animationDelay: '0s', flexDirection: 'column', alignItems: 'flex-start', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem' }}>
-                <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                        <h2 style={{ color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.8rem', fontSize: '1.8rem', margin: '0 0 0.5rem 0' }}>
-                            <TrendingUp size={28} /> {t('profile_title')}
-                        </h2>
-                        <p style={{ color: 'var(--text-light)', margin: 0, fontSize: '0.9rem' }}>{t('profile_subtitle')}</p>
-                    </div>
-                    {/* Dil Değiştirme Butonu */}
-                    <div style={{ display: 'flex', gap: '5px', background: 'rgba(0,0,0,0.3)', padding: '5px', borderRadius: '10px', border: '1px solid var(--glass-border)' }}>
-                        <button 
-                            onClick={() => setLang('tr')}
-                            style={{ 
-                                padding: '5px 10px', 
-                                borderRadius: '8px', 
-                                border: 'none', 
-                                background: lang === 'tr' ? 'var(--accent-primary)' : 'transparent',
-                                color: lang === 'tr' ? '#000' : '#fff',
-                                cursor: 'pointer',
-                                fontSize: '0.8rem',
-                                fontWeight: 'bold'
-                            }}
-                        >TR</button>
-                        <button 
-                            onClick={() => setLang('en')}
-                            style={{ 
-                                padding: '5px 10px', 
-                                borderRadius: '8px', 
-                                border: 'none', 
-                                background: lang === 'en' ? 'var(--accent-primary)' : 'transparent',
-                                color: lang === 'en' ? '#000' : '#fff',
-                                cursor: 'pointer',
-                                fontSize: '0.8rem',
-                                fontWeight: 'bold'
-                            }}
-                        >EN</button>
-                    </div>
+                <div style={{ width: '100%' }}>
+                    <h2 style={{ color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.8rem', fontSize: '1.8rem', margin: '0 0 0.5rem 0' }}>
+                        <TrendingUp size={28} /> {t('profile_title')}
+                    </h2>
+                    <p style={{ color: 'var(--text-light)', margin: 0, fontSize: '0.9rem' }}>{t('profile_subtitle')}</p>
                 </div>
             </header>
 
             <div className="workout-tracker-list fade-in" style={{ animationDelay: '0.1s', display: 'flex', flexDirection: 'column', gap: '2rem', paddingTop: '1.5rem', paddingBottom: '3rem' }}>
+
+                {/* 0. AYARLAR: isim + dil */}
+                <div className="glass-card slide-in">
+                    <h3 style={{ color: '#fff', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Settings size={20} color="var(--accent-primary)" /> {t('set_title')}
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {/* Isim */}
+                        <div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '6px' }}>
+                                <Type size={14} /> {t('set_name_label')}
+                            </label>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <input
+                                    type="text"
+                                    className="neon-input"
+                                    style={{ flex: 1 }}
+                                    value={nameDraft}
+                                    onChange={(e) => setNameDraft(e.target.value)}
+                                    maxLength={24}
+                                    placeholder={t('auth_name_placeholder')}
+                                />
+                                <button
+                                    className="neon-btn"
+                                    onClick={saveName}
+                                    style={{ padding: '0.6rem 1.1rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                >
+                                    <Save size={16} /> {t('set_save')}
+                                </button>
+                            </div>
+                        </div>
+                        {/* Dil */}
+                        <div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '6px' }}>
+                                <Globe size={14} /> {t('set_lang_label')}
+                            </label>
+                            <div style={{ display: 'flex', gap: '5px', background: 'rgba(0,0,0,0.3)', padding: '5px', borderRadius: '10px', border: '1px solid var(--glass-border)', width: 'fit-content' }}>
+                                <button
+                                    onClick={() => setLang('tr')}
+                                    style={{
+                                        padding: '6px 14px',
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        background: lang === 'tr' ? 'var(--accent-primary)' : 'transparent',
+                                        color: lang === 'tr' ? '#000' : '#fff',
+                                        cursor: 'pointer',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 'bold'
+                                    }}
+                                >🇹🇷 TR</button>
+                                <button
+                                    onClick={() => setLang('en')}
+                                    style={{
+                                        padding: '6px 14px',
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        background: lang === 'en' ? 'var(--accent-primary)' : 'transparent',
+                                        color: lang === 'en' ? '#000' : '#fff',
+                                        cursor: 'pointer',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 'bold'
+                                    }}
+                                >🇬🇧 EN</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 {/* Bulut Eşitleme Kartı */}
                 <CloudSyncCard currentUser={currentUser} onLoginClick={onLoginClick} />
