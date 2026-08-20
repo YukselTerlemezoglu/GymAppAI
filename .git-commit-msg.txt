@@ -1,7 +1,0 @@
-Alt nav duzeltmeleri: portal ile sabit konum, her ekranda gorunur, profil geri butonu kaldirildi
-
-- BottomNav document.body'ye portal: PC'de framer-motion transform kaymasi cozuldu
-- lucide ikonlarinda CSS var yerine sabit renk (SVG attribute sorunu)
-- Alt nav artik tum ekranlarda (aktif antrenman/giris haric)
-- Profil sayfasi geri butonu kaldirildi (alt nav profili zaten gosteriyor)
-- .app-container'a alt bosluk (safe-area destekli)
