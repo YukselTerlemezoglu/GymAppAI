@@ -75,7 +75,7 @@ function AnatomyLibrary({ onBack }) {
   };
 
   return (
-    <div className="fade-in" style={{ paddingBottom: '4rem' }}>
+    <div className="page-shell fade-in">
       <header style={{ display: 'flex', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem' }}>
         <button
           onClick={onBack}

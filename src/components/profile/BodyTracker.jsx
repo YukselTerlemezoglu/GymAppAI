@@ -505,7 +505,7 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                             </h3>
                             <select
                                 className="neon-input"
-                                style={{ width: 'auto', padding: '0.5rem', fontSize: '0.9rem', backgroundColor: 'rgba(0,0,0,0.5)' }}
+                                style={{ width: 'auto', padding: '0.5rem', fontSize: '16px', backgroundColor: 'rgba(0,0,0,0.5)' }}
                                 value={chartDataKey}
                                 onChange={(e) => setChartDataKey(e.target.value)}
                             >

@@ -8,14 +8,15 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['favicon-64.png', 'apple-touch-icon.png', 'icon.svg'],
       manifest: {
         name: 'GymApp AI - AI Powered Workout Manager',
         short_name: 'GymAppAI',
         description: 'Yapay Zeka Destekli, Modern ve Profesyonel Vücut Geliştirme Asistanı',
-        theme_color: '#000000',
-        background_color: '#000000',
+        theme_color: '#0f1115',
+        background_color: '#0f1115',
         display: 'standalone',
+        orientation: 'portrait-primary',
         icons: [
           {
             src: 'pwa-192x192.png',

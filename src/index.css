@@ -5,30 +5,38 @@
   --bg-dark: #0f1115;
   --bg-card: rgba(26, 29, 36, 0.7);
   --bg-card-hover: rgba(36, 40, 50, 0.8);
-  
+  --bg-nav: rgba(10, 13, 20, 0.92);
+
   --gradient-1: rgba(0, 255, 136, 0.05);
   --gradient-2: rgba(0, 212, 255, 0.05);
-  
+
   /* Accents */
   --accent-primary: #00ff88;
   --accent-secondary: #00d4ff;
   --accent-danger: #ff4757;
   --accent-warning: #ffa502;
-  
+
   /* Text */
   --text-primary: #ffffff;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
-  
+  /* Bazi bilesenler --text-light kullaniyor; yedek deger tanimli
+     ki tum temalarda tanimli olsun (tema tablosu bunu ezmez). */
+  --text-light: #c7d2e0;
+
   /* Effects */
   --glass-border: rgba(255, 255, 255, 0.05);
   --neon-glow: 0 0 20px rgba(0, 255, 136, 0.15);
   --neon-glow-strong: 0 0 30px rgba(0, 255, 136, 0.4);
-  
+
+  /* Layout */
+  --shell-max: 780px;
+  --nav-h: 64px;
+
   /* Typography */
   --font-heading: 'Outfit', sans-serif;
   --font-body: 'Inter', sans-serif;
-  
+
   /* Transitions */
   --transition-fast: 0.05s ease;
   --transition-medium: 0.1s ease;
@@ -66,6 +74,14 @@ h1, h2, h3, h4, h5, h6 {
   margin: 0 auto;
   min-height: 100vh;
   min-height: 100dvh;
+}
+
+/* iOS Safari 16px'ten kucuk fontlu inputlara odaklaninca sayfayi
+   zoom yapar. Tum input/select/textarea'larda asgari 16px garanti. */
+input,
+select,
+textarea {
+  font-size: max(16px, 1em);
 }
 
 /* Glassmorphism Card Utility */
@@ -165,5 +181,131 @@ h1, h2, h3, h4, h5, h6 {
     padding: 0.8rem 1rem;
     min-height: 44px;
     font-size: 0.95rem;
+  }
+}
+
+/* =====================================================
+   RESPONSIVE SHELL & BOTTOM NAV (tum cihazlar)
+   ===================================================== */
+
+/* Buyuk ekranda app-container 780px'e genisler (daha ferah) */
+.app-container {
+  max-width: var(--shell-max);
+}
+
+/* Kenar boslugu olmayan tam ekran gorunumler icin sarmalayici */
+.page-shell {
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 2rem);
+  width: 100%;
+  min-height: 100dvh;
+}
+
+@media (max-width: 600px) {
+  .page-shell {
+    padding: 1rem 0.75rem calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 1.5rem);
+  }
+}
+
+/* Dashboard sekmelerinde masaustu 2 kolon duzen */
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 900px) {
+  .dash-grid {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    align-items: start;
+  }
+
+  .dash-grid > .dash-main {
+    grid-column: 1;
+  }
+
+  .dash-grid > .dash-side {
+    grid-column: 2;
+  }
+}
+
+/* BOTTOM NAV — tum cihazlarda yuzen pill stil */
+.bottom-nav {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+  width: min(calc(100% - 24px), calc(var(--shell-max) - 32px));
+  z-index: 900;
+  display: flex;
+  justify-content: space-between;
+  padding: 6px;
+  background: var(--bg-nav);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 2px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  border-radius: 16px;
+  transition: background 0.15s ease;
+}
+
+.bottom-nav-item:active {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.bottom-nav-item .bn-icon {
+  display: flex;
+  padding: 3px 12px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.bottom-nav-item.active .bn-icon {
+  background: linear-gradient(135deg, rgba(0, 195, 255, 0.22), rgba(255, 0, 136, 0.18));
+  box-shadow: 0 0 14px rgba(0, 195, 255, 0.28);
+}
+
+.bottom-nav-item .bn-label {
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0.2px;
+}
+
+.bottom-nav-item.active .bn-label {
+  font-weight: 700;
+  color: var(--accent-secondary);
+}
+
+/* Klavye erisilebilirligi: odak halkalari */
+:focus-visible {
+  outline: 2px solid var(--accent-secondary);
+  outline-offset: 2px;
+}
+
+/* Hareket hassasiyeti olan kullaniciar icin animasyonlari kisalt */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

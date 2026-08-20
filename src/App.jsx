@@ -364,15 +364,16 @@ function AppContent() {
   }
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key="dashboard"
-        variants={pageVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        style={{ width: '100%' }}
-      >
+    <>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key="dashboard"
+          variants={pageVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          style={{ width: '100%' }}
+        >
         <div className="app-container">
           <ErrorBoundary>
             {/* Top Navigation */}
@@ -501,28 +502,27 @@ function AppContent() {
 
         {/* ============ BUGÜN ============ */}
         {dashboardTab === 'today' && (
-          <>
-            {/* Main Stats: Score Tracker */}
-            <ScoreTracker
-              workoutHistory={workoutHistory}
-              streak={streak}
-            />
+          <div className="dash-grid">
+            {/* Sol kolon: ana skor kartı */}
+            <div className="dash-main">
+              <ScoreTracker
+                workoutHistory={workoutHistory}
+                streak={streak}
+              />
+            </div>
 
-            {/* Beslenme + Su yan yana (mobilde üst üste) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+            {/* Sag kolon: beslenme + su + AI koç kısayolu */}
+            <div className="dash-side">
               <NutritionSummary
                 nutritionData={nutritionData}
                 onClick={() => setCurrentView('nutrition')}
               />
               <WaterTrackerWidget />
-            </div>
 
-            {/* Hızlı erişim: AI koç (ana CTA) */}
-            <div className="fade-in" style={{ animationDelay: '0.2s', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <motion.button
                 onClick={() => setCurrentView('aicoach')}
                 className="neon-btn"
-                style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', background: 'rgba(0, 195, 255, 0.1)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none' }}
+                style={{ width: '100%', padding: '1rem', fontSize: '1.05rem', background: 'rgba(0, 195, 255, 0.1)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none', marginTop: '0.5rem' }}
                 whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(0, 195, 255, 0.4)' }}
                 whileTap={{ scale: 0.95 }}
                 transition={{ duration: 0.05 }}
@@ -530,7 +530,7 @@ function AppContent() {
                 <Bot size={20} /> {t('btn_ai_coach')}
               </motion.button>
             </div>
-          </>
+          </div>
         )}
 
         {/* ============ ANTRENMAN ============ */}
@@ -582,17 +582,19 @@ function AppContent() {
 
         {/* ============ GELİŞİM ============ */}
         {dashboardTab === 'progress' && (
-          <>
-            {/* WORKOUT PROGRESS CHARTS */}
-            {
-              workoutHistory && workoutHistory.length > 0 && (
+          <div className="dash-grid">
+            {/* Sol kolon: grafikler */}
+            <div className="dash-main">
+              {workoutHistory && workoutHistory.length > 0 && (
                 <WorkoutProgressCharts workoutHistory={workoutHistory} onOpenPrHistory={() => setCurrentView('prhistory')} />
-              )
-            }
+              )}
+            </div>
 
-            {/* AI COACH SMART DASHBOARD INSIGHTS */}
-            <AICoachInsights workoutHistory={workoutHistory} />
-          </>
+            {/* Sag kolon: AI içgörüler */}
+            <div className="dash-side">
+              <AICoachInsights workoutHistory={workoutHistory} />
+            </div>
+          </div>
         )}
 
         {/* Level Up Confetti Modal */}
@@ -637,8 +639,9 @@ function AppContent() {
           )}
         </AnimatePresence>
       </motion.div>
+      </AnimatePresence>
       {bottomNavEl}
-    </AnimatePresence>
+    </>
   );
 }
 

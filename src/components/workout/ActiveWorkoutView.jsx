@@ -520,7 +520,7 @@ function ActiveWorkoutView({
                                                     <select
                                                         value={setLog.mode}
                                                         onChange={(e) => updateSetData(eIdx, sIdx, 'mode', e.target.value)}
-                                                        style={{ background: 'rgba(0,0,0,0.3)', color: setLog.mode === 'Drop Set' || setLog.mode === 'AMRAP' ? 'var(--accent-warning)' : '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '4px 8px', fontSize: '0.8rem', outline: 'none' }}
+                                                        style={{ background: 'rgba(0,0,0,0.3)', color: setLog.mode === 'Drop Set' || setLog.mode === 'AMRAP' ? 'var(--accent-warning)' : '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '4px 8px', fontSize: '16px', outline: 'none' }}
                                                     >
                                                         <option value="Normal">{lang === 'tr' ? 'Normal' : 'Normal'}</option>
                                                         <option value="Warmup">{lang === 'tr' ? 'Isınma' : 'Warmup'}</option>

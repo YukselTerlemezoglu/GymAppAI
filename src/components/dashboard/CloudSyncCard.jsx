@@ -64,7 +64,7 @@ function CloudSyncCard({ currentUser, onLoginClick }) {
                     className="neon-btn" 
                     style={{ borderColor: '#00c3ff', color: '#00c3ff', background: 'rgba(0, 195, 255, 0.1)', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}
                 >
-                    <LogIn size={18} /> {t('cloud_login').toUpperCase()}
+                    <LogIn size={18} /> {t('cloud_login').toLocaleUpperCase('tr-TR')}
                 </button>
             </div>
         );
@@ -93,7 +93,7 @@ function CloudSyncCard({ currentUser, onLoginClick }) {
                     style={{ flex: 2, borderColor: '#00ff88', color: '#00ff88', background: 'rgba(0, 255, 136, 0.1)', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}
                 >
                     <RefreshCcw size={18} className={isSyncing ? "spin-animation" : ""} /> 
-                    {isSyncing ? t('cloud_syncing').toUpperCase() : t('cloud_backup_now')}
+                    {isSyncing ? t('cloud_syncing').toLocaleUpperCase('tr-TR') : t('cloud_backup_now')}
                 </button>
                 <button 
                     onClick={handleLogout} 

@@ -124,7 +124,7 @@ function ReminderSettingsCard() {
                                 borderRadius: '8px',
                                 padding: '6px 10px',
                                 color: '#fff',
-                                fontSize: '0.9rem',
+                                fontSize: '16px',
                                 fontWeight: 700,
                                 outline: 'none',
                                 colorScheme: 'dark'

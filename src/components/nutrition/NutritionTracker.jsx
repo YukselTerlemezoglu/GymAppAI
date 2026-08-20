@@ -249,19 +249,19 @@ function NutritionTracker({ onBack }) {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                         <div className="input-group" style={{ marginBottom: 0 }}>
                             <label>{t('nutrition_goal_kcal')}</label>
-                            <input type="number" className="neon-input" style={{ fontSize: '0.9rem' }} value={currentDayData.goals.kcal} onChange={(e) => handleGoalChange('kcal', e.target.value)} />
+                            <input type="number" className="neon-input" style={{ fontSize: '16px' }} value={currentDayData.goals.kcal} onChange={(e) => handleGoalChange('kcal', e.target.value)} />
                         </div>
                         <div className="input-group" style={{ marginBottom: 0 }}>
                             <label>{t('nutrition_goal_protein')} (g)</label>
-                            <input type="number" className="neon-input" style={{ fontSize: '0.9rem' }} value={currentDayData.goals.protein} onChange={(e) => handleGoalChange('protein', e.target.value)} />
+                            <input type="number" className="neon-input" style={{ fontSize: '16px' }} value={currentDayData.goals.protein} onChange={(e) => handleGoalChange('protein', e.target.value)} />
                         </div>
                         <div className="input-group" style={{ marginBottom: 0 }}>
                             <label>{t('nutrition_goal_carbs')} (g)</label>
-                            <input type="number" className="neon-input" style={{ fontSize: '0.9rem' }} value={currentDayData.goals.carbs} onChange={(e) => handleGoalChange('carbs', e.target.value)} />
+                            <input type="number" className="neon-input" style={{ fontSize: '16px' }} value={currentDayData.goals.carbs} onChange={(e) => handleGoalChange('carbs', e.target.value)} />
                         </div>
                         <div className="input-group" style={{ marginBottom: 0 }}>
                             <label>{t('nutrition_goal_fat')} (g)</label>
-                            <input type="number" className="neon-input" style={{ fontSize: '0.9rem' }} value={currentDayData.goals.fat} onChange={(e) => handleGoalChange('fat', e.target.value)} />
+                            <input type="number" className="neon-input" style={{ fontSize: '16px' }} value={currentDayData.goals.fat} onChange={(e) => handleGoalChange('fat', e.target.value)} />
                         </div>
                     </div>
                 </div>

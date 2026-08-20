@@ -122,7 +122,7 @@ function WaterTrackerWidget() {
                             value={manualGoalL}
                             onChange={(e) => setManualGoalL(e.target.value)}
                             placeholder="2.5"
-                            style={{ width: '70px', padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.4)', color: '#fff', fontWeight: 'bold', outline: 'none' }}
+                            style={{ width: '76px', padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.4)', color: '#fff', fontWeight: 'bold', outline: 'none', fontSize: '16px' }}
                         />
                         <span style={{ color: 'var(--text-light)', fontSize: '0.8rem' }}>L {t('water_goal_manual')}</span>
                         <button onClick={saveManualGoal} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', background: 'var(--accent-primary)', color: '#000', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.8rem' }}>
