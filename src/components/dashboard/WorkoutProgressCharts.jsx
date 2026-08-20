@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, LineChart, Line } from 'recharts';
-import { Activity, BarChart2, TrendingUp } from 'lucide-react';
+import { Activity, BarChart2, TrendingUp, Trophy } from 'lucide-react';
 import MuscleRadarChart from './MuscleRadarChart';
 import WeeklyVolumeBoard from './WeeklyVolumeBoard';
 import { useTranslation } from '../../i18n/LanguageContext';
@@ -21,7 +21,7 @@ function CustomTooltip({ active, payload, label }) {
     return null;
 }
 
-function WorkoutProgressCharts({ workoutHistory }) {
+function WorkoutProgressCharts({ workoutHistory, onOpenPrHistory }) {
     const { t } = useTranslation();
     const [chartTab, setChartTab] = useState('volume'); // 'volume' | 'strength'
 
@@ -110,7 +110,28 @@ function WorkoutProgressCharts({ workoutHistory }) {
                     <Activity size={20} color="var(--accent-primary)" /> {t('charts_analysis_title')}
                 </h2>
 
-                <div style={{ display: 'flex', gap: '10px', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <button
+                        onClick={() => onOpenPrHistory && onOpenPrHistory()}
+                        style={{
+                            background: 'rgba(255, 215, 0, 0.12)',
+                            color: '#ffd700',
+                            border: '1px solid rgba(255, 215, 0, 0.3)',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            transition: 'all 0.2s'
+                        }}
+                        title={t('prh_title')}
+                    >
+                        <Trophy size={15} /> {t('prh_title')}
+                    </button>
+                    <div style={{ display: 'flex', gap: '10px', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '8px' }}>
                     <button
                         onClick={() => setChartTab('volume')}
                         style={{
@@ -147,6 +168,7 @@ function WorkoutProgressCharts({ workoutHistory }) {
                     >
                         <TrendingUp size={16} /> {t('charts_strength_tab')}
                     </button>
+                    </div>
                 </div>
             </div>
 

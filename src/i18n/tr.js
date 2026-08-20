@@ -8,6 +8,9 @@ const tr = {
 
     // Action Buttons
     btn_ai_coach: "YAPAY ZEKA KOÇU",
+    tab_today: "Bugün",
+    tab_train: "Antrenman",
+    tab_progress: "Gelişim",
     btn_anatomy: "KAS ANATOMİSİ & REHBER",
     btn_create_program: "KENDİ PROGRAMINI YARAT",
     btn_exit: "Çıkış",
@@ -86,6 +89,19 @@ const tr = {
     water_remove: "Bardak çıkar",
     water_set: "Ayarla:",
     water_done_msg: "Günlük hedefe ulaştın, harika iş! 💧",
+    water_goal_edit: "Su hedefini düzenle",
+    water_goal_auto_info: "Kilo kaydın: {kg}kg → önerilen hedef {l}L (33ml/kg)",
+    water_goal_no_weight: "Kilo kaydın yok, öneri için profil sayfasından kilo ekle. Şimdilik 2.5L varsayılan.",
+    water_goal_manual: "(elle ayarla)",
+    water_goal_save: "Kaydet",
+    water_goal_use_auto: "Kiloma göre hesapla",
+    water_goal_current_manual: "Şu an elle ayarlı hedef: {l}L",
+
+    // PR Geçmişi
+    prh_title: "Rekorlarım",
+    prh_subtitle: "{n} egzersizde kişisel en iyilerin",
+    prh_empty: "Henüz rekor yok. Antrenmanları kaydet, rekorların burada biriksın!",
+    prh_top: "en güçlü 3'lük",
 
     // Body Metrics
     body_weight: "Kilo",
@@ -178,6 +194,7 @@ const tr = {
 
     // Muscle Radar Chart
     radar_title: "Kas Dengesi Analizi",
+    radar_last30: "Son 30 gün",
     radar_no_data: "Yeterli idman verisi bulunmuyor. İdman kaydettikçe kas dağılımınız burada belirecektir.",
     radar_description: "Tüm idman geçmişinize göre tamamladığınız set sayılarının kas gruplarına dağılımı. Zayıf kalan bölgelerinizi tespit edin!",
     radar_sets: "Tamamlanan Set",

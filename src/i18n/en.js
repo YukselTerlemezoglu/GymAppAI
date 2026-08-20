@@ -8,6 +8,9 @@ const en = {
 
     // Action Buttons
     btn_ai_coach: "AI COACH",
+    tab_today: "Today",
+    tab_train: "Train",
+    tab_progress: "Progress",
     btn_anatomy: "MUSCLE ANATOMY & GUIDE",
     btn_create_program: "CREATE YOUR OWN PROGRAM",
     btn_exit: "Exit",
@@ -85,6 +88,19 @@ const en = {
     water_remove: "Remove glass",
     water_set: "Set:",
     water_done_msg: "Daily goal reached, great job! 💧",
+    water_goal_edit: "Edit water goal",
+    water_goal_auto_info: "Your latest weight: {kg}kg → suggested goal {l}L (33ml/kg)",
+    water_goal_no_weight: "No weight record yet — add one in your profile for a smart suggestion. Using 2.5L for now.",
+    water_goal_manual: "(set manually)",
+    water_goal_save: "Save",
+    water_goal_use_auto: "Calculate from my weight",
+    water_goal_current_manual: "Currently set manually: {l}L",
+
+    // PR History
+    prh_title: "My Records",
+    prh_subtitle: "Personal bests across {n} exercises",
+    prh_empty: "No records yet. Log your workouts and your PRs will pile up here!",
+    prh_top: "top 3 strongest",
 
     // Body Metrics
     body_weight: "Weight",
@@ -159,6 +175,7 @@ const en = {
 
     // Muscle Radar Chart
     radar_title: "Muscle Balance Analysis",
+    radar_last30: "Last 30 days",
     radar_no_data: "Not enough workout data. Your muscle distribution chart will appear here as you log workouts.",
     radar_description: "Distribution of completed sets across muscle groups based on your workout history. Identify your weak areas!",
     radar_sets: "Completed Sets",

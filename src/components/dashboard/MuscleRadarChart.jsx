@@ -28,8 +28,11 @@ function MuscleRadarChart({ workoutHistory }) {
         // Kas grup ID'si bazli sayac (tek kaynak: exercises.js)
         const counts = Object.fromEntries(MUSCLE_GROUPS.map(mg => [mg.id, 0]));
 
+        // Son 30 gunun antrenmanlari (daha eski kayitlar radar'i bozmasin)
+        const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
         workoutHistory.forEach(w => {
             if (!w.exercise || !w.sets) return;
+            if (w.date && !isNaN(new Date(w.date)) && new Date(w.date).getTime() < cutoff) return;
             const sets = parseInt(w.sets) || 0;
             const groupId = findMuscleGroupIdForExercise(w.exercise);
             if (groupId && groupId in counts) {
@@ -71,7 +74,7 @@ function MuscleRadarChart({ workoutHistory }) {
                 <Target color="#00c3ff" /> {t('radar_title')}
             </h3>
             <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                {t('radar_description')}
+                {t('radar_description')} · <span style={{ color: '#00c3ff', fontWeight: 600 }}>{t('radar_last30')}</span>
             </p>
 
             <div style={{ width: '100%', height: 320 }}>

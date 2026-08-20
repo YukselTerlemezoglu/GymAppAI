@@ -10,11 +10,11 @@ import ScoreTracker from './components/dashboard/ScoreTracker';
 import AICoachInsights from './components/dashboard/AICoachInsights';
 import SavedProgramPreview from './components/dashboard/SavedProgramPreview';
 import WorkoutProgressCharts from './components/dashboard/WorkoutProgressCharts';
-import CloudSyncCard from './components/dashboard/CloudSyncCard';
 import BodyTracker from './components/profile/BodyTracker';
 import NutritionTracker from './components/nutrition/NutritionTracker';
 import NutritionSummary from './components/dashboard/NutritionSummary';
 import WaterTrackerWidget from './components/dashboard/WaterTrackerWidget';
+import PrHistoryPage from './components/dashboard/PrHistoryPage';
 import LevelUpModal from './components/ui/LevelUpModal';
 import ShopModal from './components/profile/ShopModal';
 import BadgeUnlockModal from './components/ui/BadgeUnlockModal';
@@ -103,6 +103,7 @@ function AppContent() {
 
   // UI / Routing State
   const [showCustomBuilder, setShowCustomBuilder] = useState(false);
+  const [dashboardTab, setDashboardTab] = useLocalStorage('gym_app_dashboard_tab', 'today');
   const [activeAiWorkoutDayIdx, setActiveAiWorkoutDayIdx] = useLocalStorage('gym_app_active_day_idx', null);
   const [activeAiWorkoutDayParams, setActiveAiWorkoutDayParams] = useLocalStorage('gym_app_active_day_params', null);
 
@@ -263,6 +264,9 @@ function AppContent() {
       }
       if (currentView === 'nutrition') {
         return <NutritionTracker onBack={() => setCurrentView('dashboard')} />;
+      }
+      if (currentView === 'prhistory') {
+        return <PrHistoryPage workoutHistory={workoutHistory} onBack={() => setCurrentView('dashboard')} />;
       }
       if (currentView === 'admin') {
         return (
@@ -449,90 +453,134 @@ function AppContent() {
           })()}
         </header>
 
-        {/* Main Stats: Score Tracker */}
-        <ScoreTracker
-          workoutHistory={workoutHistory}
-          streak={streak}
-        />
-
-        {/* AI COACH SMART DASHBOARD INSIGHTS */}
-        <AICoachInsights workoutHistory={workoutHistory} />
-
-        {/* Nutrition Summary Widget */}
-        <NutritionSummary
-            nutritionData={nutritionData}
-            onClick={() => setCurrentView('nutrition')}
-        />
-
-        {/* Water Tracker Widget */}
-        <WaterTrackerWidget />
-
-        {/* WORKOUT PROGRESS CHARTS */}
-        {
-          workoutHistory && workoutHistory.length > 0 && (
-            <WorkoutProgressCharts workoutHistory={workoutHistory} />
-          )
-        }
-
-        {/* Action Area */}
-        <div className="fade-in" style={{ animationDelay: '0.2s', marginBottom: '3rem', display: 'flex', gap: '1rem', flexDirection: 'column' }}>
-
-          {/* YAPAY ZEKA KOÇU BUTONU (Her Zaman Görünür) */}
-          <motion.button
-            onClick={() => setCurrentView('aicoach')}
-            className="neon-btn"
-            style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', background: 'rgba(0, 195, 255, 0.1)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none' }}
-            whileHover={{ scale: 1.03, boxShadow: '0 0 25px rgba(0, 195, 255, 0.4)' }}
-            whileTap={{ scale: 0.93 }}
-            transition={{ duration: 0.05 }}
-          >
-            <Bot size={20} />
-            {t('btn_ai_coach')}
-          </motion.button>
-
-          {/* KAS ANATOMİSİ BUTONU */}
-          <motion.button
-            onClick={() => setCurrentView('anatomy')}
-            className="neon-btn"
-            style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', background: 'rgba(173, 255, 47, 0.1)', borderColor: '#adff2f', color: '#adff2f', boxShadow: 'none' }}
-            whileHover={{ scale: 1.03, boxShadow: '0 0 25px rgba(173, 255, 47, 0.4)' }}
-            whileTap={{ scale: 0.93 }}
-            transition={{ duration: 0.05 }}
-          >
-            <Activity size={20} /> {t('btn_anatomy')}
-          </motion.button>
-
-          {/* Custom Program Builder Acma Butonu */}
-          {!showCustomBuilder && (
-            <motion.button
-              onClick={() => setShowCustomBuilder(true)}
-              className="neon-btn"
-              style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', background: 'rgba(255, 0, 136, 0.1)', borderColor: '#ff0088', color: '#ff0088', boxShadow: 'none' }}
-              whileHover={{ scale: 1.03, boxShadow: '0 0 25px rgba(255, 0, 136, 0.4)' }}
-              whileTap={{ scale: 0.93 }}
-              transition={{ duration: 0.05 }}
+        {/* Sekme navigasyonu: Bugün / Antrenman / Gelişim */}
+        <nav className="fade-in" style={{ animationDelay: '0.05s', display: 'flex', gap: '6px', background: 'rgba(0,0,0,0.3)', padding: '5px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)', marginBottom: '1.25rem' }}>
+          {[
+            { id: 'today', icon: <Zap size={15} />, label: t('tab_today') },
+            { id: 'train', icon: <Bot size={15} />, label: t('tab_train') },
+            { id: 'progress', icon: <Trophy size={15} />, label: t('tab_progress') }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setDashboardTab(tab.id)}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '9px 4px',
+                borderRadius: '9px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                fontWeight: dashboardTab === tab.id ? 700 : 500,
+                background: dashboardTab === tab.id ? 'linear-gradient(135deg, rgba(0,195,255,0.22), rgba(255,0,136,0.18))' : 'transparent',
+                color: dashboardTab === tab.id ? '#fff' : 'var(--text-light)',
+                boxShadow: dashboardTab === tab.id ? '0 2px 12px rgba(0,195,255,0.25)' : 'none',
+                transition: 'all 0.2s'
+              }}
             >
-              <Plus size={20} /> {t('btn_create_program')}
-            </motion.button>
-          )}
-        </div>
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </nav>
 
-        {/* AI Saved Program */}
-        <SavedProgramPreview
-          savedAiProgram={savedAiProgram}
-          showCustomBuilder={showCustomBuilder}
-          completedDays={completedDays}
-          clearAiProgram={clearAiProgram}
-          startActiveAiWorkout={startActiveAiWorkout}
-          handleUpdateAiProgram={handleUpdateAiProgram}
-        />
+        {/* ============ BUGÜN ============ */}
+        {dashboardTab === 'today' && (
+          <>
+            {/* Main Stats: Score Tracker */}
+            <ScoreTracker
+              workoutHistory={workoutHistory}
+              streak={streak}
+            />
 
-        {/* Custom Program Builder */}
-        {
-          showCustomBuilder && (
-            <CustomProgramBuilder setSavedAiProgram={setSavedAiProgram} setShowCustomBuilder={setShowCustomBuilder} />
-          )
-        }
+            {/* Beslenme + Su yan yana (mobilde üst üste) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+              <NutritionSummary
+                nutritionData={nutritionData}
+                onClick={() => setCurrentView('nutrition')}
+              />
+              <WaterTrackerWidget />
+            </div>
+
+            {/* Hızlı erişim: AI koç (ana CTA) */}
+            <div className="fade-in" style={{ animationDelay: '0.2s', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <motion.button
+                onClick={() => setCurrentView('aicoach')}
+                className="neon-btn"
+                style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', background: 'rgba(0, 195, 255, 0.1)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none' }}
+                whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(0, 195, 255, 0.4)' }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.05 }}
+              >
+                <Bot size={20} /> {t('btn_ai_coach')}
+              </motion.button>
+            </div>
+          </>
+        )}
+
+        {/* ============ ANTRENMAN ============ */}
+        {dashboardTab === 'train' && (
+          <>
+            {/* AI Saved Program */}
+            <SavedProgramPreview
+              savedAiProgram={savedAiProgram}
+              showCustomBuilder={showCustomBuilder}
+              completedDays={completedDays}
+              clearAiProgram={clearAiProgram}
+              startActiveAiWorkout={startActiveAiWorkout}
+              handleUpdateAiProgram={handleUpdateAiProgram}
+            />
+
+            {/* Custom Program Builder */}
+            {
+              showCustomBuilder && (
+                <CustomProgramBuilder setSavedAiProgram={setSavedAiProgram} setShowCustomBuilder={setShowCustomBuilder} />
+              )
+            }
+
+            {/* Aksiyon butonları */}
+            <div className="fade-in" style={{ animationDelay: '0.15s', marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', flexDirection: 'column' }}>
+              <motion.button
+                onClick={() => setShowCustomBuilder(true)}
+                className="neon-btn"
+                style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', background: 'rgba(255, 0, 136, 0.1)', borderColor: '#ff0088', color: '#ff0088', boxShadow: 'none' }}
+                whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(255, 0, 136, 0.4)' }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.05 }}
+              >
+                <Plus size={20} /> {t('btn_create_program')}
+              </motion.button>
+
+              <motion.button
+                onClick={() => setCurrentView('anatomy')}
+                className="neon-btn"
+                style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', background: 'rgba(173, 255, 47, 0.1)', borderColor: '#adff2f', color: '#adff2f', boxShadow: 'none' }}
+                whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(173, 255, 47, 0.4)' }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.05 }}
+              >
+                <Activity size={20} /> {t('btn_anatomy')}
+              </motion.button>
+            </div>
+          </>
+        )}
+
+        {/* ============ GELİŞİM ============ */}
+        {dashboardTab === 'progress' && (
+          <>
+            {/* WORKOUT PROGRESS CHARTS */}
+            {
+              workoutHistory && workoutHistory.length > 0 && (
+                <WorkoutProgressCharts workoutHistory={workoutHistory} onOpenPrHistory={() => setCurrentView('prhistory')} />
+              )
+            }
+
+            {/* AI COACH SMART DASHBOARD INSIGHTS */}
+            <AICoachInsights workoutHistory={workoutHistory} />
+          </>
+        )}
 
         {/* Level Up Confetti Modal */}
         {
