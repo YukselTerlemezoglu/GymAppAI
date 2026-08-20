@@ -512,7 +512,7 @@ function AppContent() {
             </div>
 
             {/* Sag kolon: beslenme + su + AI koç kısayolu */}
-            <div className="dash-side">
+            <div className="dash-side" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <NutritionSummary
                 nutritionData={nutritionData}
                 onClick={() => setCurrentView('nutrition')}
@@ -522,7 +522,7 @@ function AppContent() {
               <motion.button
                 onClick={() => setCurrentView('aicoach')}
                 className="neon-btn"
-                style={{ width: '100%', padding: '1rem', fontSize: '1.05rem', background: 'rgba(0, 195, 255, 0.1)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none', marginTop: '0.5rem' }}
+                style={{ width: '100%', padding: '1rem', fontSize: '1.05rem', background: 'rgba(0, 195, 255, 0.1)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none' }}
                 whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(0, 195, 255, 0.4)' }}
                 whileTap={{ scale: 0.95 }}
                 transition={{ duration: 0.05 }}
@@ -581,20 +581,15 @@ function AppContent() {
         )}
 
         {/* ============ GELİŞİM ============ */}
+        {/* Grafikler genislik ister; bu sekme tek kolon akar (PC dahil) */}
         {dashboardTab === 'progress' && (
-          <div className="dash-grid">
-            {/* Sol kolon: grafikler */}
-            <div className="dash-main">
-              {workoutHistory && workoutHistory.length > 0 && (
-                <WorkoutProgressCharts workoutHistory={workoutHistory} onOpenPrHistory={() => setCurrentView('prhistory')} />
-              )}
-            </div>
+          <>
+            {workoutHistory && workoutHistory.length > 0 && (
+              <WorkoutProgressCharts workoutHistory={workoutHistory} onOpenPrHistory={() => setCurrentView('prhistory')} />
+            )}
 
-            {/* Sag kolon: AI içgörüler */}
-            <div className="dash-side">
-              <AICoachInsights workoutHistory={workoutHistory} />
-            </div>
-          </div>
+            <AICoachInsights workoutHistory={workoutHistory} />
+          </>
         )}
 
         {/* Level Up Confetti Modal */}

@@ -82,7 +82,6 @@ function WaterTrackerWidget() {
             className="glass-card slide-in"
             style={{
                 animationDelay: '0.25s',
-                marginBottom: '1rem',
                 border: `1px solid ${isDone ? 'rgba(0,195,255,0.5)' : 'rgba(0,195,255,0.2)'}`,
                 background: 'linear-gradient(145deg, rgba(0,0,0,0.4) 0%, rgba(0,195,255,0.05) 100%)'
             }}

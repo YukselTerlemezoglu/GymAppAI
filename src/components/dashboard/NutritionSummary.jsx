@@ -21,7 +21,6 @@ function NutritionSummary({ nutritionData = {}, onClick }) {
             className="glass-card slide-in"
             style={{
                 animationDelay: '0.2s',
-                marginBottom: '1rem',
                 cursor: 'pointer',
                 border: '1px solid rgba(255, 107, 129, 0.2)',
                 background: 'linear-gradient(145deg, rgba(0,0,0,0.4) 0%, rgba(255, 107, 129, 0.05) 100%)',
