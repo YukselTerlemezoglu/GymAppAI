@@ -376,93 +376,103 @@ function AppContent() {
         >
         <div className="app-container">
           <ErrorBoundary>
-            {/* Top Navigation */}
+            {/* Top Bar: mobilde tek kompakt kart — avatar+isim solda, coin sagda */}
             <header className="top-bar fade-in" style={{ animationDelay: '0s' }}>
-              <div className="profile-section"
+              <div
                 onClick={handleProfileClick}
                 style={{
-              cursor: 'pointer',
-              padding: '0.6rem 1rem',
-              borderRadius: '20px',
-              background: 'rgba(0, 195, 255, 0.1)',
-              border: '1px solid rgba(0, 195, 255, 0.3)',
-              transition: 'all 0.3s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              userSelect: 'none',
-              touchAction: 'manipulation'
-            }}
-            title={t('app_profile_tooltip')}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0, 195, 255, 0.2)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0, 195, 255, 0.1)'; e.currentTarget.style.transform = 'translateY(0)'; }}
-          >
-            <div className="avatar" style={{ width: '40px', height: '40px' }}>
-              <Trophy size={20} />
-            </div>
-            <div className="greeting" style={{ display: 'flex', flexDirection: 'column' }}>
-              {isEditingName ? (
-                <input
-                  type="text"
-                  autoFocus
-                  style={{ background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--accent-primary)', borderRadius: '4px', outline: 'none', padding: '2px 4px', fontSize: '1.1rem', width: '120px', marginBottom: '2px' }}
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  onBlur={() => setIsEditingName(false)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') setIsEditingName(false); }}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              ) : (
+                  cursor: 'pointer',
+                  flex: '1 1 auto',
+                  minWidth: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '0.6rem 0.9rem',
+                  borderRadius: '16px',
+                  background: 'rgba(0, 195, 255, 0.1)',
+                  border: '1px solid rgba(0, 195, 255, 0.3)',
+                  transition: 'all 0.3s ease',
+                  userSelect: 'none',
+                  touchAction: 'manipulation'
+                }}
+                title={t('app_profile_tooltip')}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0, 195, 255, 0.2)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0, 195, 255, 0.1)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+              >
+                <div className="avatar" style={{ width: '40px', height: '40px', flexShrink: 0 }}>
+                  <Trophy size={20} />
+                </div>
+
+                <div className="greeting" style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minWidth: 0 }}>
+                  {isEditingName ? (
+                    <input
+                      type="text"
+                      autoFocus
+                      style={{ background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--accent-primary)', borderRadius: '4px', outline: 'none', padding: '2px 4px', fontSize: '1.1rem', width: '120px', marginBottom: '2px' }}
+                      value={userName}
+                      onChange={(e) => setUserName(e.target.value)}
+                      onBlur={() => setIsEditingName(false)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') setIsEditingName(false); }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}
+                      onClick={(e) => { e.stopPropagation(); setIsEditingName(true); }}
+                    >
+                      <h1 style={{ fontSize: '1.05rem', margin: 0, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</h1>
+                      <span style={{ fontSize: '0.75rem', opacity: 0.5, flexShrink: 0 }} title={t('app_edit_name_tooltip')}>✏️</span>
+                    </div>
+                  )}
+                  {/* Rank + seviye + XP tek satırda */}
+                  {(() => {
+                    const currentRank = getRank(userLevel) || { icon: '🛡️', color: '#fff', title_tr: '...', title_en: '...' };
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.78rem', minWidth: 0 }}>
+                        <span style={{ flexShrink: 0 }}>{currentRank.icon}</span>
+                        <span style={{ color: currentRank.color, fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {lang === 'tr' ? currentRank.title_tr : currentRank.title_en}
+                        </span>
+                        <span style={{ color: '#fff', flexShrink: 0 }}>{t('level')} {userLevel}</span>
+                        <span style={{ color: 'var(--text-light)', opacity: 0.8, marginLeft: 'auto', flexShrink: 0, fontSize: '0.7rem' }}>
+                          {userXP} XP
+                        </span>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Coin: profil kartının içinde, sağda */}
                 <div
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}
-                  onClick={(e) => { e.stopPropagation(); setIsEditingName(true); }}
+                  onClick={(e) => { e.stopPropagation(); setShowShopModal(true); }}
+                  style={{ background: 'rgba(255, 215, 0, 0.1)', border: '1px solid #ffd700', borderRadius: '12px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#ffd700', fontWeight: 'bold', fontSize: '0.85rem', flexShrink: 0, marginLeft: '4px' }}
+                  title={t('app_shop_tooltip')}
                 >
-                  <h1 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--text-primary)' }}>{userName}</h1>
-                  <span style={{ fontSize: '0.8rem', opacity: 0.5 }} title={t('app_edit_name_tooltip')}>✏️</span>
+                  <span>🪙</span> {userCoins}
+                </div>
+              </div>
+
+              {/* Sabitlenmis rozetler: PC'de yanda, mobilde altta */}
+              {pinnedBadges.length > 0 && (
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
+                  {pinnedBadges.map(badgeId => {
+                    const bInfo = BADGE_LIBRARY.find(b => b.id === badgeId);
+                    if (!bInfo) return null;
+                    return (
+                      <div key={bInfo.id} title={lang === 'tr' ? bInfo.title : bInfo.title_en} style={{ fontSize: '1.3rem', background: 'rgba(0, 195, 255, 0.1)', padding: '4px', borderRadius: '8px', border: '1px solid rgba(0, 195, 255, 0.3)' }}>
+                        {bInfo.icon}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
-              <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 'bold' }}>{t('app_profile_view')}</span>
-            </div>
-          </div>
 
-          {/* Dashboard Level & Badges Showcase */}
-          {(() => {
-            const currentRank = getRank(userLevel) || { icon: '🛡️', color: '#fff', title_tr: '...', title_en: '...' };
-            const reqXP = (userLevel * 500) + (userLevel * 100);
-            const progressPercent = Math.min(100, Math.max(0, (userXP / reqXP) * 100)) || 0;
-            
-            return (
-              <div style={{
-                marginTop: '1rem',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '8px',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                background: 'rgba(0,0,0,0.3)',
-                padding: '10px 12px',
-                borderRadius: '12px',
-                border: '1px solid rgba(255,255,255,0.05)'
-              }}>
-                {/* Sol: Rank + ilerleme çubuğu — dar ekranlarda tam genişlik kaplar */}
-                <div style={{ flex: '1 1 140px', minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', minWidth: 0 }}>
-                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>{currentRank.icon}</span>
-                    <span style={{
-                      color: currentRank.color,
-                      fontSize: '0.85rem',
-                      fontWeight: 'bold',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {lang === 'tr' ? currentRank.title_tr : currentRank.title_en} <span style={{ color: '#fff' }}>({t('level')} {userLevel})</span>
-                    </span>
-                    <span style={{ color: 'var(--text-light)', fontSize: '0.7rem', marginLeft: 'auto', flexShrink: 0 }}>
-                      {userXP}/{reqXP}
-                    </span>
-                  </div>
-                  <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+              {/* XP ilerleme çubuğu: tam genişlik ince şerit */}
+              {(() => {
+                const reqXP = (userLevel * 500) + (userLevel * 100);
+                const progressPercent = Math.min(100, Math.max(0, (userXP / reqXP) * 100)) || 0;
+                return (
+                  <div style={{ width: '100%', height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }} title={`${userXP}/${reqXP} XP`}>
                     <div style={{
                       height: '100%',
                       width: `${progressPercent}%`,
@@ -471,34 +481,9 @@ function AppContent() {
                       transition: 'width 0.5s ease'
                     }}></div>
                   </div>
-                </div>
-
-                {/* Sağ: Coin + rozetler — taşarsa alt satıra geçer */}
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
-                  <div
-                    onClick={() => setShowShopModal(true)}
-                    style={{ background: 'rgba(255, 215, 0, 0.1)', border: '1px solid #ffd700', borderRadius: '12px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#ffd700', fontWeight: 'bold', fontSize: '0.85rem' }}
-                    title={t('app_shop_tooltip')}
-                  >
-                    <span>🪙</span> {userCoins}
-                  </div>
-
-                  {pinnedBadges.length > 0 && (
-                    pinnedBadges.map(badgeId => {
-                      const bInfo = BADGE_LIBRARY.find(b => b.id === badgeId);
-                      if (!bInfo) return null;
-                      return (
-                        <div key={bInfo.id} title={lang === 'tr' ? bInfo.title : bInfo.title_en} style={{ fontSize: '1.3rem', background: 'rgba(0, 195, 255, 0.1)', padding: '4px', borderRadius: '8px', border: '1px solid rgba(0, 195, 255, 0.3)' }}>
-                          {bInfo.icon}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-        </header>
+                );
+              })()}
+            </header>
 
         {/* ============ BUGÜN ============ */}
         {dashboardTab === 'today' && (
