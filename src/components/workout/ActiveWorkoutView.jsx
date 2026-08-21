@@ -9,6 +9,7 @@ import RestTimer from './RestTimer';
 import PrCelebrationModal from '../ui/PrCelebrationModal';
 import PlateCalculator from '../ui/PlateCalculator';
 import { detectPRs, getOverloadSuggestion, getExerciseHistory } from '../../utils/prTracker';
+import { totalXpForLevel, levelFromTotalXp } from '../../utils/levelSystem';
 import { normalizeAiWeight, normalizeAiReps } from '../../utils/aiNormalizer';
 
 function ActiveWorkoutView({
@@ -326,10 +327,12 @@ function ActiveWorkoutView({
             // Programı güncelle
             setSavedAiProgram(updatedProgram);
 
-            // --- DYNAMIC XP & LEVEL LOGIC ---
-            // Dinamik XP Hesaplama: Set sayısı, tekrar sayısı, süre ve RPE zorluk derecesini baz alır.
+            // --- DYNAMIC XP & LEVEL LOGIC (v2) ---
+            // Bilesenler: taban + set + tekrar + dakika + HACIM + PR bonusu,
+            // uzerine RPE ve seri (streak) carpanlari.
             const totalSets = newWorkouts.reduce((sum, w) => sum + (w.sets || 0), 0);
             const totalReps = newWorkouts.reduce((sum, w) => sum + (w.totalReps || 0), 0);
+            const totalVolume = newWorkouts.reduce((sum, w) => sum + (parseFloat(w.totalWeight) || 0), 0);
             const timeInMinutes = Math.floor(activeAiWorkoutTimer / 60);
             const rpe = parseFloat(aiFeedbackRpe) || 5;
 
@@ -337,6 +340,10 @@ function ActiveWorkoutView({
             calculatedXP += totalSets * 5; // Her set için 5 XP
             calculatedXP += totalReps * 0.5; // Her kaldırılan tekrar için 0.5 XP
             calculatedXP += timeInMinutes * 2; // Antrenmanda geçen her dakika için 2 XP
+            calculatedXP += Math.round(totalVolume / 1000) * 10; // Her tam ton (1000 kg) hacim için 10 XP
+
+            // PR BONUSU: bu idmanda kirilan her kisisel rekor 25 XP
+            calculatedXP += (prs.length || 0) * 25;
 
             // Zorluk Derecesine (RPE) göre çarpan (RPE 10 = %25 bonus, RPE 5 = bonus yok)
             const rpeMultiplier = 1 + ((rpe - 5) * 0.05);
@@ -354,24 +361,14 @@ function ActiveWorkoutView({
 
             const gainedXP = Math.max(10, Math.min(2000, calculatedXP)); // Minimum 10, maksimum 2000 XP
 
-            // Dinamik Level Barajı Hesaplayıcı (Örn: Lvl 1: 500XP, Lvl 2: 700XP, Lvl 3: 900XP vs...)
-            const calculateRequiredXP = (level) => level * 500 + (level * 100);
+            // --- EGRISEL SEVIYE SISTEMI (levelSystem.js) ---
+            // Toplam XP uzerinden hesap; birden fazla seviye atlanabilir.
+            const prevTotal = totalXpForLevel(userLevel) + userXP;
+            const after = levelFromTotalXp(prevTotal + gainedXP);
+            const leveledUp = after.level > userLevel;
 
-            let newTotalXP = userXP + gainedXP;
-            let leveledUp = false;
-            let currentLvl = userLevel;
-            let currentRequiredXP = calculateRequiredXP(currentLvl);
-
-            // Kullanıcı tek idmanda çok fazla XP kazanırsa birden fazla level atlayabilsin diye 'while' döngüsü:
-            while (newTotalXP >= currentRequiredXP) {
-                newTotalXP -= currentRequiredXP;
-                currentLvl += 1;
-                currentRequiredXP = calculateRequiredXP(currentLvl);
-                leveledUp = true;
-            }
-
-            setUserLevel(currentLvl);
-            setUserXP(newTotalXP);
+            setUserLevel(after.level);
+            setUserXP(after.xp);
 
             // Jeton (Coin) Ekleme: Kazanılan XP'nin %10'u kadar Jeton verilir (Ödül Sistemi)
             const earnedCoins = Math.max(1, Math.round(gainedXP * 0.1));
@@ -385,7 +382,7 @@ function ActiveWorkoutView({
 
             // Seviye atlama ve optimizasyon mesaji toast'larla gosterilir
             if (leveledUp) {
-                toast.success(`🎉 ${lang === 'tr' ? `Seviye atladın! Yeni seviye: ${currentLvl}` : `Level up! New level: ${currentLvl}`}`, { duration: 4200 });
+                toast.success(`🎉 ${lang === 'tr' ? `Seviye atladın! Yeni seviye: ${after.level}` : `Level up! New level: ${after.level}`}`, { duration: 4200 });
             }
             toast.success(`${baseMsg} ${lang === 'tr' ? 'kazandın!' : 'earned!'}`, { duration: 3200 });
             if (optimizationMessage && optimizationMessage.trim()) {

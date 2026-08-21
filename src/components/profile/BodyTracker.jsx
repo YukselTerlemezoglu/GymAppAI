@@ -6,7 +6,8 @@ import { Save, Trash2, LineChart as LineChartIcon, TrendingUp, Award, Zap, Refre
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { BADGE_LIBRARY } from '../../data/badges';
-import { getRank } from '../../utils/ranks';
+import { getRank, getRankProgress } from '../../utils/ranks';
+import { levelProgress, totalXpForLevel } from '../../utils/levelSystem';
 import { savePhoto, getPhoto, deletePhoto } from '../../utils/db';
 import { compressImage } from '../../utils/imageCompressor';
 import PhotoGalleryModal from './PhotoGalleryModal';
@@ -359,7 +360,7 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                     workoutHistory={workoutHistory}
                 />
 
-                {/* 1. SEVİYE VE XP BARI (Gamification) */}
+                {/* 1. SEVİYE VE XP BARI (Gamification v2) */}
                 <div className="glass-card slide-in" style={{ border: '1px solid rgba(0, 195, 255, 0.2)', background: 'linear-gradient(145deg, rgba(0,0,0,0.6) 0%, rgba(0, 195, 255, 0.05) 100%)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                         <h3 style={{ margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.3rem' }}>
@@ -368,10 +369,10 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                             <span style={{ opacity: 0.7, fontSize: '0.9rem' }}>({t('level')} {userLevel})</span>
                         </h3>
                         {(() => {
-                            const reqXP = userLevel * 500 + (userLevel * 100);
+                            const { need } = levelProgress(userXP, userLevel);
                             return (
                                 <span style={{ color: 'var(--text-light)', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                                    {userXP} / {reqXP} XP
+                                    {userXP} / {need} XP
                                 </span>
                             );
                         })()}
@@ -379,11 +380,11 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                     {/* Progress Bar Container */}
                     <div style={{ width: '100%', height: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden' }}>
                         {(() => {
-                            const reqXP = userLevel * 500 + (userLevel * 100);
+                            const { percent } = levelProgress(userXP, userLevel);
                             return (
                                 <div style={{
                                     height: '100%',
-                                    width: `${Math.min(100, (userXP / reqXP) * 100)}%`,
+                                    width: `${percent}%`,
                                     background: 'linear-gradient(90deg, #00c3ff, #ff0088)',
                                     borderRadius: '10px',
                                     transition: 'width 0.5s ease-out'
@@ -391,7 +392,31 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                             );
                         })()}
                     </div>
-                    <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', marginTop: '0.8rem', marginBottom: 0, textAlign: 'center' }}>{t('profile_xp_desc')}</p>
+
+                    {/* Rutbe ilerlemesi: sonraki rutbeye kac seviye kaldigi */}
+                    {(() => {
+                        const rp = getRankProgress(userLevel);
+                        return (
+                            <div style={{ marginTop: '0.9rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-light)', marginBottom: '4px' }}>
+                                    <span>
+                                        {rp.next
+                                            ? <>{rp.next.icon} {t('rank_next')}: <strong style={{ color: rp.next.color }}>{lang === 'tr' ? rp.next.title_tr : rp.next.title_en}</strong> · {t('rank_until')}: {Math.max(0, rp.next.maxLevel - userLevel + 1)} {t('rank_levels')}</>
+                                            : <>{rp.current.icon} {t('rank_max')} 🏆</>
+                                        }
+                                    </span>
+                                    <span>{rp.rankIndex + 1}/{rp.totalRanks}</span>
+                                </div>
+                                <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                                    <div style={{ height: '100%', width: `${rp.percent}%`, background: rp.current.color, borderRadius: '4px', transition: 'width 0.5s ease' }}></div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', marginTop: '0.8rem', marginBottom: 0, textAlign: 'center' }}>
+                        {t('profile_total_xp')}: <strong style={{ color: '#00c3ff' }}>{(totalXpForLevel(userLevel) + userXP).toLocaleString()}</strong>
+                    </p>
                 </div>
 
                 {/* 2. ROZETLER (Badges) VİTRİNİ */}

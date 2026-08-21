@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Droplets, Plus, Minus, Check, Settings2 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import useLocalStorage from '../../hooks/useLocalStorage';
@@ -76,6 +76,16 @@ function WaterTrackerWidget() {
     };
 
     const isManual = goalSetting?.mode === 'manual';
+
+    // Hedef tamamlanan gunleri kaydet (rozet: Su Ustasi).
+    // Her gun bir kez yazilir; hedef sonradan duserse kayit silinmez.
+    const [waterHistory, setWaterHistory] = useLocalStorage('gym_app_water_history', []);
+    useEffect(() => {
+        if (!isDone) return;
+        if (waterHistory.includes(today)) return;
+        setWaterHistory([...waterHistory, today].slice(-400));
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- sadece hedef tamamlaninca yaz
+    }, [isDone, today]);
 
     return (
         <div

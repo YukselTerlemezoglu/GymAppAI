@@ -37,6 +37,21 @@ export const getMaxWeightSet = (exerciseName, history) => {
   return best;
 };
 
+// Tum zamanlarin toplam PR sayisi (bir sonraki seansa karsi kirma sayisi degil;
+// her egzersizin mevcut rekoru 1 sayilir - "kac farkli egzersizde rekorum var").
+export const countAllTimePRs = (history) => {
+  if (!Array.isArray(history)) return 0;
+  const best = new Map();
+  history.forEach(w => {
+    if (!w || !w.exercise) return;
+    const e1rm = estimate1RM(w.maxWeight, w.bestReps);
+    if (e1rm <= 0) return;
+    const cur = best.get(w.exercise) || 0;
+    if (e1rm > cur) best.set(w.exercise, e1rm);
+  });
+  return best.size;
+};
+
 /**
  * Yeni kaydedilecek antrenmanlari gecmisle karsilastirip PR listesi uretir.
  * PR turleri:

@@ -32,6 +32,9 @@ import AnatomyLibrary from './components/anatomy/AnatomyLibrary';
 import AuthScreen from './components/auth/AuthScreen';
 import { BADGE_LIBRARY } from './data/badges';
 import { applyTheme } from './data/themes';
+import { migrateLevelData, levelProgress } from './utils/levelSystem';
+import { countAllTimePRs } from './utils/prTracker';
+import { subscribeFriendships } from './utils/friends';
 import './App.css';
 import { getRank } from './utils/ranks';import { auth } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -124,6 +127,32 @@ function AppContent() {
     applyTheme(activeTheme);
   }, [activeTheme]);
 
+  // --- SEVIYE SISTEMI MIGRASYONU (v1 dogrusal -> v2 egrisel) ---
+  // Tek seferlik: eski (level, xp) ikilisini toplam XP'ye cevirip yeni
+  // egriden seviye bulur. Kullanici XP kaybetmez, seviye ancak yukselir.
+  const [levelSysVersion, setLevelSysVersion] = useLocalStorage('gym_app_level_sys_version', 0);
+  useEffect(() => {
+    if (levelSysVersion >= 2) return;
+    const migrated = migrateLevelData(userLevel, userXP, levelSysVersion);
+    if (migrated) {
+      setUserLevel(migrated.level);
+      setUserXP(migrated.xp);
+    }
+    setLevelSysVersion(2);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tek seferlik migrasyon
+  }, [levelSysVersion]);
+
+  // --- ARKADAS SAYISI (rozet: Ekip Ruhu) ---
+  // FriendsCard kendi aboneligini tuttugu icin burada hafif bir dinleyici
+  // acilir; sadece girisli kullanici icin calisir. Cikista senkron setState
+  // yerine abonelik 0'la savunmasiz kalir; rozet kosulu 0 kabul eder.
+  const [friendCountForBadges, setFriendCountForBadges] = useState(0);
+  useEffect(() => {
+    if (!currentUser) return;
+    const unsub = subscribeFriendships((uids) => setFriendCountForBadges(uids.length));
+    return () => unsub();
+  }, [currentUser]);
+
   // --- PWA HATIRLATMA TICKER'I ---
   // Uygulama acikken antrenman/su hatirlatmalarini kontrol eder
   useEffect(() => {
@@ -155,10 +184,14 @@ function AppContent() {
   }, [currentUser]);
 
   // --- LEVEL UP ---
-  // Onceki seviyeyi ref ile izliyoruz; modal karari render sonrasi tek effect'te.
+  // Modal acik oldugu surece onceki seviye state'te saklanir (render'da ref
+  // okuma kuralina takilmamak icin); kapatilinca temizlenir.
   const prevLevelRef = useRef(userLevel);
-  const markLevelUpSeen = useCallback(() => {
+  const [levelUpFrom, setLevelUpFrom] = useState(null);
+  const closeLevelUpModal = useCallback(() => {
     prevLevelRef.current = userLevel;
+    setShowLevelUpModal(false);
+    setLevelUpFrom(null);
   }, [userLevel]);
 
   // --- LEVEL UP EFFECT ---
@@ -166,6 +199,7 @@ function AppContent() {
   // kuralina gore modal acma tek seferlik senkronizasyon isidir.
   useEffect(() => {
     if (prevLevelRef.current > 0 && userLevel > prevLevelRef.current) {
+      setLevelUpFrom(prevLevelRef.current); // modalda rutbe atlama kontrolu icin
       setShowLevelUpModal(true);
     }
     prevLevelRef.current = userLevel;
@@ -175,15 +209,31 @@ function AppContent() {
   // Rozetler localStorage ile senkronize edilir; burada setState external store
   // guncellemesi oldugu icin kural devre disi birakildi.
   useEffect(() => {
+    const hist = workoutHistory || [];
+    // Su hedefi gunleri: water kayitlarinin gecmisi ayri tutuluyor
+    let waterGoalDays = 0;
+    try {
+      const raw = localStorage.getItem('gym_app_water_history');
+      if (raw) waterGoalDays = (JSON.parse(raw) || []).length;
+    } catch { /* bozuk kayit yok sayilir */ }
+
     const stats = {
-      totalWorkouts: new Set((workoutHistory || []).map(w => new Date(w.date).toDateString())).size,
+      totalWorkouts: new Set(hist.map(w => new Date(w.date).toDateString())).size,
       streak: streak,
-      aiWorkoutsCompleted: new Set((workoutHistory || []).filter(w => w.isAiGenerated).map(w => new Date(w.date).toDateString())).size,
-      history: workoutHistory || [],
-      level: userLevel
+      aiWorkoutsCompleted: new Set(hist.filter(w => w.isAiGenerated).map(w => new Date(w.date).toDateString())).size,
+      history: hist,
+      level: userLevel,
+      // v2 rozet istatistikleri
+      totalVolume: hist.reduce((s, w) => s + (parseFloat(w.totalWeight) || 0), 0),
+      totalSets: hist.reduce((s, w) => s + (parseInt(w.sets) || 0), 0),
+      totalReps: hist.reduce((s, w) => s + (parseInt(w.totalReps) || 0), 0),
+      uniqueExercises: new Set(hist.map(w => w.exercise).filter(Boolean)).size,
+      prCount: countAllTimePRs(hist),
+      waterGoalDays,
+      friendCount: friendCountForBadges
     };
 
-    const newlyUnlocked = BADGE_LIBRARY.filter(badge => 
+    const newlyUnlocked = BADGE_LIBRARY.filter(badge =>
        !unlockedBadges.includes(badge.id) && badge.condition(stats)
     );
 
@@ -195,14 +245,14 @@ function AppContent() {
            }
            return prev;
        });
-       
+
        if (!showBadgeUnlockModal) {
            // Rozet kilit acma bildirimi; localStorage senkronizasyonu parçasi
            // eslint-disable-next-line react-hooks/set-state-in-effect
            setShowBadgeUnlockModal(newlyUnlocked[0]);
        }
     }
-  }, [workoutHistory, streak, userLevel, unlockedBadges, showBadgeUnlockModal, setUnlockedBadges]);
+  }, [workoutHistory, streak, userLevel, unlockedBadges, showBadgeUnlockModal, setUnlockedBadges, friendCountForBadges]);
 
   // --- Reset Completed Days on Monday ---
   // Bugün (YYYY-MM-DD) ve gün-of-week render başına bir kez hesaplanır;
@@ -477,15 +527,14 @@ function AppContent() {
                 </div>
               )}
 
-              {/* XP ilerleme çubuğu: tam genişlik ince şerit */}
+              {/* XP ilerleme çubuğu: tam genişlik ince şerit (v2 eğrisel sistem) */}
               {(() => {
-                const reqXP = (userLevel * 500) + (userLevel * 100);
-                const progressPercent = Math.min(100, Math.max(0, (userXP / reqXP) * 100)) || 0;
+                const { need, percent } = levelProgress(userXP, userLevel);
                 return (
-                  <div style={{ width: '100%', height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }} title={`${userXP}/${reqXP} XP`}>
+                  <div style={{ width: '100%', height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }} title={`${userXP}/${need} XP`}>
                     <div style={{
                       height: '100%',
-                      width: `${progressPercent}%`,
+                      width: `${percent}%`,
                       background: 'linear-gradient(90deg, #00c3ff, #ff0088)',
                       borderRadius: '4px',
                       transition: 'width 0.5s ease'
@@ -603,7 +652,7 @@ function AppContent() {
         {/* Level Up Confetti Modal */}
         {
           showLevelUpModal && (
-            <LevelUpModal level={userLevel} onClose={() => { markLevelUpSeen(); setShowLevelUpModal(false); }} />
+            <LevelUpModal level={userLevel} prevLevel={levelUpFrom || userLevel} onClose={closeLevelUpModal} />
           )
         }
 

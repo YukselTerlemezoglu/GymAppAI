@@ -360,6 +360,14 @@ const tr = {
     fr_removed: "Arkadaş kaldırıldı.",
     fr_empty_board: "Henüz arkadaşın yok. Yukarıdaki davet linkini paylaş veya kodla ekle!",
 
+    // Rutbe sistemi v2
+    rank_next: "Sonraki rütbe",
+    rank_until: "kalan",
+    rank_levels: "seviye",
+    rank_max: "En yüksek rütbedesin!",
+    rank_up_banner: "YENİ RÜTBE KAZANDIN!",
+    profile_total_xp: "Toplam XP",
+
     // Language
     // Auth
     auth_signing_in: "Giriş Yapılıyor...",

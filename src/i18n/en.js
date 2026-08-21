@@ -343,6 +343,14 @@ const en = {
     fr_removed: "Friend removed.",
     fr_empty_board: "No friends yet. Share the invite link above or add by code!",
 
+    // Rank system v2
+    rank_next: "Next rank",
+    rank_until: "left",
+    rank_levels: "levels",
+    rank_max: "You're at the highest rank!",
+    rank_up_banner: "NEW RANK UNLOCKED!",
+    profile_total_xp: "Total XP",
+
     // Language
     // Auth
     auth_signing_in: "Signing In...",

@@ -99,6 +99,132 @@ export const BADGE_LIBRARY = [
         condition: (stats) => stats.aiWorkoutsCompleted >= 5,
         progress: (stats) => `${Math.min(stats.aiWorkoutsCompleted, 5)}/5`
     },
+    // ================== YENI ROZETLER (v2) ==================
+    {
+        id: "streak_7",
+        title: "Haftalık Ateş",
+        title_en: "Weekly Blaze",
+        description: "7 gün üst üste antrenman! Haftanın her günü demire dokundunuz.",
+        description_en: "7 days in a row! You touched iron every day of the week.",
+        icon: "🔥",
+        condition: (stats) => stats.streak >= 7,
+        progress: (stats) => `${Math.min(stats.streak, 7)}/7`
+    },
+    {
+        id: "streak_100",
+        title: "Yüz Gün Demir",
+        title_en: "100 Days of Iron",
+        description: "100 gün kesintisiz antrenman. Bu disiplin efsane seviyesinde!",
+        description_en: "100 consecutive training days. This discipline is legendary!",
+        icon: "⛓️",
+        condition: (stats) => stats.streak >= 100,
+        progress: (stats) => `${Math.min(stats.streak, 100)}/100`
+    },
+    {
+        id: "volume_10t",
+        title: "10 Ton Kulübü",
+        title_en: "10-Ton Club",
+        description: "Toplam 10.000 kg ağırlık kaldırdınız. Hacim kralı olma yolundasınız!",
+        description_en: "You've lifted a total of 10,000 kg. On your way to being the volume king!",
+        icon: "🏗️",
+        condition: (stats) => (stats.totalVolume || 0) >= 10000,
+        progress: (stats) => `${Math.min(Math.round((stats.totalVolume || 0) / 100) / 10, 10)}/10 t`
+    },
+    {
+        id: "volume_50t",
+        title: "50 Ton Devi",
+        title_en: "50-Ton Giant",
+        description: "Toplam 50.000 kg! Kaldırdığınız ağırlık bir kamyonet doldurur.",
+        description_en: "50,000 kg total! That's a pickup truck worth of weight.",
+        icon: "🚛",
+        condition: (stats) => (stats.totalVolume || 0) >= 50000,
+        progress: (stats) => `${Math.min(Math.round((stats.totalVolume || 0) / 100) / 10, 50)}/50 t`
+    },
+    {
+        id: "volume_100t",
+        title: "Yüz Ton Kolosu",
+        title_en: "100-Ton Colossus",
+        description: "100.000 kg toplam hacim! Artık salonun canlı efsanesisiniz.",
+        description_en: "100,000 kg total volume! You're now the gym's living legend.",
+        icon: "🗿",
+        condition: (stats) => (stats.totalVolume || 0) >= 100000,
+        progress: (stats) => `${Math.min(Math.round((stats.totalVolume || 0) / 100) / 10, 100)}/100 t`
+    },
+    {
+        id: "sets_1000",
+        title: "Bin Set Sarpası",
+        title_en: "1000-Set Summit",
+        description: "Toplam 1.000 set tamamladınız. Her set sizi zirveye taşır.",
+        description_en: "You've completed 1,000 total sets. Every set carries you to the top.",
+        icon: "⛰️",
+        condition: (stats) => (stats.totalSets || 0) >= 1000,
+        progress: (stats) => `${Math.min(stats.totalSets || 0, 1000)}/1000`
+    },
+    {
+        id: "reps_10000",
+        title: "On Bin Tekrar",
+        title_en: "Ten Thousand Reps",
+        description: "10.000 tekrar! Her tekrar bir tuğla, duvarınız sağlam.",
+        description_en: "10,000 reps! Every rep is a brick, your wall is solid.",
+        icon: "🧱",
+        condition: (stats) => (stats.totalReps || 0) >= 10000,
+        progress: (stats) => `${Math.min(stats.totalReps || 0, 10000)}/10000`
+    },
+    {
+        id: "variety_20",
+        title: "Kas Kâşifi",
+        title_en: "Muscle Explorer",
+        description: "20 farklı egzersiz denediniz. Vücudunuzun her köşesini keşfediyorsunuz!",
+        description_en: "You've tried 20 different exercises. You're exploring every corner of your body!",
+        icon: "🧭",
+        condition: (stats) => (stats.uniqueExercises || 0) >= 20,
+        progress: (stats) => `${Math.min(stats.uniqueExercises || 0, 20)}/20`
+    },
+    {
+        id: "pr_10",
+        title: "Rekor Avcısı",
+        title_en: "Record Hunter",
+        description: "10 farklı egzersizde kişisel rekorunuzu elinizde tutuyorsunuz. Avlanmaya devam!",
+        description_en: "You hold personal records in 10 different exercises. Keep hunting!",
+        icon: "🎯",
+        condition: (stats) => (stats.prCount || 0) >= 10,
+        progress: (stats) => `${Math.min(stats.prCount || 0, 10)}/10`
+    },
+    {
+        id: "squat_100",
+        title: "Yüz Kilo Squat",
+        title_en: "100 kg Squat",
+        description: "Squat'ta 100 kg'ı geçtiniz! Bacak gücünüz konuşuyor.",
+        description_en: "You've passed 100 kg in the squat! Your leg power speaks for itself.",
+        icon: "🦵",
+        condition: (stats) => {
+            if (!stats.history) return false;
+            return stats.history.some(w =>
+                w.exercise && w.exercise.toLowerCase().includes('squat') && parseFloat(w.maxWeight) >= 100
+            );
+        },
+        progress: () => ""
+    },
+    {
+        id: "water_30",
+        title: "Su Ustası",
+        title_en: "Hydration Master",
+        description: "30 farklı gün su hedefinizi tamamladınız. Kaslarınız size teşekkür ediyor!",
+        description_en: "You hit your water goal on 30 different days. Your muscles thank you!",
+        icon: "💧",
+        condition: (stats) => (stats.waterGoalDays || 0) >= 30,
+        progress: (stats) => `${Math.min(stats.waterGoalDays || 0, 30)}/30`
+    },
+    {
+        id: "social_first",
+        title: "Ekip Ruhu",
+        title_en: "Team Spirit",
+        description: "İlk arkadaşınızı eklediniz! Birlikte antrenman daha güçlü.",
+        description_en: "You added your first friend! Training together is stronger.",
+        icon: "🤝",
+        condition: (stats) => (stats.friendCount || 0) >= 1,
+        progress: (stats) => `${Math.min(stats.friendCount || 0, 1)}/1`
+    },
     // GİZLİ BAŞARIMLAR (SECRET BADGES)
     {
         id: "night_owl",
@@ -135,6 +261,23 @@ export const BADGE_LIBRARY = [
         progress: () => ""
     },
     {
+        id: "weekend_warrior",
+        title: "Hafta Sonu Savaşçısı",
+        title_en: "Weekend Warrior",
+        description: "Herkes dinlenirken siz Cumartesi veya Pazar günü idman yaptınız.",
+        description_en: "While everyone rests, you worked out on a Saturday or Sunday.",
+        icon: "🛡️",
+        isSecret: true,
+        condition: (stats) => {
+            if (!stats.history) return false;
+            return stats.history.some(w => {
+                const day = new Date(w.date).getDay();
+                return day === 0 || day === 6;
+            });
+        },
+        progress: () => ""
+    },
+    {
         id: "century_club",
         title: "Yüzler Kulübü",
         title_en: "Century Club",
@@ -158,7 +301,7 @@ export const BADGE_LIBRARY = [
         isSecret: false,
         condition: (stats) => {
             if (!stats.history) return false;
-            return stats.history.some(w => 
+            return stats.history.some(w =>
                 w.exercise && w.exercise.toLowerCase().includes('bench press') && w.maxWeight >= 100
             );
         },
@@ -174,7 +317,7 @@ export const BADGE_LIBRARY = [
         isSecret: false,
         condition: (stats) => {
             if (!stats.history) return false;
-            return stats.history.some(w => 
+            return stats.history.some(w =>
                 w.exercise && w.exercise.toLowerCase().includes('deadlift') && w.maxWeight >= 150
             );
         },
@@ -192,5 +335,27 @@ export const BADGE_LIBRARY = [
             return (stats.level || 1) >= 10;
         },
         progress: (stats) => `${Math.min(stats.level || 1, 10)}/10`
+    },
+    {
+        id: "level_25",
+        title: "Yaşayan Efsane",
+        title_en: "Living Legend",
+        description: "25. Seviyeye ulaştınız! Seviye eğrisi dikleşiyor ama siz daha diksiniz.",
+        description_en: "You've reached Level 25! The curve gets steeper, but you're steeper.",
+        icon: "🏔️",
+        isSecret: false,
+        condition: (stats) => (stats.level || 1) >= 25,
+        progress: (stats) => `${Math.min(stats.level || 1, 25)}/25`
+    },
+    {
+        id: "level_50",
+        title: "Ölümsüz Atlet",
+        title_en: "Immortal Athlete",
+        description: "50. Seviye! Bu sabrı gösteren az kişi vardır. Fiziksel ve zihinsel ustalık.",
+        description_en: "Level 50! Few show this patience. Physical and mental mastery.",
+        icon: "⚡",
+        isSecret: false,
+        condition: (stats) => (stats.level || 1) >= 50,
+        progress: (stats) => `${Math.min(stats.level || 1, 50)}/50`
     }
 ];

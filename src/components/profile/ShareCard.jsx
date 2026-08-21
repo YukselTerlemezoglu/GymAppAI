@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Share2, Download, Trophy, Flame, Zap } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast, haptic } from '../ui/ToastProvider';
+import { totalXpForLevel } from '../../utils/levelSystem';
 
 // Antrenman ozetini PNG kart olarak uretir (canvas) ve paylasir/indirir.
 // Istatistikler: toplam antrenman, seri, toplam hacim, seviye/XP.
@@ -62,7 +63,7 @@ function ShareCard({ userName, userLevel, userXP, streak, workoutHistory }) {
         ctx.fillText(String(userName || (lang === 'tr' ? 'Sporcu' : 'Athlete')), 540, 320);
         ctx.fillStyle = '#ff0088';
         ctx.font = 'bold 30px system-ui, -apple-system, sans-serif';
-        ctx.fillText(`${t('level')} ${userLevel} · ${userXP} XP`, 540, 370);
+        ctx.fillText(`${t('level')} ${userLevel} · ${totalXpForLevel(userLevel) + (Number(userXP) || 0)} XP`, 540, 370);
 
         // Istatislik kartlari (2x2)
         const cards = [

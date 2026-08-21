@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Users, UserPlus, Crown, X, Check, Trash2, Copy, RefreshCcw } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast, haptic } from '../ui/ToastProvider';
+import { totalXpForLevel } from '../../utils/levelSystem';
 import {
     sendRequest, subscribeRequests, acceptRequest, declineRequest,
     subscribeFriendships, getFriendProfiles, removeFriend
@@ -61,10 +62,11 @@ function FriendsCard({ currentUser, myCode, userName, userXP, userLevel }) {
     // Beni ilgilendiren her degisimde siralamayi hesapla
     // (friendUids bos ise eski profiller gosterilmez - arkadas silinince aninda duser)
     const board = useMemo(() => {
-        const me = { uid: 'me', name: userName, xp: Number(userXP) || 0, level: Number(userLevel) || 1, isMe: true };
+        const myTotal = totalXpForLevel(Number(userLevel) || 1) + (Number(userXP) || 0);
+        const me = { uid: 'me', name: userName, totalXp: myTotal, level: Number(userLevel) || 1, isMe: true };
         const valid = friendUids.length > 0 ? friendProfiles.filter((p) => friendUids.includes(p.uid)) : [];
-        const rows = [me, ...valid.map((p) => ({ ...p, isMe: false }))];
-        rows.sort((a, b) => b.xp - a.xp);
+        const rows = [me, ...valid.map((p) => ({ ...p, totalXp: totalXpForLevel(Number(p.level) || 1) + (Number(p.xp) || 0), isMe: false }))];
+        rows.sort((a, b) => b.totalXp - a.totalXp);
         return rows;
     }, [userName, userXP, userLevel, friendProfiles, friendUids]);
 
@@ -296,7 +298,7 @@ function FriendsCard({ currentUser, myCode, userName, userXP, userLevel }) {
                             {t('fr_lvl_short')} {row.level}
                         </span>
                         <span style={{ color: '#adff2f', fontWeight: 'bold', fontSize: '0.85rem', flexShrink: 0 }}>
-                            {Number(row.xp || 0).toLocaleString()} XP
+                            {Number(row.totalXp || 0).toLocaleString()} XP
                         </span>
                         {!row.isMe && (
                             <button
