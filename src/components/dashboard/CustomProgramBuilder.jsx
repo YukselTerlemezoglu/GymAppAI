@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dumbbell, Trash2, Plus, Check, Link2 } from 'lucide-react';
+import { Dumbbell, Trash2, Plus, Check, Link2, BedDouble } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
@@ -27,6 +27,32 @@ function CustomProgramBuilder({ setSavedAiProgram, setShowCustomBuilder }) {
             return;
         }
         setCustomDays([...customDays, { dayName: t('builder_default_day_name', { num: customDays.length + 1 }), exercises: [] }]);
+    };
+
+    // Dinlenme gunu ekle: egzersizsiz, tip etiketli gun (programda gorunur,
+    // baslatilamaz; haftalik takip sistemi dinlenmeyi serbest birakir)
+    const handleAddRestDay = () => {
+        if (customDays.length >= 7) {
+            toast.warning(t('builder_max_days_error', { max: 7 }));
+            return;
+        }
+        setCustomDays([...customDays, { dayName: t('builder_rest_day_name'), exercises: [], isRestDay: true }]);
+    };
+
+    // Gun tipini degistir (normal <-> dinlenme)
+    const toggleRestDay = (dayIdx) => {
+        const updatedDays = [...customDays];
+        const day = updatedDays[dayIdx];
+        if (day.isRestDay) {
+            delete day.isRestDay;
+            if (day.dayName === t('builder_rest_day_name')) {
+                day.dayName = t('builder_default_day_name', { num: dayIdx + 1 });
+            }
+        } else {
+            day.isRestDay = true;
+            day.exercises = [];
+        }
+        setCustomDays(updatedDays);
     };
 
     const handleAddCustomExercise = (dayIdx) => {
@@ -97,8 +123,12 @@ function CustomProgramBuilder({ setSavedAiProgram, setShowCustomBuilder }) {
                 </div>
 
                 {customDays.map((day, dIdx) => (
-                    <div key={dIdx} style={{ marginBottom: '1.5rem', background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px' }}>
-                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '1rem' }}>
+                    <div key={dIdx} style={{
+                        marginBottom: '1.5rem', padding: '1rem', borderRadius: '12px',
+                        background: day.isRestDay ? 'rgba(0,195,255,0.04)' : 'rgba(0,0,0,0.3)',
+                        border: day.isRestDay ? '1px dashed rgba(0,195,255,0.3)' : 'none'
+                    }}>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: day.isRestDay ? 0 : '1rem' }}>
                             <input
                                 type="text"
                                 className="neon-input"
@@ -107,8 +137,29 @@ function CustomProgramBuilder({ setSavedAiProgram, setShowCustomBuilder }) {
                                 placeholder={t('builder_day_name_placeholder')}
                                 style={{ flex: '1', padding: '0.5rem', fontSize: '1rem' }}
                             />
+                            {/* Dinlenme gunu dugmesi: gun tipini cevirir */}
+                            <button
+                                onClick={() => toggleRestDay(dIdx)}
+                                title={day.isRestDay ? t('builder_rest_to_normal') : t('builder_mark_rest')}
+                                style={{
+                                    background: day.isRestDay ? 'rgba(0,195,255,0.15)' : 'transparent',
+                                    border: `1px solid ${day.isRestDay ? '#00c3ff' : 'rgba(255,255,255,0.15)'}`,
+                                    borderRadius: '8px', padding: '8px', cursor: 'pointer',
+                                    color: day.isRestDay ? '#00c3ff' : 'var(--text-light)',
+                                    display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
+                                    fontSize: '0.75rem', whiteSpace: 'nowrap'
+                                }}
+                            >
+                                <BedDouble size={16} /> {day.isRestDay ? t('builder_rest_badge') : ''}
+                            </button>
                         </div>
 
+                        {day.isRestDay ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-light)', fontSize: '0.85rem', padding: '0.7rem 0.2rem 0.2rem' }}>
+                                <BedDouble size={18} color="#00c3ff" />
+                                <span>{t('builder_rest_day_desc')}</span>
+                            </div>
+                        ) : (<>
                         {day.exercises.map((ex, eIdx) => (
                             <div key={eIdx} style={{ display: 'grid', gridTemplateColumns: 'minmax(120px, 2fr) 1fr 1fr 1fr auto', gap: '8px', marginBottom: '10px', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center', minWidth: 0 }}>
@@ -172,12 +223,18 @@ function CustomProgramBuilder({ setSavedAiProgram, setShowCustomBuilder }) {
                         <button onClick={() => handleAddCustomExercise(dIdx)} className="neon-btn-secondary" style={{ fontSize: '0.8rem', padding: '0.5rem', width: '100%', marginTop: '0.5rem' }}>
                             <Plus size={14} /> {t('builder_add_exercise')}
                         </button>
+                        </>)}
                     </div>
                 ))}
 
-                <button onClick={handleAddCustomDay} className="neon-btn-secondary" style={{ width: '100%', marginBottom: '1rem', background: 'rgba(255,255,255,0.05)' }}>
-                    <Plus size={18} /> {t('builder_add_day')}
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                    <button onClick={handleAddCustomDay} className="neon-btn-secondary" style={{ flex: 1, background: 'rgba(255,255,255,0.05)' }}>
+                        <Plus size={18} /> {t('builder_add_day')}
+                    </button>
+                    <button onClick={handleAddRestDay} className="neon-btn-secondary" style={{ flex: 1, background: 'rgba(0,195,255,0.05)', borderColor: 'rgba(0,195,255,0.3)', color: '#00c3ff' }}>
+                        <BedDouble size={16} /> {t('builder_add_rest_day')}
+                    </button>
+                </div>
 
                 <button onClick={handleSaveCustomProgram} className="neon-btn" style={{ width: '100%', padding: '1rem' }}>
                     <Check size={20} /> {t('builder_save_btn')}

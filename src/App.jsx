@@ -35,6 +35,7 @@ import { applyTheme } from './data/themes';
 import { migrateLevelData, levelProgress } from './utils/levelSystem';
 import { countAllTimePRs } from './utils/prTracker';
 import { subscribeFriendships } from './utils/friends';
+import { calcWeeklyStreak } from './utils/consistency';
 import './App.css';
 import { getRank } from './utils/ranks';import { auth } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -101,12 +102,21 @@ function AppContent() {
   // Storage State
   const [workoutHistory, setWorkoutHistory] = useLocalStorage('gym_app_history', []);
   const [lastWorkoutDate, setLastWorkoutDate] = useLocalStorage('gym_app_last_date', null);
-  const [streak, setStreak] = useLocalStorage('gym_app_streak', 0);
   const [savedAiProgram, setSavedAiProgram] = useLocalStorage('gym_app_ai_program', null);
   const [userXP, setUserXP] = useLocalStorage('gym_app_xp', 0);
   const [userLevel, setUserLevel] = useLocalStorage('gym_app_level', 1);
   const [pinnedBadges, setPinnedBadges] = useLocalStorage('gym_app_pinned_badges', []);
   const [unlockedBadges, setUnlockedBadges] = useLocalStorage('gym_app_unlocked_badges', []);
+
+  // Haftalik hedef: kac gun antrenman (dinlenme gunleri seriyi bozmaz)
+  const [weeklyGoal, setWeeklyGoal] = useLocalStorage('gym_app_weekly_goal', 3);
+
+  // STREAK ARTIK TURETILMIS DEGER: workoutHistory'den haftalik seri hesaplanir.
+  // Eskiden gunluk Duolingo serisi saklaniyordu; artik ayri depolama yok.
+  const { streak, weeksThisWeek } = React.useMemo(
+    () => calcWeeklyStreak(workoutHistory, weeklyGoal),
+    [workoutHistory, weeklyGoal]
+  );
 
   const [completedDays, setCompletedDays] = useLocalStorage('gym_app_completed_days', []);
   const [lastResetDate, setLastResetDate] = useLocalStorage('gym_app_last_reset_date', null);
@@ -344,8 +354,7 @@ function AppContent() {
             setCurrentView={setCurrentView}
             workoutHistory={workoutHistory}
             setWorkoutHistory={setWorkoutHistory}
-            streak={streak}
-            setStreak={setStreak}
+            weeklyGoal={weeklyGoal}
             lastWorkoutDate={lastWorkoutDate}
             setLastWorkoutDate={setLastWorkoutDate}
             completedDays={completedDays}
@@ -376,6 +385,8 @@ function AppContent() {
             userLevel={userLevel}
             workoutHistory={workoutHistory}
             streak={streak}
+            weeklyGoal={weeklyGoal}
+            setWeeklyGoal={setWeeklyGoal}
             pinnedBadges={pinnedBadges}
             setPinnedBadges={setPinnedBadges}
             unlockedBadges={unlockedBadges}
@@ -397,7 +408,6 @@ function AppContent() {
             userXP={userXP} setUserXP={setUserXP}
             userLevel={userLevel} setUserLevel={setUserLevel}
             userCoins={userCoins} setUserCoins={setUserCoins}
-            streak={streak} setStreak={setStreak}
             setWorkoutHistory={setWorkoutHistory}
             setPinnedBadges={setPinnedBadges}
             setCompletedDays={setCompletedDays}
@@ -552,6 +562,8 @@ function AppContent() {
               <ScoreTracker
                 workoutHistory={workoutHistory}
                 streak={streak}
+                weeklyGoal={weeklyGoal}
+                weeksThisWeek={weeksThisWeek}
               />
             </div>
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
 import ReminderSettingsCard from './ReminderSettingsCard';
-import { Save, Trash2, LineChart as LineChartIcon, TrendingUp, Award, Zap, RefreshCcw, Camera, X, Image as ImageIcon, Settings, Type, Globe } from 'lucide-react';
+import { Save, Trash2, LineChart as LineChartIcon, TrendingUp, Award, Zap, RefreshCcw, Camera, X, Image as ImageIcon, Settings, Type, Globe, CalendarCheck } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { BADGE_LIBRARY } from '../../data/badges';
@@ -18,9 +18,9 @@ import FriendsCard from './FriendsCard';
 import { ensureProfile, publishProfile } from '../../utils/friends';
 import { error as logError } from '../../utils/logger';
 
-function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName }) {
+function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, weeklyGoal = 3, setWeeklyGoal, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName }) {
     const { t, lang, setLang } = useTranslation();
-    const { toast, confirmDialog } = useToast();
+    const { toast, confirmDialog, haptic } = useToast();
     const [nameDraft, setNameDraft] = useState(userName);
     const [myFriendCode, setMyFriendCode] = useState(null);
 
@@ -332,6 +332,32 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                                     }}
                                 >🇬🇧 EN</button>
                             </div>
+                        </div>
+
+                        {/* Haftalik hedef: kac gun antrenman (dinlenme gunleri serbest) */}
+                        <div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '6px' }}>
+                                <CalendarCheck size={14} /> {t('set_weekly_goal_label')}
+                            </label>
+                            <div style={{ display: 'flex', gap: '5px', background: 'rgba(0,0,0,0.3)', padding: '5px', borderRadius: '10px', border: '1px solid var(--glass-border)', width: 'fit-content', flexWrap: 'wrap' }}>
+                                {[1, 2, 3, 4, 5, 6].map((n) => (
+                                    <button
+                                        key={n}
+                                        onClick={() => { haptic(8); setWeeklyGoal(n); }}
+                                        style={{
+                                            padding: '6px 14px',
+                                            borderRadius: '8px',
+                                            border: 'none',
+                                            background: weeklyGoal === n ? 'var(--accent-primary)' : 'transparent',
+                                            color: weeklyGoal === n ? '#000' : '#fff',
+                                            cursor: 'pointer',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >{n}</button>
+                                ))}
+                            </div>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem', margin: '6px 0 0 0' }}>{t('set_weekly_goal_hint')}</p>
                         </div>
                     </div>
                 </div>

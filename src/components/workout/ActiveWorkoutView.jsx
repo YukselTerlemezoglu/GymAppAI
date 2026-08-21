@@ -10,6 +10,7 @@ import PrCelebrationModal from '../ui/PrCelebrationModal';
 import PlateCalculator from '../ui/PlateCalculator';
 import { detectPRs, getOverloadSuggestion, getExerciseHistory } from '../../utils/prTracker';
 import { totalXpForLevel, levelFromTotalXp } from '../../utils/levelSystem';
+import { calcWeeklyStreak, weeklyMultiplier } from '../../utils/consistency';
 import { normalizeAiWeight, normalizeAiReps } from '../../utils/aiNormalizer';
 
 function ActiveWorkoutView({
@@ -18,9 +19,7 @@ function ActiveWorkoutView({
     setCurrentView,
     workoutHistory,
     setWorkoutHistory,
-    streak,
-    setStreak,
-    lastWorkoutDate,
+    weeklyGoal,
     setLastWorkoutDate,
     completedDays,
     setCompletedDays,
@@ -248,10 +247,9 @@ function ActiveWorkoutView({
             haptic([30, 50, 30, 50, 60]); // rekor! guclu titreme
         }
 
-        // Update streaks
-        const isYesterday = new Date(lastWorkoutDate).toDateString() === new Date(new Date().setDate(new Date().getDate() - 1)).toDateString();
-        const newStreak = lastWorkoutDate === todayStr ? streak : (isYesterday ? streak + 1 : 1);
-        setStreak(newStreak);
+        // Son antrenman tarihi kaydedilir; SERI ARTIK TURETILMIS DEGERDIR -
+        // workoutHistory tabanli haftalik seri (consistency.js) hesaplanir,
+        // gunluk Duolingo serisi kaldirildi (dinlenme gunleri seriyi bozmaz).
         setLastWorkoutDate(todayStr);
 
         // Mark current day as completed
@@ -349,10 +347,11 @@ function ActiveWorkoutView({
             const rpeMultiplier = 1 + ((rpe - 5) * 0.05);
             calculatedXP = Math.round(calculatedXP * rpeMultiplier);
 
-            // SERİ ÇARPANI (STREAK MULTIPLIER)
-            let streakMultiplier = 1.0;
-            if (newStreak >= 7) streakMultiplier = 1.5;
-            else if (newStreak >= 3) streakMultiplier = 1.2;
+            // HAFTALIK TUTARLILIK CARPANI (weekly streak multiplier)
+            // Dinlenme gunleri seriyi bozmaz; ust uste hedefe ulasilan haftalar sayilir.
+            const historyWithToday = [...newWorkouts, ...(Array.isArray(workoutHistory) ? workoutHistory : [])];
+            const { streak: weeklyStreak } = calcWeeklyStreak(historyWithToday, weeklyGoal || 3);
+            const streakMultiplier = weeklyMultiplier(weeklyStreak);
 
             calculatedXP = Math.round(calculatedXP * streakMultiplier);
 
@@ -376,7 +375,7 @@ function ActiveWorkoutView({
 
             let baseMsg = `${lang === 'tr' ? `+${gainedXP} XP` : `+${gainedXP} XP`}`;
             if (streakMultiplier > 1.0) {
-                baseMsg += ` · 🔥 ${streakMultiplier}x`;
+                baseMsg += ` · 🔥 ${streakMultiplier}x (${weeklyStreak}${lang === 'tr' ? ' hafta' : 'w'})`;
             }
             baseMsg += ` · 🪙 +${earnedCoins}`;
 

@@ -368,6 +368,23 @@ const tr = {
     rank_up_banner: "YENİ RÜTBE KAZANDIN!",
     profile_total_xp: "Toplam XP",
 
+    // Haftalik tutarlilik sistemi (dinlenme gunleri serbest)
+    score_week_progress: "Bu hafta: {{done}}/{{goal}} antrenman",
+    score_week_done: "Haftalık hedef tamam!",
+    score_week_streak_unit: "hafta",
+    score_weeks_count: "{{count}} hafta",
+    set_weekly_goal_label: "Haftalık Antrenman Hedefi (gün)",
+    set_weekly_goal_hint: "Serin haftalık bazlı çalışır: hedefe ulaştığın her hafta seriyi sürdürürsün, dinlenme günleri seriyi bozmaz.",
+    builder_add_rest_day: "Dinlenme Günü Ekle",
+    builder_rest_day_name: "Dinlenme Günü",
+    builder_rest_day_desc: "Bugün kasların dinleniyor. Uyku, su ve protein ile toparlanmayı destekle!",
+    builder_rest_badge: "Dinlenme",
+    builder_mark_rest: "Bu günü dinlenme günü yap",
+    builder_rest_to_normal: "Dinlenme gününü antrenman gününe çevir",
+    preview_rest_tag: "Dinlenme Günü",
+    preview_rest_desc: "Dinlen ve toparlan",
+    admin_streak_derived_note: "Not: Seri artık antrenman geçmişinden otomatik hesaplanır (haftalık sistem), elle değiştirilemez.",
+
     // Language
     // Auth
     auth_signing_in: "Giriş Yapılıyor...",

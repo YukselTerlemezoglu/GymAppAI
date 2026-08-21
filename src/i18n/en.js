@@ -351,6 +351,23 @@ const en = {
     rank_up_banner: "NEW RANK UNLOCKED!",
     profile_total_xp: "Total XP",
 
+    // Weekly consistency system (rest days allowed)
+    score_week_progress: "This week: {{done}}/{{goal}} workouts",
+    score_week_done: "Weekly goal complete!",
+    score_week_streak_unit: "weeks",
+    score_weeks_count: "{{count}} weeks",
+    set_weekly_goal_label: "Weekly Workout Goal (days)",
+    set_weekly_goal_hint: "Streaks are weekly: every week you hit your goal extends the streak — rest days don't break it.",
+    builder_add_rest_day: "Add Rest Day",
+    builder_rest_day_name: "Rest Day",
+    builder_rest_day_desc: "Your muscles recover today. Support it with sleep, water and protein!",
+    builder_rest_badge: "Rest",
+    builder_mark_rest: "Mark this day as rest day",
+    builder_rest_to_normal: "Convert rest day to workout day",
+    preview_rest_tag: "Rest Day",
+    preview_rest_desc: "Rest & recover",
+    admin_streak_derived_note: "Note: Streak is now auto-calculated from workout history (weekly system), not manually editable.",
+
     // Language
     // Auth
     auth_signing_in: "Signing In...",

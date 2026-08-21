@@ -68,7 +68,7 @@ function ShareCard({ userName, userLevel, userXP, streak, workoutHistory }) {
         // Istatislik kartlari (2x2)
         const cards = [
             { label: lang === 'tr' ? 'Antrenman' : 'Workouts', value: String(stats.totalWorkouts), color: '#00c3ff' },
-            { label: lang === 'tr' ? 'Gün Seri' : 'Day Streak', value: String(streak || 0), color: '#ff9f43' },
+            { label: lang === 'tr' ? 'Haftalık Seri' : 'Week Streak', value: String(streak || 0), color: '#ff9f43' },
             { label: lang === 'tr' ? 'Toplam Hacim' : 'Total Volume', value: `${Math.round(stats.totalVolume).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US')} kg`, color: '#2ed573' },
             { label: lang === 'tr' ? 'Seviye' : 'Level', value: String(userLevel), color: '#ff0088' }
         ];

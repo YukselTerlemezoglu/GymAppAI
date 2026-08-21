@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, Trash2, Check, Play, Info } from 'lucide-react';
+import { Bot, Trash2, Check, Play, Info, BedDouble } from 'lucide-react';
 import ExerciseModal from '../workout/ExerciseModal';
 import { useTranslation } from '../../i18n/LanguageContext';
 
@@ -29,26 +29,43 @@ function SavedProgramPreview({
             <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
                 <div className="json-program-preview" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.01)' }}>
                     {(savedAiProgram?.days || []).map((day, dIdx) => (
-                        <div key={dIdx} style={{ marginBottom: '1.5rem', background: 'rgba(0,0,0,0.3)', padding: '1.5rem', borderRadius: '12px' }}>
+                        <div key={dIdx} style={{
+                            marginBottom: '1.5rem', padding: '1.5rem', borderRadius: '12px',
+                            background: day.isRestDay ? 'rgba(0,195,255,0.04)' : 'rgba(0,0,0,0.3)',
+                            border: day.isRestDay ? '1px dashed rgba(0,195,255,0.3)' : 'none'
+                        }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>
                                 <h4 style={{ color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {day.isRestDay && <BedDouble size={16} color="#00c3ff" />}
                                     {day.dayName}
+                                    {day.isRestDay && (
+                                        <span style={{ fontSize: '0.75rem', background: 'rgba(0,195,255,0.15)', color: '#00c3ff', padding: '2px 8px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            {t('preview_rest_tag')}
+                                        </span>
+                                    )}
                                     {completedDays.includes(dIdx) && (
                                         <span style={{ fontSize: '0.75rem', background: 'rgba(0, 255, 136, 0.2)', color: 'var(--accent-primary)', padding: '2px 8px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <Check size={12} /> {t('preview_completed')}
                                         </span>
                                     )}
                                 </h4>
-                                {!completedDays.includes(dIdx) ? (
-                                    <button onClick={() => startActiveAiWorkout(dIdx, day)} className="neon-btn" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>
-                                        <Play size={14} fill="currentColor" /> {t('preview_start_workout')}
-                                    </button>
+                                {day.isRestDay ? (
+                                    <span style={{ color: 'var(--text-light)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <BedDouble size={16} color="#00c3ff" /> {t('preview_rest_desc')}
+                                    </span>
                                 ) : (
-                                    <button onClick={() => startActiveAiWorkout(dIdx, day)} className="neon-btn-secondary" style={{ padding: '8px 16px', fontSize: '0.9rem', opacity: 0.5 }}>
-                                        {t('preview_repeat_workout')}
-                                    </button>
+                                    !completedDays.includes(dIdx) ? (
+                                        <button onClick={() => startActiveAiWorkout(dIdx, day)} className="neon-btn" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>
+                                            <Play size={14} fill="currentColor" /> {t('preview_start_workout')}
+                                        </button>
+                                    ) : (
+                                        <button onClick={() => startActiveAiWorkout(dIdx, day)} className="neon-btn-secondary" style={{ padding: '8px 16px', fontSize: '0.9rem', opacity: 0.5 }}>
+                                            {t('preview_repeat_workout')}
+                                        </button>
+                                    )
                                 )}
                             </div>
+                            {!day.isRestDay && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                                 {(day?.exercises || []).map((ex, eIdx) => (
                                     <div key={eIdx} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.8rem' }}>
@@ -86,6 +103,7 @@ function SavedProgramPreview({
                                     </div>
                                 ))}
                             </div>
+                            )}
                         </div>
                     ))}
                 </div>

@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
-import { Trophy, Trash2 } from 'lucide-react';
+import { Trophy, CalendarCheck } from 'lucide-react';
 
-function ScoreTracker({ workoutHistory, streak }) {
+function ScoreTracker({ workoutHistory, streak, weeklyGoal = 3, weeksThisWeek = 0 }) {
     const { t } = useTranslation();
     const { volumeScore, prScore, streakScore, totalScore } = useMemo(() => {
         if (!workoutHistory || workoutHistory.length === 0) return { volumeScore: 0, prScore: 0, streakScore: 0, totalScore: 0 };
@@ -39,8 +39,8 @@ function ScoreTracker({ workoutHistory, streak }) {
 
         let pScore = Math.min((newPRsCount / 5) * 25, 25);
 
-        // 3. Streak Score (Max 15 points) - based on current streak
-        let sScore = Math.min((streak / 7) * 15, 15);
+        // 3. Consistency Score (Max 15 points) - haftalik seri (dinlenme gunleri seriyi bozmaz)
+        let sScore = Math.min((streak / 4) * 15, 15);
 
         const total = Math.round(vScore + pScore + sScore) || 0;
 
@@ -51,6 +51,11 @@ function ScoreTracker({ workoutHistory, streak }) {
             totalScore: isNaN(total) ? 0 : total
         };
     }, [workoutHistory, streak]);
+
+    // Bu haftanin ilerlemesi: hedefe kac gun kaldi / tamamlandi mi
+    const weekDone = weeksThisWeek >= weeklyGoal;
+    const weekPct = Math.min(100, Math.round((weeksThisWeek / weeklyGoal) * 100));
+    const multActive = streak >= 2;
 
     return (
         <div className="stats-grid fade-in" style={{ animationDelay: '0.1s', gridTemplateColumns: '1fr' }}>
@@ -66,10 +71,34 @@ function ScoreTracker({ workoutHistory, streak }) {
                         <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '1.2rem', letterSpacing: '1px' }}>{t('score_gym_puan').toUpperCase()}</div>
                     </div>
                     {totalScore >= 80 && <Trophy size={48} color="var(--accent-warning)" style={{ filter: 'drop-shadow(0 0 10px rgba(255, 215, 0, 0.5))' }} />}
-                    
-                    {streak >= 3 && (
+
+                    {multActive && (
                         <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(255, 165, 0, 0.2)', border: '1px solid #ffa502', padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 'bold', color: '#ffa502', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            🔥 {streak >= 7 ? '1.5x' : '1.2x'} {t('score_multiplier_active')}
+                            🔥 {streak >= 4 ? '1.5x' : '1.2x'} {t('score_multiplier_active')}
+                        </div>
+                    )}
+                </div>
+
+                {/* Bu haftanin hedefi: 7 gunluk nokta seridi (dinlenme gunleri serbest) */}
+                <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.25)', padding: '0.7rem 0.9rem', borderRadius: '10px', marginBottom: '1rem' }}>
+                    <CalendarCheck size={18} color={weekDone ? '#00ff88' : '#ffa502'} style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '4px' }}>
+                            <span style={{ color: 'var(--text-light)' }}>
+                                {t('score_week_progress', { done: weeksThisWeek, goal: weeklyGoal })}
+                            </span>
+                            <span style={{ color: weekDone ? '#00ff88' : '#ffa502', fontWeight: 'bold' }}>
+                                {weekDone ? `✓ ${t('score_week_done')}` : `${weekPct}%`}
+                            </span>
+                        </div>
+                        <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
+                            <div style={{ width: `${weekPct}%`, height: '100%', background: weekDone ? 'linear-gradient(90deg, #00c3ff, #00ff88)' : 'linear-gradient(90deg, #ffa502, #ff6348)', transition: 'width 0.6s ease' }} />
+                        </div>
+                    </div>
+                    {streak > 0 && (
+                        <div style={{ textAlign: 'center', flexShrink: 0, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '8px' }}>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#ffa502' }}>🔥{streak}</div>
+                            <div style={{ fontSize: '0.6rem', color: 'var(--text-light)' }}>{t('score_week_streak_unit')}</div>
                         </div>
                     )}
                 </div>
@@ -97,10 +126,10 @@ function ScoreTracker({ workoutHistory, streak }) {
                         </div>
                     </div>
 
-                    {/* Streak Score Progress */}
+                    {/* Consistency Score Progress - haftalik seri */}
                     <div style={{ width: '100%' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.9rem' }}>
-                            <span style={{ color: 'var(--text-light)' }}>{t('score_consistency')} <span style={{ opacity: 0.5 }}>({t('score_days_count', { count: streak })})</span></span>
+                            <span style={{ color: 'var(--text-light)' }}>{t('score_consistency')} <span style={{ opacity: 0.5 }}>({t('score_weeks_count', { count: streak })})</span></span>
                             <span style={{ fontWeight: 'bold', color: '#fff' }}>{streakScore}/15</span>
                         </div>
                         <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>

@@ -47,7 +47,6 @@ function AdminPanel({
     userXP, setUserXP,
     userLevel, setUserLevel,
     userCoins, setUserCoins,
-    streak, setStreak,
     setWorkoutHistory,
     setPinnedBadges,
     setCompletedDays,
@@ -171,7 +170,7 @@ function AdminPanel({
             setUserXP(0);
             setUserLevel(1);
             setUserCoins(0);
-            setStreak(0);
+            // Seri (streak) artik turetilmis deger: gecmissiz otomatik 0 olur
             if (setWorkoutHistory) setWorkoutHistory([]);
             if (setPinnedBadges) setPinnedBadges([]);
             if (setCompletedDays) setCompletedDays([]);
@@ -264,12 +263,9 @@ function AdminPanel({
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                    <button onClick={() => setStreak(streak + 1)} className="neon-btn-secondary" style={{ flexGrow: 1 }}>
-                        🔥 {t('admin_streak_inc')} (Mevcut: {streak})
-                    </button>
-                    <button onClick={() => setStreak(0)} className="neon-btn-secondary" style={{ flexGrow: 1, color: '#ff4757' }}>
-                        🧨 {t('admin_streak_reset')}
-                    </button>
+                    <span style={{ color: 'var(--text-light)', fontSize: '0.8rem', alignSelf: 'center' }}>
+                        {t('admin_streak_derived_note')}
+                    </span>
                 </div>
             </div>
 

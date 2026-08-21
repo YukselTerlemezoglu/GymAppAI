@@ -13,11 +13,11 @@ export const BADGE_LIBRARY = [
         id: "iron_will",
         title: "Demir İrade",
         title_en: "Iron Will",
-        description: "3 günlük kesintisiz idman serisi (Streak) yakaladınız. Disiplin en büyük gücünüz!",
-        description_en: "You've achieved a 3-day workout streak. Discipline is your greatest strength!",
+        description: "2 hafta üst üste haftalık hedefinize ulaştınız. Disiplin en büyük gücünüz!",
+        description_en: "You've hit your weekly goal 2 weeks in a row. Discipline is your greatest strength!",
         icon: "🔥",
-        condition: (stats) => stats.streak >= 3,
-        progress: (stats) => `${Math.min(stats.streak, 3)}/3`
+        condition: (stats) => stats.streak >= 2,
+        progress: (stats) => `${Math.min(stats.streak, 2)}/2`
     },
     {
         id: "gym_boss",
@@ -43,8 +43,8 @@ export const BADGE_LIBRARY = [
         id: "streak_5",
         title: "Alev Alev",
         title_en: "On Fire",
-        description: "5 günlük kesintisiz idman serisi! Sizi durdurmak imkansız.",
-        description_en: "5-day consecutive workout streak! You are unstoppable.",
+        description: "5 hafta üst üste haftalık hedef! Sizi durdurmak imkansız.",
+        description_en: "5 weeks in a row hitting your weekly goal! You are unstoppable.",
         icon: "☄️",
         condition: (stats) => stats.streak >= 5,
         progress: (stats) => `${Math.min(stats.streak, 5)}/5`
@@ -53,11 +53,11 @@ export const BADGE_LIBRARY = [
         id: "streak_30",
         title: "Bağımlılık",
         title_en: "Addiction",
-        description: "İnanılmaz! 30 gün boyunca aralıksız spor yaptınız.",
-        description_en: "Incredible! You worked out for 30 consecutive days.",
+        description: "İnanılmaz! 26 hafta (yarım yıl) üst üste haftalık hedefinizi tutturdunuz.",
+        description_en: "Incredible! 26 consecutive weeks (half a year) of hitting your weekly goal.",
         icon: "🌋",
-        condition: (stats) => stats.streak >= 30,
-        progress: (stats) => `${Math.min(stats.streak, 30)}/30`
+        condition: (stats) => stats.streak >= 26,
+        progress: (stats) => `${Math.min(stats.streak, 26)}/26`
     },
     {
         id: "workout_20",
@@ -102,23 +102,23 @@ export const BADGE_LIBRARY = [
     // ================== YENI ROZETLER (v2) ==================
     {
         id: "streak_7",
-        title: "Haftalık Ateş",
-        title_en: "Weekly Blaze",
-        description: "7 gün üst üste antrenman! Haftanın her günü demire dokundunuz.",
-        description_en: "7 days in a row! You touched iron every day of the week.",
+        title: "Aylık Ateş",
+        title_en: "Monthly Blaze",
+        description: "4 hafta (1 ay) üst üste haftalık hedef! Mükemmel bir ay geçirdiniz.",
+        description_en: "4 weeks (1 month) in a row hitting your weekly goal! A perfect month.",
         icon: "🔥",
-        condition: (stats) => stats.streak >= 7,
-        progress: (stats) => `${Math.min(stats.streak, 7)}/7`
+        condition: (stats) => stats.streak >= 4,
+        progress: (stats) => `${Math.min(stats.streak, 4)}/4`
     },
     {
         id: "streak_100",
-        title: "Yüz Gün Demir",
-        title_en: "100 Days of Iron",
-        description: "100 gün kesintisiz antrenman. Bu disiplin efsane seviyesinde!",
-        description_en: "100 consecutive training days. This discipline is legendary!",
+        title: "Yıl Demiri",
+        title_en: "Year of Iron",
+        description: "52 hafta üst üste haftalık hedef. Tam bir yıl boyunca sadık kaldınız!",
+        description_en: "52 consecutive weeks of hitting your weekly goal. A full year of dedication!",
         icon: "⛓️",
-        condition: (stats) => stats.streak >= 100,
-        progress: (stats) => `${Math.min(stats.streak, 100)}/100`
+        condition: (stats) => stats.streak >= 52,
+        progress: (stats) => `${Math.min(stats.streak, 52)}/52`
     },
     {
         id: "volume_10t",
