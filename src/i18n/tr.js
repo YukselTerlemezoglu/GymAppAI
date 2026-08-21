@@ -316,12 +316,15 @@ const tr = {
     shc_share: "Paylaş / İndir",
     shc_shared: "Paylaşım penceresi açıldı!",
     shc_downloaded: "Kart indirildi.",
-    lb_title: "Lider Tablosu",
-    lb_subtitle: "Seviyene yakın rakiplerle yarış — seni geçmek için antrenman yap!",
-    lb_you: "sen",
-    lb_gap_text: "{name}'i geçmek için {gap} XP kaldı!",
-    lb_first_text: "Zirvedesin! Sıradaki seviyeye odaklan.",
-    lb_next_level: "Sonraki seviyeye",
+    inv_title: "Arkadaşlarını Davet Et",
+    inv_hint: "Birlikte antrenman yapmak daha motivasyonel! Uygulamayı arkadaşlarınınla paylaş.",
+    inv_copy_btn: "Kopyala",
+    inv_copied_btn: "Kopyalandı",
+    inv_copied: "Bağlantı kopyalandı!",
+    inv_copy_fail: "Kopyalanamadı, bağlantıyı elle kopyala.",
+    inv_share_btn: "Diğer Yollarla Paylaş",
+    inv_shared: "Paylaşım penceresi açıldı!",
+    inv_message: "{name} senden GymAppAI ile antrenmana davet ediyor! Hadi birlikte formda kalalım 💪",
 
     // Language
     // Auth

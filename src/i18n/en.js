@@ -299,12 +299,15 @@ const en = {
     shc_share: "Share / Download",
     shc_shared: "Share sheet opened!",
     shc_downloaded: "Card downloaded.",
-    lb_title: "Leaderboard",
-    lb_subtitle: "Race rivals near your level — train to overtake them!",
-    lb_you: "you",
-    lb_gap_text: "{gap} XP left to pass {name}!",
-    lb_first_text: "You're on top! Focus on the next level.",
-    lb_next_level: "To next level",
+    inv_title: "Invite Your Friends",
+    inv_hint: "Training together is more motivating! Share the app with your friends.",
+    inv_copy_btn: "Copy",
+    inv_copied_btn: "Copied",
+    inv_copied: "Link copied!",
+    inv_copy_fail: "Copy failed, please copy the link manually.",
+    inv_share_btn: "Share Other Ways",
+    inv_shared: "Share sheet opened!",
+    inv_message: "{name} invites you to train with GymAppAI! Let's get fit together 💪",
 
     // Language
     // Auth

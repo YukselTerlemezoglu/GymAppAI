@@ -12,7 +12,7 @@ import { compressImage } from '../../utils/imageCompressor';
 import PhotoGalleryModal from './PhotoGalleryModal';
 import CloudSyncCard from '../dashboard/CloudSyncCard';
 import ShareCard from './ShareCard';
-import Leaderboard from './Leaderboard';
+import InviteFriends from './InviteFriends';
 import { error as logError } from '../../utils/logger';
 
 function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName }) {
@@ -306,8 +306,8 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                 {/* Bulut Eşitleme Kartı */}
                 <CloudSyncCard currentUser={currentUser} onLoginClick={onLoginClick} />
 
-                {/* Lider Tablosu (sanal rakipler) */}
-                <Leaderboard userName={userName} userLevel={userLevel} userXP={userXP} />
+                {/* Arkadas Davet Karti */}
+                <InviteFriends userName={userName} />
 
                 {/* Paylaşım Kartı */}
                 <ShareCard
