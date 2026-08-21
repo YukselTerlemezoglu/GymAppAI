@@ -13,12 +13,44 @@ import PhotoGalleryModal from './PhotoGalleryModal';
 import CloudSyncCard from '../dashboard/CloudSyncCard';
 import ShareCard from './ShareCard';
 import InviteFriends from './InviteFriends';
+import FriendsCard from './FriendsCard';
+import { ensureProfile, publishProfile } from '../../utils/friends';
 import { error as logError } from '../../utils/logger';
 
 function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName }) {
     const { t, lang, setLang } = useTranslation();
     const { toast, confirmDialog } = useToast();
     const [nameDraft, setNameDraft] = useState(userName);
+    const [myFriendCode, setMyFriendCode] = useState(null);
+
+    // Girisli kullanici icin arkadas profili olustur/kodu getir ve
+    // isim/XP/seviye degisikliklerini arkadaslarin gordugu profile yaz.
+    // Not: async sonuc ref'e yazilir; setState yalnizca giris degisiminde
+    // bir kez yapilir (set-state-in-effect kaskadini onler).
+    const friendCodeRef = useRef(null);
+    const profileInitedRef = useRef(false);
+
+    useEffect(() => {
+        if (!currentUser) {
+            profileInitedRef.current = false;
+            friendCodeRef.current = null;
+            return;
+        }
+        if (profileInitedRef.current) return;
+        profileInitedRef.current = true;
+        ensureProfile({ name: userName, xp: userXP, level: userLevel }).then((p) => {
+            if (p && p.code) {
+                friendCodeRef.current = p.code;
+                setMyFriendCode(p.code);
+            }
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- giris degisiminde bir kez calismali
+    }, [currentUser]);
+
+    useEffect(() => {
+        if (!currentUser) return;
+        publishProfile({ name: userName, xp: userXP, level: userLevel });
+    }, [currentUser, userName, userXP, userLevel]);
 
     const saveName = () => {
         const trimmed = nameDraft.trim();
@@ -306,8 +338,17 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                 {/* Bulut Eşitleme Kartı */}
                 <CloudSyncCard currentUser={currentUser} onLoginClick={onLoginClick} />
 
+                {/* Arkadaslar + Lider Tablosu (gercek kisiler) */}
+                <FriendsCard
+                    currentUser={currentUser}
+                    myCode={myFriendCode}
+                    userName={userName}
+                    userXP={userXP}
+                    userLevel={userLevel}
+                />
+
                 {/* Arkadas Davet Karti */}
-                <InviteFriends userName={userName} />
+                <InviteFriends userName={userName} myCode={myFriendCode} />
 
                 {/* Paylaşım Kartı */}
                 <ShareCard

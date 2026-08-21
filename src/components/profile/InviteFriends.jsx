@@ -4,27 +4,28 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast, haptic } from '../ui/ToastProvider';
 
 // Arkadas davet karti: uygulama linkini kopyalar / mesajlasma
-// uygulamalariyla paylasir. Gercek cok-kullanicili lider tablosu
-// icin backend gerekir; bu kart davet akisinin ilk adimidir.
-function InviteFriends({ userName }) {
+// uygulamalariyla paylasir. Link kullanici kodunu tasir (?add=KOD);
+// yeni kullanici giris yaptiginda otomatik arkadaslik istegi gider.
+function InviteFriends({ userName, myCode }) {
     const { t } = useTranslation();
     const { toast } = useToast();
     const [copied, setCopied] = useState(false);
 
     const APP_URL = typeof window !== 'undefined' ? window.location.origin : 'https://gym-app-ai-snowy.vercel.app';
+    const INVITE_LINK = myCode ? `${APP_URL}/?add=${myCode}` : APP_URL;
     const INVITE_TEXT = t('inv_message').replace('{name}', userName || '');
 
     const copyLink = async () => {
         haptic(8);
         try {
-            await navigator.clipboard.writeText(APP_URL);
+            await navigator.clipboard.writeText(INVITE_LINK);
             setCopied(true);
             toast.success(t('inv_copied'));
             setTimeout(() => setCopied(false), 2000);
         } catch {
             // Clipboard API yoksa fallback
             const ta = document.createElement('textarea');
-            ta.value = APP_URL;
+            ta.value = INVITE_LINK;
             document.body.appendChild(ta);
             ta.select();
             try {
@@ -41,14 +42,14 @@ function InviteFriends({ userName }) {
 
     const shareWhatsApp = () => {
         haptic(8);
-        window.open(`https://wa.me/?text=${encodeURIComponent(INVITE_TEXT + ' ' + APP_URL)}`, '_blank');
+        window.open(`https://wa.me/?text=${encodeURIComponent(INVITE_TEXT + ' ' + INVITE_LINK)}`, '_blank');
     };
 
     const shareGeneric = async () => {
         haptic(8);
         if (navigator.share) {
             try {
-                await navigator.share({ title: 'GymAppAI', text: INVITE_TEXT, url: APP_URL });
+                await navigator.share({ title: 'GymAppAI', text: INVITE_TEXT, url: INVITE_LINK });
                 toast.success(t('inv_shared'));
             } catch {
                 /* kullanici iptali */
@@ -75,7 +76,7 @@ function InviteFriends({ userName }) {
                 border: '1px solid rgba(255,255,255,0.1)'
             }}>
                 <span style={{ color: 'var(--text-light)', fontSize: '0.8rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {APP_URL}
+                    {INVITE_LINK}
                 </span>
                 <button
                     onClick={copyLink}

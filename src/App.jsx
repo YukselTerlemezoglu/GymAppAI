@@ -36,7 +36,7 @@ import './App.css';
 import { getRank } from './utils/ranks';import { auth } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
-import { error as logError } from './utils/logger';
+import { error as logError, log as logInfo } from './utils/logger';
 
 function AppContent() {
   const { t, lang } = useLanguage();
@@ -130,6 +130,29 @@ function AppContent() {
     const stop = startReminderTicker();
     return stop;
   }, []);
+
+  // --- DAVET LINKI (?add=KOD) ---
+  // Arkadas linkiyle gelen kullanici giris yaptiginda kodu isle:
+  // profil olustur, koda sahip kisiye otomatik arkadaslik istegi gonder,
+  // URL'den parametreyi temizle (yenilemede tekrar gondermesin).
+  useEffect(() => {
+    if (!currentUser) return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const code = (params.get('add') || '').trim().toUpperCase();
+      if (code.length !== 6) return;
+      window.history.replaceState({}, '', window.location.pathname);
+      import('./utils/friends').then(({ sendRequest }) => {
+        sendRequest(code).then((res) => {
+          // Sonuc sessiz islenir; hata durumunda kullanici FriendsCard'tan
+          // tekrar deneyebilir, burada UI bozulmamali.
+          if (res && res.error) logInfo('Davet kodu sonucu:', res.error);
+        });
+      });
+    } catch (err) {
+      logError('Davet kodu islenemedi:', err);
+    }
+  }, [currentUser]);
 
   // --- LEVEL UP ---
   // Onceki seviyeyi ref ile izliyoruz; modal karari render sonrasi tek effect'te.
@@ -491,18 +514,19 @@ function AppContent() {
               />
               <WaterTrackerWidget />
               <RecoveryWidget workoutHistory={workoutHistory} />
-
-              <motion.button
-                onClick={() => setCurrentView('aicoach')}
-                className="neon-btn"
-                style={{ width: '100%', padding: '1rem', fontSize: '1.05rem', background: 'rgba(0, 195, 255, 0.1)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none' }}
-                whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(0, 195, 255, 0.4)' }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ duration: 0.05 }}
-              >
-                <Bot size={20} /> {t('btn_ai_coach')}
-              </motion.button>
             </div>
+
+            {/* AI Koc: grid disinda tam genislik (mobil + PC ayni gorunum) */}
+            <motion.button
+              onClick={() => setCurrentView('aicoach')}
+              className="neon-btn"
+              style={{ width: '100%', padding: '1rem', fontSize: '1.05rem', background: 'rgba(0, 195, 255, 0.1)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none', gridColumn: '1 / -1' }}
+              whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(0, 195, 255, 0.4)' }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ duration: 0.05 }}
+            >
+              <Bot size={20} /> {t('btn_ai_coach')}
+            </motion.button>
           </div>
         )}
 
