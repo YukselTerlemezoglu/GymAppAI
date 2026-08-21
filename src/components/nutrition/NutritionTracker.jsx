@@ -5,6 +5,7 @@ import { ArrowLeft, Plus, Trash2, Utensils, PieChart, Info, Bot, Loader2 } from 
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { estimateMacros } from '../../services/groq';
 import { error as logError } from '../../utils/logger';
+import MacroCalculator from './MacroCalculator';
 
 function NutritionTracker({ onBack }) {
     const { t, lang } = useTranslation();
@@ -68,6 +69,17 @@ function NutritionTracker({ onBack }) {
             [currentDate]: {
                 ...currentDayData,
                 goals: { ...currentDayData.goals, [field]: val }
+            }
+        }));
+    };
+
+    // Makro hesaplayicidan gelen hedefleri gunun hedeflerine yazar
+    const applyMacroGoals = (goals) => {
+        setNutritionData(prev => ({
+            ...prev,
+            [currentDate]: {
+                ...currentDayData,
+                goals: { ...currentDayData.goals, ...goals }
             }
         }));
     };
@@ -240,6 +252,9 @@ function NutritionTracker({ onBack }) {
                         </div>
                     )}
                 </div>
+
+                {/* Makro Hesaplayici */}
+                <MacroCalculator onApply={applyMacroGoals} />
 
                 {/* Goals Settings */}
                 <div className="glass-card slide-in">

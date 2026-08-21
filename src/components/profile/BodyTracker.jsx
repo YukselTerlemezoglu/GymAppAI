@@ -11,6 +11,8 @@ import { savePhoto, getPhoto, deletePhoto } from '../../utils/db';
 import { compressImage } from '../../utils/imageCompressor';
 import PhotoGalleryModal from './PhotoGalleryModal';
 import CloudSyncCard from '../dashboard/CloudSyncCard';
+import ShareCard from './ShareCard';
+import Leaderboard from './Leaderboard';
 import { error as logError } from '../../utils/logger';
 
 function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName }) {
@@ -303,6 +305,18 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
 
                 {/* Bulut Eşitleme Kartı */}
                 <CloudSyncCard currentUser={currentUser} onLoginClick={onLoginClick} />
+
+                {/* Lider Tablosu (sanal rakipler) */}
+                <Leaderboard userName={userName} userLevel={userLevel} userXP={userXP} />
+
+                {/* Paylaşım Kartı */}
+                <ShareCard
+                    userName={userName}
+                    userLevel={userLevel}
+                    userXP={userXP}
+                    streak={streak}
+                    workoutHistory={workoutHistory}
+                />
 
                 {/* 1. SEVİYE VE XP BARI (Gamification) */}
                 <div className="glass-card slide-in" style={{ border: '1px solid rgba(0, 195, 255, 0.2)', background: 'linear-gradient(145deg, rgba(0,0,0,0.6) 0%, rgba(0, 195, 255, 0.05) 100%)' }}>

@@ -1,8 +1,19 @@
 import React from 'react';
-import { Dumbbell, Trash2, Plus, Check } from 'lucide-react';
+import { Dumbbell, Trash2, Plus, Check, Link2 } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
+
+// Superset zincirinde kaçıncı cift oldugunu bulur (A1, A2, A3...)
+// Bir satir "oncekiyle bagli"ysa, zincir basindan itibaren numaralar.
+function supersetPairIndex(exercises, idx) {
+    let n = 1;
+    for (let i = 1; i <= idx; i++) {
+        if (exercises[i]?.supersetWithPrev) n++;
+        else n = 1;
+    }
+    return n;
+}
 
 function CustomProgramBuilder({ setSavedAiProgram, setShowCustomBuilder }) {
     const { t } = useTranslation();
@@ -27,6 +38,19 @@ function CustomProgramBuilder({ setSavedAiProgram, setShowCustomBuilder }) {
     const handleUpdateCustomExercise = (dayIdx, exIdx, field, value) => {
         const updatedDays = [...customDays];
         updatedDays[dayIdx].exercises[exIdx][field] = value;
+        setCustomDays(updatedDays);
+    };
+
+    // Superset bagini ac/kapa: satiri oncekiyle esler (A1/A2 cifti)
+    const toggleSuperset = (dayIdx, exIdx) => {
+        if (exIdx === 0) return;
+        const updatedDays = [...customDays];
+        const ex = updatedDays[dayIdx].exercises[exIdx];
+        if (ex.supersetWithPrev) {
+            delete ex.supersetWithPrev;
+        } else {
+            ex.supersetWithPrev = true;
+        }
         setCustomDays(updatedDays);
     };
 
@@ -86,15 +110,21 @@ function CustomProgramBuilder({ setSavedAiProgram, setShowCustomBuilder }) {
                         </div>
 
                         {day.exercises.map((ex, eIdx) => (
-                            <div key={eIdx} style={{ display: 'grid', gridTemplateColumns: 'minmax(120px, 2fr) 1fr 1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-                                <input
-                                    type="text"
-                                    className="neon-input"
-                                    placeholder={t('builder_exercise_placeholder')}
-                                    value={ex.name}
-                                    onChange={(e) => handleUpdateCustomExercise(dIdx, eIdx, 'name', e.target.value)}
-                                    style={{ padding: '0.4rem' }}
-                                />
+                            <div key={eIdx} style={{ display: 'grid', gridTemplateColumns: 'minmax(120px, 2fr) 1fr 1fr 1fr auto', gap: '8px', marginBottom: '10px', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center', minWidth: 0 }}>
+                                    {/* Superset eslestirmesi: bagli satir VE ciftin ilk satiri A1 rozeti tasir */}
+                                    {(ex.supersetWithPrev || day.exercises[eIdx + 1]?.supersetWithPrev) && (
+                                        <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#ff0088', border: '1px solid #ff0088', borderRadius: '4px', padding: '1px 4px', flexShrink: 0 }}>A{supersetPairIndex(day.exercises, eIdx)}</span>
+                                    )}
+                                    <input
+                                        type="text"
+                                        className="neon-input"
+                                        placeholder={t('builder_exercise_placeholder')}
+                                        value={ex.name}
+                                        onChange={(e) => handleUpdateCustomExercise(dIdx, eIdx, 'name', e.target.value)}
+                                        style={{ padding: '0.4rem', minWidth: 0 }}
+                                    />
+                                </div>
                                 <input
                                     type="number"
                                     className="neon-input"
@@ -121,6 +151,21 @@ function CustomProgramBuilder({ setSavedAiProgram, setShowCustomBuilder }) {
                                     onChange={(e) => handleUpdateCustomExercise(dIdx, eIdx, 'reps', e.target.value)}
                                     style={{ padding: '0.4rem', textAlign: 'center' }}
                                 />
+                                {/* Superset baglama butonu (ilk satir haric) */}
+                                <button
+                                    onClick={() => toggleSuperset(dIdx, eIdx)}
+                                    title={eIdx === 0 ? t('sup_first_row_hint') : t('sup_link_hint')}
+                                    disabled={eIdx === 0}
+                                    style={{
+                                        background: ex.supersetWithPrev ? 'rgba(255,0,136,0.2)' : 'transparent',
+                                        border: `1px solid ${ex.supersetWithPrev ? '#ff0088' : 'rgba(255,255,255,0.15)'}`,
+                                        borderRadius: '6px', padding: '6px', cursor: eIdx === 0 ? 'not-allowed' : 'pointer',
+                                        color: ex.supersetWithPrev ? '#ff0088' : 'var(--text-light)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: eIdx === 0 ? 0.3 : 1
+                                    }}
+                                >
+                                    <Link2 size={14} />
+                                </button>
                             </div>
                         ))}
 

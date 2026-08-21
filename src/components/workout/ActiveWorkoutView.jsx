@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Check, Trophy, Info, Settings, TrendingUp, Calculator } from 'lucide-react';
+import { ArrowLeft, Check, Trophy, Info, Settings, TrendingUp, Calculator, History, Link2 } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import ExerciseModal from './ExerciseModal';
 import RestTimer from './RestTimer';
 import PrCelebrationModal from '../ui/PrCelebrationModal';
 import PlateCalculator from '../ui/PlateCalculator';
-import { detectPRs, getOverloadSuggestion } from '../../utils/prTracker';
+import { detectPRs, getOverloadSuggestion, getExerciseHistory } from '../../utils/prTracker';
 import { normalizeAiWeight, normalizeAiReps } from '../../utils/aiNormalizer';
 
 function ActiveWorkoutView({
@@ -490,11 +490,32 @@ function ActiveWorkoutView({
             <div className="workout-tracker-list fade-in" style={{ paddingBottom: '100px', paddingTop: '1rem' }}>
                 {activeAiWorkoutDayParams?.exercises?.map((ex, eIdx) => {
                     const setsArray = activeAiWorkoutLogs[eIdx] || getSetsForExercise(eIdx, ex);
+                    const isSuperset = !!ex.supersetWithPrev;
+                    // Superset rozet numarasi (A1, A2, ...)
+                    let supBadge = null;
+                    if (isSuperset || activeAiWorkoutDayParams.exercises[eIdx + 1]?.supersetWithPrev) {
+                        let n = 1;
+                        for (let i = 1; i <= eIdx; i++) {
+                            if (activeAiWorkoutDayParams.exercises[i]?.supersetWithPrev) n++;
+                            else n = 1;
+                        }
+                        supBadge = `A${n}`;
+                    }
 
                     return (
-                        <div key={eIdx} className="glass-card" style={{ marginBottom: '1rem' }}>
+                        <div key={eIdx} className="glass-card" style={{
+                            marginBottom: '1rem',
+                            borderLeft: isSuperset ? '4px solid #ff0088' : undefined,
+                            background: isSuperset ? 'rgba(255,0,136,0.05)' : undefined
+                        }}>
                             <div style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h3 style={{ color: 'var(--accent-primary)', margin: 0 }}>{ex.name}</h3>
+                                <h3 style={{ color: 'var(--accent-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {supBadge && (
+                                        <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#ff0088', border: '1px solid #ff0088', borderRadius: '4px', padding: '2px 5px', flexShrink: 0 }} title={t('sup_badge_hint')}>{supBadge}</span>
+                                    )}
+                                    {ex.name}
+                                    {isSuperset && <Link2 size={14} color="#ff0088" title={t('sup_badge_hint')} />}
+                                </h3>
                                 <div style={{ display: 'flex', gap: '10px' }}>
                                     <button
                                         onClick={() => setSelectedExerciseForModal(ex.name)}
@@ -506,7 +527,6 @@ function ActiveWorkoutView({
                             </div>
 
                             <LastPerformanceCard exerciseName={ex.name} history={workoutHistory} lang={lang} t={t} />
-
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                                 {setsArray.map((setLog, sIdx) => {
                                     const isChecked = setLog.completed;
@@ -680,17 +700,19 @@ function ActiveWorkoutView({
     );
 }
 
-// Egzersiz kartında "geçen sefer + bugünün hedefi" gösteren mini kart
-function LastPerformanceCard({ exerciseName, history, t }) {
+// Egzersiz kartında "geçen sefer + bugünün hedefi" gösteren mini kart.
+// Genisletilince son 5 seansin performans listesi acilir.
+function LastPerformanceCard({ exerciseName, history, t, lang }) {
+    const [expanded, setExpanded] = useState(false);
     const suggestion = useMemo(() => getOverloadSuggestion(exerciseName, history), [exerciseName, history]);
+    const sessions = useMemo(
+        () => (expanded ? getExerciseHistory(exerciseName, history, 5) : []),
+        [expanded, exerciseName, history]
+    );
     if (!suggestion) return null;
     const { from, kind, targetWeight, targetReps } = suggestion;
     return (
         <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            gap: '6px 12px',
             background: 'rgba(0, 195, 255, 0.06)',
             border: '1px solid rgba(0, 195, 255, 0.15)',
             borderRadius: '8px',
@@ -698,15 +720,40 @@ function LastPerformanceCard({ exerciseName, history, t }) {
             marginBottom: '0.8rem',
             fontSize: '0.8rem'
         }}>
-            <TrendingUp size={14} color="#00c3ff" style={{ flexShrink: 0 }} />
-            <span style={{ color: 'var(--text-light)' }}>
-                {t('po_last_time')}: <strong style={{ color: 'var(--text-primary)' }}>{from.weight}kg × {from.reps}</strong>
-            </span>
-            <span style={{ color: '#00ff88', fontWeight: 600 }}>
-                {kind === 'weight'
-                    ? t('po_target_weight').replace('{w}', targetWeight).replace('{r}', targetReps)
-                    : t('po_target_reps').replace('{w}', targetWeight).replace('{r}', targetReps)}
-            </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 12px' }}>
+                <TrendingUp size={14} color="#00c3ff" style={{ flexShrink: 0 }} />
+                <span style={{ color: 'var(--text-light)' }}>
+                    {t('po_last_time')}: <strong style={{ color: 'var(--text-primary)' }}>{from.weight}kg × {from.reps}</strong>
+                </span>
+                <span style={{ color: '#00ff88', fontWeight: 600 }}>
+                    {kind === 'weight'
+                        ? t('po_target_weight').replace('{w}', targetWeight).replace('{r}', targetReps)
+                        : t('po_target_reps').replace('{w}', targetWeight).replace('{r}', targetReps)}
+                </span>
+                <button
+                    onClick={() => setExpanded(!expanded)}
+                    style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: '#00c3ff', cursor: 'pointer', fontSize: '0.75rem', padding: '2px 6px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                    <History size={13} /> {t('exh_button')}
+                </button>
+            </div>
+            {expanded && (
+                <div style={{ marginTop: '8px', borderTop: '1px solid rgba(0,195,255,0.15)', paddingTop: '8px' }}>
+                    {sessions.length === 0 ? (
+                        <p style={{ color: 'var(--text-light)', margin: 0, fontSize: '0.75rem' }}>{t('exh_empty')}</p>
+                    ) : (
+                        sessions.map((s, i) => (
+                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', fontSize: '0.78rem', borderBottom: i < sessions.length - 1 ? '1px dashed rgba(255,255,255,0.06)' : 'none' }}>
+                                <span style={{ color: 'var(--text-light)' }}>
+                                    {new Date(s.date).toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'short' })}
+                                </span>
+                                <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{s.weight}kg × {s.reps} <span style={{ color: 'var(--text-light)', fontWeight: 400 }}>({s.sets} set)</span></span>
+                                <span style={{ color: '#00c3ff', fontSize: '0.72rem' }}>e1RM {Math.round(s.e1rm)}kg</span>
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
         </div>
     );
 }

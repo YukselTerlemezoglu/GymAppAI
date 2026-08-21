@@ -10,6 +10,11 @@ import ScoreTracker from './components/dashboard/ScoreTracker';
 import AICoachInsights from './components/dashboard/AICoachInsights';
 import SavedProgramPreview from './components/dashboard/SavedProgramPreview';
 import WorkoutProgressCharts from './components/dashboard/WorkoutProgressCharts';
+import WorkoutHeatmap from './components/dashboard/WorkoutHeatmap';
+import StrengthStandards from './components/dashboard/StrengthStandards';
+import WeeklyAiReport from './components/dashboard/WeeklyAiReport';
+import WorkoutTemplates from './components/dashboard/WorkoutTemplates';
+import RecoveryWidget from './components/dashboard/RecoveryWidget';
 import BodyTracker from './components/profile/BodyTracker';
 import NutritionTracker from './components/nutrition/NutritionTracker';
 import NutritionSummary from './components/dashboard/NutritionSummary';
@@ -485,6 +490,7 @@ function AppContent() {
                 onClick={() => setCurrentView('nutrition')}
               />
               <WaterTrackerWidget />
+              <RecoveryWidget workoutHistory={workoutHistory} />
 
               <motion.button
                 onClick={() => setCurrentView('aicoach')}
@@ -520,6 +526,11 @@ function AppContent() {
               )
             }
 
+            {/* Sablonlar: tek dokunusla baslat */}
+            <WorkoutTemplates
+              onStartTemplate={(params) => startActiveAiWorkout(-1, params)}
+            />
+
             {/* Aksiyon butonları */}
             <div className="fade-in" style={{ animationDelay: '0.15s', marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', flexDirection: 'column' }}>
               <motion.button
@@ -551,6 +562,12 @@ function AppContent() {
         {/* Grafikler genislik ister; bu sekme tek kolon akar (PC dahil) */}
         {dashboardTab === 'progress' && (
           <>
+            <WorkoutHeatmap workoutHistory={workoutHistory} />
+
+            <StrengthStandards workoutHistory={workoutHistory} />
+
+            <WeeklyAiReport workoutHistory={workoutHistory} />
+
             {workoutHistory && workoutHistory.length > 0 && (
               <WorkoutProgressCharts workoutHistory={workoutHistory} onOpenPrHistory={() => setCurrentView('prhistory')} />
             )}

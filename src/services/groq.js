@@ -137,8 +137,7 @@ export async function generateProgram(ctx) {
 
 /**
  * Bir öğünün makro değerlerini tahmin et.
- */
-export async function estimateMacros(mealText, lang) {
+ */export async function estimateMacros(mealText, lang) {
   const systemPrompt = 'You are a professional dietitian. Output JSON only.';
   const userPrompt =
     lang === 'tr'
@@ -160,5 +159,40 @@ export async function estimateMacros(mealText, lang) {
     protein: Number(data.protein) || 0,
     carbs: Number(data.carbs) || 0,
     fat: Number(data.fat) || 0,
+  };
+}
+
+/**
+ * Haftalik antrenman raporu yorumu uret.
+ */
+export async function generateWeeklyReport(ctx) {
+  const { lang, stats } = ctx;
+
+  const systemPrompt =
+    'You are a professional strength coach. You must ONLY output a valid JSON object matching the requested schema. ' +
+    'No other text, no markdown formatting like ```json.';
+
+  const userPrompt =
+    lang === 'tr'
+      ? `Sen profesyonel bir antrenörsün. Kullanıcının son 7 günlük özeti: ${JSON.stringify(stats)}. ` +
+        'Kısa, motive edici ve somut bir rapor yaz. SADECE JSON. Şema: ' +
+        '{ summary: string (2-3 cümle, performans değerlendirmesi), suggestions: string[] (gelecek hafta için 2-3 somut öneri) }'
+      : `You are a professional strength coach. User last 7 days summary: ${JSON.stringify(stats)}. ` +
+        'Write a short, motivating and concrete report. JSON ONLY. Schema: ' +
+        '{ summary: string (2-3 sentences, performance assessment), suggestions: string[] (2-3 concrete suggestions for next week) }';
+
+  const data = await callGroq({
+    kind: 'nutrition', // mevcut izinli kind; rapor da benzer tek-cikti JSON akisi
+    systemPrompt,
+    userPrompt,
+    temperature: 0.6,
+  });
+
+  if (!data || typeof data.summary !== 'string') {
+    throw new Error('AI geçerli bir rapor üretmedi.');
+  }
+  return {
+    summary: data.summary,
+    suggestions: Array.isArray(data.suggestions) ? data.suggestions.map(String).slice(0, 3) : [],
   };
 }

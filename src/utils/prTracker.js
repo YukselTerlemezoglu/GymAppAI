@@ -98,3 +98,28 @@ export const getOverloadSuggestion = (exerciseName, history) => {
   }
   return { kind: 'reps', from: best, targetWeight: best.weight, targetReps: best.reps + 1 };
 };
+
+/**
+ * Bir egzersizin son N seanstaki performansini listeler.
+ * Her seans: { date, weight, reps, sets, e1rm } — en iyi sete (e1RM) gore.
+ * Tarih sirasina gore yeniden eskiye dondurur.
+ */
+export const getExerciseHistory = (exerciseName, history, limit = 5) => {
+  if (!exerciseName || !Array.isArray(history)) return [];
+  const sessions = [];
+  history.forEach(w => {
+    if (!w || w.exercise !== exerciseName) return;
+    const e1rm = estimate1RM(w.maxWeight, w.bestReps);
+    if (e1rm <= 0) return;
+    sessions.push({
+      date: w.date,
+      weight: parseFloat(w.maxWeight) || 0,
+      reps: parseInt(w.bestReps) || 0,
+      sets: parseInt(w.sets) || 0,
+      e1rm
+    });
+  });
+  // Guncel en iyi seans once
+  sessions.sort((a, b) => new Date(b.date) - new Date(a.date));
+  return sessions.slice(0, limit);
+};
