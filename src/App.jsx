@@ -26,6 +26,7 @@ import { ToastProvider, useToast } from './components/ui/ToastProvider';
 import { startReminderTicker } from './utils/notificationScheduler';
 import LevelUpModal from './components/ui/LevelUpModal';
 import ShopPage from './components/shop/ShopPage';
+import EvolutionModal from './components/shop/EvolutionModal';
 import BadgeUnlockModal from './components/ui/BadgeUnlockModal';
 import AdminPanel from './components/admin/AdminPanel';
 import AnatomyLibrary from './components/anatomy/AnatomyLibrary';
@@ -123,7 +124,8 @@ function AppContent() {
   const [activeBuddyId, setActiveBuddyId] = useLocalStorage('gym_app_buddy_active', null);
   const [gachaPity, setGachaPity] = useLocalStorage('gym_app_gacha_pity', {});
   const [wheelState, setWheelState] = useLocalStorage('gym_app_wheel', null);
-  const [showShopModal, setShowShopModal] = useState(false);
+  // Evrim kutlamasi: { buddyId, newXp } / null (antrenman + dukkan ortak)
+  const [buddyEvolution, setBuddyEvolution] = useState(null);
 
   // STREAK ARTIK TURETILMIS DEGER: workoutHistory'den haftalik seri hesaplanir.
   // Eskiden gunluk Duolingo serisi saklaniyordu; artik ayri depolama yok.
@@ -361,6 +363,15 @@ function AppContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Evrim kutlamasi: antrenman ya da dukkan beslemesinden tetiklenir
+  const evolutionModalEl = buddyEvolution && (
+    <EvolutionModal
+      buddyId={buddyEvolution.buddyId}
+      newXp={buddyEvolution.newXp}
+      onClose={() => setBuddyEvolution(null)}
+    />
+  );
+
   // Alt nav her ekranda gorunur; aktif antrenman ve giris akisinda gizlenir
   const showBottomNav = currentView !== 'activeAiWorkout' && currentView !== 'auth';
   const bottomNavEl = showBottomNav && (
@@ -369,7 +380,8 @@ function AppContent() {
       dashboardTab={dashboardTab}
       onGoHome={handleNavGoProfile}
       onSelectTab={handleNavSelectTab}
-      onOpenShop={() => setShowShopModal(true)}
+      onOpenShop={() => setCurrentView('shop')}
+      freeSpinAvailable={getWheelState(wheelState).freeAvailable}
     />
   );
 
@@ -406,6 +418,7 @@ function AppContent() {
             setBuddyCollection={setBuddyCollection}
             activeBuddyId={activeBuddyId}
             activePrEffect={getActive(activeCosmetics, ownedCosmetics, 'prEffect')?.id}
+            onBuddyEvolved={(buddyId, newXp) => setBuddyEvolution({ buddyId, newXp })}
             userCoins={userCoins}
             setUserCoins={setUserCoins}
           />
@@ -441,7 +454,37 @@ function AppContent() {
             ownedCosmetics={ownedCosmetics}
             inventory={inventory}
             setInventory={setInventory}
-            onOpenShop={() => setShowShopModal(true)}
+            onOpenShop={() => setCurrentView('shop')}
+          />
+        );
+      }
+      if (currentView === 'shop') {
+        return (
+          <ShopPage
+            onBack={() => setCurrentView('dashboard')}
+            userCoins={userCoins}
+            setUserCoins={setUserCoins}
+            inventory={inventory}
+            setInventory={setInventory}
+            ownedCosmetics={ownedCosmetics}
+            setOwnedCosmetics={setOwnedCosmetics}
+            activeCosmetics={activeCosmetics}
+            setActiveCosmetics={setActiveCosmetics}
+            buddyCollection={buddyCollection}
+            setBuddyCollection={setBuddyCollection}
+            activeBuddyId={activeBuddyId}
+            setActiveBuddyId={setActiveBuddyId}
+            gachaPity={gachaPity}
+            setGachaPity={setGachaPity}
+            wheelState={wheelState}
+            setWheelState={setWheelState}
+            setUserXP={setUserXP}
+            userLevel={userLevel}
+            unlockedThemes={unlockedThemes}
+            setUnlockedThemes={setUnlockedThemes}
+            activeTheme={activeTheme}
+            setActiveTheme={setActiveTheme}
+            applyThemeFn={applyTheme}
           />
         );
       }
@@ -496,7 +539,8 @@ function AppContent() {
               </ErrorBoundary>
             </motion.div>
           </AnimatePresence>
-          {bottomNavEl}
+          {evolutionModalEl}
+      {bottomNavEl}
         </>
       );
     }
@@ -564,7 +608,7 @@ function AppContent() {
 
                 {/* Coin: profil kartının içinde, sağda. Ucretsiz cark varsa 🎡 isareti yanip soner */}
                 <div
-                  onClick={(e) => { e.stopPropagation(); setShowShopModal(true); }}
+                  onClick={(e) => { e.stopPropagation(); setCurrentView('shop'); }}
                   style={{ background: 'rgba(255, 215, 0, 0.1)', border: '1px solid #ffd700', borderRadius: '12px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#ffd700', fontWeight: 'bold', fontSize: '0.85rem', flexShrink: 0, marginLeft: '4px' }}
                   title={t('app_shop_tooltip')}
                 >
@@ -732,38 +776,6 @@ function AppContent() {
           )
         }
 
-        {/* Shop Modal (tam sayfa dukkan) */}
-        {
-          showShopModal && (
-            <ShopPage
-              onBack={() => setShowShopModal(false)}
-              userCoins={userCoins}
-              setUserCoins={setUserCoins}
-              inventory={inventory}
-              setInventory={setInventory}
-              ownedCosmetics={ownedCosmetics}
-              setOwnedCosmetics={setOwnedCosmetics}
-              activeCosmetics={activeCosmetics}
-              setActiveCosmetics={setActiveCosmetics}
-              buddyCollection={buddyCollection}
-              setBuddyCollection={setBuddyCollection}
-              activeBuddyId={activeBuddyId}
-              setActiveBuddyId={setActiveBuddyId}
-              gachaPity={gachaPity}
-              setGachaPity={setGachaPity}
-              wheelState={wheelState}
-              setWheelState={setWheelState}
-              setUserXP={setUserXP}
-              userLevel={userLevel}
-              unlockedThemes={unlockedThemes}
-              setUnlockedThemes={setUnlockedThemes}
-              activeTheme={activeTheme}
-              setActiveTheme={setActiveTheme}
-              applyThemeFn={applyTheme}
-            />
-          )
-        }
-
           </ErrorBoundary>
         </div>
 
@@ -775,6 +787,7 @@ function AppContent() {
         </AnimatePresence>
       </motion.div>
       </AnimatePresence>
+      {evolutionModalEl}
       {bottomNavEl}
     </>
   );

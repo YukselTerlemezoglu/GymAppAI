@@ -521,6 +521,9 @@ const en = {
     shop_wheel_extra_confirm: "Extra spin costs {{price}} Coins. Continue?",
     shop_wheel_no_extra: "No extra spins left today.",
     shop_wheel_free_ready: "Free spin ready!",
+    shop_buddy_evolved_title: "Evolution Leap!",
+    shop_buddy_evolved_desc: "{{name}} reached a new form!",
+    shop_buddy_evolved_tap: "Tap to close",
     // Profile
     profile_no_buddy: "You don't have a buddy yet.",
     profile_open_shop: "Open shop",

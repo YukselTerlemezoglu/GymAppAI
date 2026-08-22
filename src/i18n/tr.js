@@ -538,6 +538,9 @@ const tr = {
     shop_wheel_extra_confirm: "Ekstra çevirme {{price}} Jetona. Devam?",
     shop_wheel_no_extra: "Bugünlük ekstra çevirme hakkın bitti.",
     shop_wheel_free_ready: "Ücretsiz çevirme hazır!",
+    shop_buddy_evolved_title: "Evrimsel Sıçrama!",
+    shop_buddy_evolved_desc: "{{name}} yeni bir forma ulaştı!",
+    shop_buddy_evolved_tap: "Kapatmak için dokun",
     // Profil
     profile_no_buddy: "Henüz dostun yok.",
     profile_open_shop: "Dükkanı aç",

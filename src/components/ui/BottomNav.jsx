@@ -8,7 +8,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
  * Stil index.css'teki .bottom-nav / .bottom-nav-item class'larinda;
  * burada sadece tema bagimli ikon renkleri hesaplanir.
  */
-function BottomNav({ currentView, dashboardTab, onGoHome, onSelectTab, onOpenShop }) {
+function BottomNav({ currentView, dashboardTab, onGoHome, onSelectTab, onOpenShop, freeSpinAvailable }) {
     const { t } = useLanguage();
 
     const isDashboard = currentView === 'dashboard';
@@ -50,7 +50,7 @@ function BottomNav({ currentView, dashboardTab, onGoHome, onSelectTab, onOpenSho
                                 strokeWidth={isActive ? 2.4 : 2}
                                 style={{ color: isActive ? 'var(--accent-secondary)' : 'var(--text-secondary)' }}
                             />
-                            {isShop && (
+                            {isShop && freeSpinAvailable && (
                                 <span
                                     style={{
                                         position: 'absolute', top: '-2px', right: '-4px', fontSize: '0.62rem',

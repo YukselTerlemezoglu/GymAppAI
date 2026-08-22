@@ -1,13 +1,16 @@
 import React, { useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Zap, Package, Dices, Palette, ArrowLeft, Lock, Check } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast, haptic } from '../ui/ToastProvider';
 import { BOOSTS, BOXES, RARITY, COSMETIC_FRAMES, COSMETIC_NAME_STYLES, COSMETIC_FLAMES, COSMETIC_PR_EFFECTS } from '../../data/shopItems';
 import { canBuyBoost, ownsCosmetic, buyCosmetic, setCosmeticActive, clearCosmeticActive } from '../../utils/inventory';
-import { BUDDIES, getBuddyStageInfo, findBuddy } from '../../utils/buddy';
+import { BUDDIES, getBuddyStageInfo, findBuddy, addBuddyXp } from '../../utils/buddy';
 import { openChest, updateChestPity, openEgg, updateEggPity, spinWheel, getWheelState, updateWheelState, WHEEL_SEGMENTS, WHEEL_PRICE, CHEST_PITY_EPIC, EGG_PITY_EPIC, EGG_PITY_LEGENDARY } from '../../utils/gacha';
 import GachaRevealModal from './GachaRevealModal';
+import { playSound } from '../../utils/sounds';
 import BuddyCapsule from './BuddyCapsule';
+import EvolutionModal from './EvolutionModal';
 
 /*
  * DUKKAN SAYFASI - tam ekran gorunum, 4 sekme:
@@ -52,6 +55,8 @@ function ShopPage({
     const [wheelAngle, setWheelAngle] = useState(0);
     // Gacha modalinin key'i: her acilista artar (Date.now yerine saf sayaç)
     const [revealKey, setRevealKey] = useState(0);
+    // Evrim kutlamasi: { buddyId, newXp } / null
+    const [evolution, setEvolution] = useState(null);
 
     const wheel = useMemo(() => getWheelState(wheelState), [wheelState]);
 
@@ -62,7 +67,7 @@ function ShopPage({
             return;
         }
         if (userCoins < boost.price) {
-            toast.warning(t('shop_insufficient_coins', { needed: boost.price - userCoins }));
+            playSound('deny'); toast.warning(t('shop_insufficient_coins', { needed: boost.price - userCoins }));
             return;
         }
         const ok = await confirmDialog({
@@ -73,7 +78,7 @@ function ShopPage({
         });
         if (!ok) return;
         haptic(12);
-        setUserCoins(userCoins - boost.price);
+        setUserCoins(userCoins - boost.price); playSound('buy');
         setInventory({ ...(inventory || {}), [boost.id]: (inventory?.[boost.id] || 0) + 1 });
         toast.success(t('shop_bought', { name: lang === 'tr' ? boost.title_tr : boost.title_en }));
     };
@@ -82,7 +87,7 @@ function ShopPage({
     const handleBuyCosmetic = async (item) => {
         if (ownsCosmetic(ownedCosmetics, item.id)) return;
         if (userCoins < item.price) {
-            toast.warning(t('shop_insufficient_coins', { needed: item.price - userCoins }));
+            playSound('deny'); toast.warning(t('shop_insufficient_coins', { needed: item.price - userCoins }));
             return;
         }
         const ok = await confirmDialog({
@@ -116,7 +121,7 @@ function ShopPage({
     // ---------- SANS KUTUSU ----------
     const handleOpenChest = async () => {
         if (userCoins < BOXES[0].price) {
-            toast.warning(t('shop_insufficient_coins', { needed: BOXES[0].price - userCoins }));
+            playSound('deny'); toast.warning(t('shop_insufficient_coins', { needed: BOXES[0].price - userCoins }));
             return;
         }
         const ok = await confirmDialog({
@@ -129,14 +134,14 @@ function ShopPage({
 
         const result = openChest(gachaPity, ownedCosmetics);
         applyGachaResult({ ...result, source: 'chest' });
-        setUserCoins(userCoins - BOXES[0].price);
+        setUserCoins(userCoins - BOXES[0].price); playSound('buy');
         setGachaPity(updateChestPity(gachaPity, result));
     };
 
     // ---------- DOST YUMURTASI ----------
     const handleOpenEgg = async () => {
         if (userCoins < BOXES[1].price) {
-            toast.warning(t('shop_insufficient_coins', { needed: BOXES[1].price - userCoins }));
+            playSound('deny'); toast.warning(t('shop_insufficient_coins', { needed: BOXES[1].price - userCoins }));
             return;
         }
         const ok = await confirmDialog({
@@ -149,7 +154,7 @@ function ShopPage({
 
         const result = openEgg(gachaPity);
         const dupe = !!(buddyCollection && buddyCollection[result.buddyId]);
-        setUserCoins(userCoins - BOXES[1].price);
+        setUserCoins(userCoins - BOXES[1].price); playSound('buy');
         setGachaPity(updateEggPity(gachaPity, result));
 
         if (dupe) {
@@ -175,7 +180,7 @@ function ShopPage({
                 return;
             }
             if (userCoins < WHEEL_PRICE) {
-                toast.warning(t('shop_insufficient_coins', { needed: WHEEL_PRICE - userCoins }));
+                playSound('deny'); toast.warning(t('shop_insufficient_coins', { needed: WHEEL_PRICE - userCoins }));
                 return;
             }
             const ok = await confirmDialog({
@@ -185,12 +190,20 @@ function ShopPage({
                 cancelLabel: t('shop_buy_no')
             });
             if (!ok) return;
-            setUserCoins(userCoins - WHEEL_PRICE);
+            setUserCoins(userCoins - WHEEL_PRICE); playSound('buy');
         }
 
         const result = spinWheel();
         setSpinning(true);
         haptic([10, 20, 10]);
+        playSound('click');
+
+        // Tikirti sesleri: donus yavasladikca tik araliklari buyur (easing ile uyumlu)
+        const SPIN_MS = 4000;
+        for (let i = 0; i < 24; i++) {
+            const at = Math.round(Math.pow((i + 1) / 24, 2.2) * SPIN_MS);
+            setTimeout(() => playSound('tick'), at);
+        }
 
         // Donus acisi: onceki acinin uzerine 4 tam tur + sonuc segmentinin
         // isaretcinin altina gelmesi icin gereken aci (deterministik).
@@ -246,6 +259,9 @@ function ShopPage({
         }
         setRevealKey((k) => k + 1);
         setReveal(result);
+        // Acilis sesi reveal aninda (GachaRevealModal patlamasiyla es zamanli)
+        const delay = result.source === 'wheel' ? 0 : (result.rarity === 'legendary' ? 1400 : 1100);
+        setTimeout(() => playSound('reveal_' + result.rarity), delay);
     };
 
     // ---------- KOZMETIK SATIR (render yardimcisi; bilesen degil) ----------
@@ -447,8 +463,14 @@ function ShopPage({
                                         const stock = inventory?.snack || 0;
                                         if (stock <= 0) { toast.warning(t('shop_no_snacks')); return; }
                                         haptic(10);
+playSound('feed');
                                         setInventory((prev) => ({ ...prev, snack: (prev.snack || 1) - 1 }));
-                                        setBuddyCollection((prev) => ({ ...prev, [activeBuddyId]: { xp: (prev[activeBuddyId]?.xp || 0) + 150 } }));
+                                        // addBuddyXp evrimi tespit eder; evrim varsa tam ekran kutlama acilir
+setBuddyCollection((prev) => {
+    const res = addBuddyXp(prev, activeBuddyId, 150);
+    if (res.evolved) setEvolution({ buddyId: activeBuddyId, newXp: res.xp });
+    return res.collection;
+});
                                         toast.success(t('shop_fed_buddy', { name: lang === 'tr' ? findBuddy(activeBuddyId)?.title_tr : findBuddy(activeBuddyId)?.title_en }));
                                     }}
                                     className="neon-btn"
@@ -481,19 +503,21 @@ function ShopPage({
 
                         {/* Cark gorseli (CSS konik gradyan) */}
                         <div style={{ position: 'relative', width: '230px', height: '230px', margin: '0 auto 1rem' }}>
-                            <div style={{
-                                position: 'absolute', inset: 0, borderRadius: '50%',
-                                background: `conic-gradient(${WHEEL_SEGMENTS.map((s, i) => {
-                                    const rc = RARITY[s.rarity].color;
-                                    const start = (i / WHEEL_SEGMENTS.length) * 360;
-                                    const end = ((i + 1) / WHEEL_SEGMENTS.length) * 360;
-                                    return `${rc} ${start}deg ${end}deg`;
-                                }).join(', ')})`,
-                                transition: 'transform 4s cubic-bezier(0.2, 0.8, 0.2, 1)',
-                                transform: `rotate(${wheelAngle}deg)`,
-                                boxShadow: '0 0 30px rgba(0,195,255,0.25)',
-                                border: '4px solid rgba(255,255,255,0.15)'
-                            }} />
+                            <motion.div
+                                animate={{ rotate: wheelAngle }}
+                                transition={spinning ? { duration: 4, ease: [0.16, 1, 0.3, 1] } : { duration: 0 }}
+                                style={{
+                                    position: 'absolute', inset: 0, borderRadius: '50%',
+                                    background: `conic-gradient(${WHEEL_SEGMENTS.map((s, i) => {
+                                        const rc = RARITY[s.rarity].color;
+                                        const start = (i / WHEEL_SEGMENTS.length) * 360;
+                                        const end = ((i + 1) / WHEEL_SEGMENTS.length) * 360;
+                                        return `${rc} ${start}deg ${end}deg`;
+                                    }).join(', ')})`,
+                                    boxShadow: '0 0 30px rgba(0,195,255,0.25)',
+                                    border: '4px solid rgba(255,255,255,0.15)'
+                                }}
+                            />
                             {/* Merkez */}
                             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '54px', height: '54px', borderRadius: '50%', background: '#0f1115', border: '3px solid var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', zIndex: 2 }}>
                                 🎡
@@ -567,7 +591,7 @@ function ShopPage({
                                             toast.success(t('shop_equip_ok', { name: themeName }));
                                         } else {
                                             if (userCoins < theme.price) {
-                                                toast.warning(t('shop_insufficient_coins', { needed: theme.price - userCoins }));
+                                                playSound('deny'); toast.warning(t('shop_insufficient_coins', { needed: theme.price - userCoins }));
                                                 return;
                                             }
                                             const ok = await confirmDialog({
@@ -577,7 +601,7 @@ function ShopPage({
                                                 cancelLabel: t('shop_buy_no')
                                             });
                                             if (!ok) return;
-                                            setUserCoins(userCoins - theme.price);
+                                            setUserCoins(userCoins - theme.price); playSound('buy');
                                             setUnlockedThemes([...unlockedThemes, theme.id]);
                                             setActiveTheme(theme.id);
                                             if (applyThemeFn) applyThemeFn(theme.id);
@@ -597,6 +621,15 @@ function ShopPage({
 
             {/* Acilis animasyonu modali (key: her sonucta yeni mount -> faz sifirlanir) */}
             {reveal && <GachaRevealModal key={revealKey} result={reveal} lang={lang} t={t} onClose={() => setReveal(null)} />}
+
+            {/* Evrim kutlamasi (tam ekran) */}
+            {evolution && (
+                <EvolutionModal
+                    buddyId={evolution.buddyId}
+                    newXp={evolution.newXp}
+                    onClose={() => setEvolution(null)}
+                />
+            )}
         </div>
     );
 }

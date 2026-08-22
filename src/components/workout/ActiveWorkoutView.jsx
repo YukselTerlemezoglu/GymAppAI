@@ -15,6 +15,7 @@ import { buddyGainFromWorkout, addBuddyXp, findBuddy } from '../../utils/buddy';
 import { normalizeAiWeight, normalizeAiReps } from '../../utils/aiNormalizer';
 
 function ActiveWorkoutView({
+    onBuddyEvolved,
     activeAiWorkoutDayIdx,
     activeAiWorkoutDayParams,
     setCurrentView,
@@ -451,8 +452,9 @@ function ActiveWorkoutView({
                 const res = addBuddyXp(buddyStateRef.current.collection, buddyStateRef.current.activeId, gain);
                 setBuddyCollection(res.collection);
                 if (res.evolved) {
-                    toast.success(`🎉 ${lang === 'tr' ? 'Dostun evrim geçirdi!' : 'Your buddy evolved!'}`, { duration: 4200 });
-                }
+    // Tam ekran evrim kutlamasi App seviyesinde gosterilir
+    onBuddyEvolved?.(buddyStateRef.current.activeId, res.xp);
+}
                 baseBuddyMsgRef.current = `${buddyStateRef.current.icon} ${lang === 'tr' ? 'dost' : 'buddy'} +${gain} XP`;
             }
 
