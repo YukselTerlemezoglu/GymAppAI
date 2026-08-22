@@ -61,6 +61,7 @@ function ShopPage({
     const [buyAmounts, setBuyAmounts] = useState({});
     // Yumurta 10'lu paketi: 10 yumurta 9 fiyatina (indirim)
     const EGG_PACK = { count: 10, payFor: 9 };
+    const CHEST_PACK = { count: 10, payFor: 9 };
 
     const wheel = useMemo(() => getWheelState(wheelState), [wheelState]);
 
@@ -127,23 +128,42 @@ function ShopPage({
     };
 
     // ---------- SANS KUTUSU ----------
-    const handleOpenChest = async () => {
-        if (userCoins < BOXES[0].price) {
-            playSound('deny'); toast.warning(t('shop_insufficient_coins', { needed: BOXES[0].price - userCoins }));
+    const handleOpenChest = async (count = 1) => {
+        const unit = BOXES[0].price;
+        const total = count === CHEST_PACK.count ? unit * CHEST_PACK.payFor : unit * count;
+        if (userCoins < total) {
+            playSound('deny'); toast.warning(t('shop_insufficient_coins', { needed: total - userCoins }));
             return;
         }
         const ok = await confirmDialog({
             title: t('shop_chest_title'),
-            message: t('shop_chest_confirm', { price: BOXES[0].price }),
+            message: count === CHEST_PACK.count
+                ? t('shop_chest_pack_confirm', { count: CHEST_PACK.count, price: total })
+                : t('shop_chest_confirm', { price: unit }),
             confirmLabel: t('shop_buy_yes'),
             cancelLabel: t('shop_buy_no')
         });
         if (!ok) return;
 
-        const result = openChest(gachaPity, ownedCosmetics);
-        applyGachaResult({ ...result, source: 'chest' });
-        setUserCoins(userCoins - BOXES[0].price); playSound('buy');
-        setGachaPity(updateChestPity(gachaPity, result));
+        if (count === 1) {
+            const result = openChest(gachaPity, ownedCosmetics);
+            applyGachaResult({ ...result, source: 'chest' });
+            setUserCoins(userCoins - total); playSound('buy');
+            setGachaPity(updateChestPity(gachaPity, result));
+            return;
+        }
+
+        // Coklu kutu: sonuclar sirali kart animasyonuyla tek modale gider
+        let pity = gachaPity;
+        const results = [];
+        for (let i = 0; i < count; i++) {
+            const result = openChest(pity, ownedCosmetics);
+            pity = updateChestPity(pity, result);
+            results.push(result);
+        }
+        setUserCoins(userCoins - total); playSound('buy');
+        setGachaPity(pity);
+        applyGachaResult({ type: 'multiChest', source: 'chest', results, rarity: results.reduce((acc, r) => (r.rarity === 'legendary' || acc === 'legendary') ? 'legendary' : (r.rarity === 'epic' || acc === 'epic') ? 'epic' : 'common', 'common') });
     };
 
     // ---------- DOST YUMURTASI ----------
@@ -240,45 +260,54 @@ function ShopPage({
     };
 
     // ---------- GACHA SONUCU UYGULA ----------
-    const applyGachaResult = (result) => {
-        switch (result.type) {
+    const applySingleResult = (r) => {
+        switch (r.type) {
             case 'xp':
-                setUserXP((prev) => (prev || 0) + result.amount);
+                setUserXP((prev) => (prev || 0) + r.amount);
                 break;
             case 'coins':
-                setUserCoins((prev) => (prev || 0) + result.amount);
+                setUserCoins((prev) => (prev || 0) + r.amount);
                 break;
             case 'buddyXp': {
                 const target = activeBuddyId || Object.keys(buddyCollection || {})[0];
                 if (target) {
-                    setBuddyCollection((prev) => ({ ...(prev || {}), [target]: { xp: (prev?.[target]?.xp || 0) + result.amount } }));
+                    setBuddyCollection((prev) => ({ ...(prev || {}), [target]: { xp: (prev?.[target]?.xp || 0) + r.amount } }));
                 } else {
                     // Dostu yok: coin'e donus
                     setUserCoins((prev) => (prev || 0) + 50);
-                    result = { ...result, type: 'coins', amount: 50, converted: true };
+                    r = { ...r, type: 'coins', amount: 50, converted: true };
                 }
                 break;
             }
             case 'snack':
-                setInventory((prev) => ({ ...(prev || {}), snack: (prev?.snack || 0) + result.amount }));
+                setInventory((prev) => ({ ...(prev || {}), snack: (prev?.snack || 0) + r.amount }));
                 break;
             case 'cosmetic': {
                 const next = [...(ownedCosmetics || [])];
-                if (!next.includes(result.cosmeticId)) next.push(result.cosmeticId);
+                if (!next.includes(r.cosmeticId)) next.push(r.cosmeticId);
                 setOwnedCosmetics(next);
                 break;
             }
             case 'jackpot':
-                setUserXP((prev) => (prev || 0) + result.amount);
-                setUserCoins((prev) => (prev || 0) + (result.coins || 0));
+                setUserXP((prev) => (prev || 0) + r.amount);
+                setUserCoins((prev) => (prev || 0) + (r.coins || 0));
                 break;
             default:
                 break;
         }
+        return r;
+    };
+
+    const applyGachaResult = (result) => {
+        if (result.type === 'multiChest' && result.results) {
+            result = { ...result, results: result.results.map(applySingleResult) };
+        } else {
+            applySingleResult(result);
+        }
         setRevealKey((k) => k + 1);
         setReveal(result);
         // Acilis sesi reveal aninda (GachaRevealModal patlamasiyla es zamanli)
-        const delay = result.source === 'wheel' ? 0 : result.type === 'multiEgg' ? 900 : (result.rarity === 'legendary' ? 1400 : 1100);
+        const delay = result.source === 'wheel' ? 0 : (result.type === 'multiEgg' || result.type === 'multiChest') ? 900 : (result.rarity === 'legendary' ? 1400 : 1100);
         setTimeout(() => playSound('reveal_' + result.rarity), delay);
     };
 
@@ -592,9 +621,17 @@ setBuddyCollection((prev) => {
                                     </div>
                                 </div>
                             </div>
-                            <button onClick={handleOpenChest} className="neon-btn" style={{ padding: '0.5rem 0.9rem', fontSize: '0.85rem', width: 'auto', flexShrink: 0, borderColor: '#ffd700', color: '#ffd700', background: 'transparent' }}>
-                                🪙 {BOXES[0].price}
-                            </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+                                {/* Tek kutu */}
+                                <button onClick={() => handleOpenChest(1)} className="neon-btn" style={{ padding: '0.5rem 0.9rem', fontSize: '0.85rem', width: 'auto', flexShrink: 0, borderColor: '#ffd700', color: '#ffd700', background: 'transparent' }}>
+                                    🪙 {BOXES[0].price}
+                                </button>
+                                {/* 10'lu paket: 9 fiyati - eski fiyat ustunun cizili */}
+                                <button onClick={() => handleOpenChest(CHEST_PACK.count)} className="neon-btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem', width: 'auto', flexShrink: 0, borderColor: '#ff6b81', color: '#ff6b81', background: 'rgba(255,107,129,0.08)', display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: 1.2 }}>
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 'bold', color: '#ff6b81' }}>x10 {t('shop_egg_pack_badge')}</span>
+                                    <span><span style={{ textDecoration: 'line-through', opacity: 0.5, fontSize: '0.7rem' }}>🪙{BOXES[0].price * 10}</span> <span style={{ fontWeight: 'bold' }}>🪙{BOXES[0].price * CHEST_PACK.payFor}</span></span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

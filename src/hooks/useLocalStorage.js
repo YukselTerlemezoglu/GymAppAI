@@ -98,5 +98,40 @@ function useLocalStorage(key, initialValue) {
     return [storedValue, setValue];
 }
 
+export const GYM_APP_KEY_PREFIX = 'gym_app_';
+
+/*
+ * GERCEK HARD RESET: hem localStorage hem IndexedDB'deki tum gym_app_*
+ * verilerini siler. Promise dondurur; cagiran taraf await etmeli.
+ * Dil tercihi (gym_app_lang) korunur.
+ */
+export async function clearAllGymAppStorage() {
+    // 1. localStorage
+    try {
+        const keysToRemove = [];
+        for (let i = 0; i < window.localStorage.length; i++) {
+            const key = window.localStorage.key(i);
+            if (key && key.startsWith(GYM_APP_KEY_PREFIX)) keysToRemove.push(key);
+        }
+        keysToRemove.forEach(k => window.localStorage.removeItem(k));
+        if (!window.localStorage.getItem('gym_app_lang')) {
+            window.localStorage.setItem('gym_app_lang', 'tr');
+        }
+    } catch { /* erisim engellense bile devam */ }
+
+    // 2. IndexedDB (birincil depo - burasi silinmezse veriler geri gelir!)
+    try {
+        const db = await getDB();
+        await new Promise((resolve) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            const req = store.clear();
+            req.onsuccess = () => resolve();
+            req.onerror = () => resolve();
+            tx.oncomplete = () => resolve();
+        });
+    } catch { /* DB yoksa sessizce gec */ }
+}
+
 export default useLocalStorage;
 

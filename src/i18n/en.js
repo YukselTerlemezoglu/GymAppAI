@@ -503,6 +503,7 @@ const en = {
     shop_egg_title: "Open Buddy Egg",
     shop_egg_confirm: "Open the egg for {{price}} Coins?",
     shop_egg_pack_confirm: "Open 10 eggs, pay for 9! Total: {{price}} coins.",
+    shop_chest_pack_confirm: "Open 10 chests, pay for 9! Total: {{price}} coins.",
     shop_egg_pack_badge: "DEAL -1 FREE",
     // BuddyDex
     shop_buddydex_title: "BuddyDex Collection",

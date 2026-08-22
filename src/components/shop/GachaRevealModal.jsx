@@ -30,13 +30,44 @@ const shakeColors = (rarity) => {
  * Coklu yumurta izgarasi: 10 kart sirayla acilir. Acilan kartlar
  * nadirlik rengine gore parlaklik kazanir; acilmayanlar kapali karttir.
  */
-function MultiEggGrid({ results, shown, lang, t }) {
+const chestIconFor = (r) => {
+    switch (r.type) {
+        case 'xp': return '⭐';
+        case 'coins': return '🪙';
+        case 'buddyXp': return '🍖';
+        case 'snack': return '🍖';
+        case 'jackpot': return '🎰';
+        case 'cosmetic': {
+            const cm = findCosmetic(r.cosmeticId);
+            return cm ? cm.icon : '🎁';
+        }
+        default: return '🎁';
+    }
+};
+
+const chestLabelFor = (r) => {
+    switch (r.type) {
+        case 'xp': return `+${r.amount} XP`;
+        case 'coins': return `+${r.amount}`;
+        case 'buddyXp': return `+${r.amount}`;
+        case 'snack': return `+${r.amount}x`;
+        case 'jackpot': return `+${r.amount}+${r.coins}`;
+        case 'cosmetic': {
+            const cm = findCosmetic(r.cosmeticId);
+            return cm ? cm.icon : '🎁';
+        }
+        default: return '?';
+    }
+};
+
+function MultiGrid({ results, shown, lang, t, mode }) {
+    const isEgg = mode === 'egg';
     return (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', maxWidth: '360px', margin: '0 auto' }}>
             {results.map((r, i) => {
                 const opened = i < shown;
                 const rarity = RARITY[r.rarity] || RARITY.common;
-                const buddy = opened ? findBuddy(r.buddyId) : null;
+                const buddy = opened && isEgg ? findBuddy(r.buddyId) : null;
                 return (
                     <motion.div
                         key={i}
@@ -53,14 +84,16 @@ function MultiEggGrid({ results, shown, lang, t }) {
                     >
                         {opened ? (
                             <>
-                                <span style={{ fontSize: '1.6rem' }}>{buddy ? buddy.icon : '?'}{r.dupe ? '' : ''}</span>
+                                <span style={{ fontSize: '1.6rem' }}>{isEgg ? (buddy ? buddy.icon : '?') : chestIconFor(r)}</span>
                                 <span style={{ fontSize: '0.5rem', color: rarity.color, fontWeight: 'bold', textAlign: 'center', padding: '0 2px' }}>
-                                    {buddy ? (lang === 'tr' ? buddy.title_tr : buddy.title_en).slice(0, 8) : '?'}
+                                    {isEgg
+                                        ? (buddy ? (lang === 'tr' ? buddy.title_tr : buddy.title_en).slice(0, 8) : '?')
+                                        : chestLabelFor(r)}
                                 </span>
-                                {r.dupe && <span style={{ fontSize: '0.45rem', color: 'var(--text-muted)' }} title={t('shop_dupe_converted', { xp: DUPE_XP[r.rarity] })}>+{DUPE_XP[r.rarity]}</span>}
+                                {isEgg && r.dupe && <span style={{ fontSize: '0.45rem', color: 'var(--text-muted)' }} title={t('shop_dupe_converted', { xp: DUPE_XP[r.rarity] })}>+{DUPE_XP[r.rarity]}</span>}
                             </>
                         ) : (
-                            <span style={{ fontSize: '1.4rem', opacity: 0.5 }}>🥚</span>
+                            <span style={{ fontSize: '1.4rem', opacity: 0.5 }}>{isEgg ? '🥚' : '🎁'}</span>
                         )}
                     </motion.div>
                 );
@@ -144,7 +177,7 @@ function GachaRevealModal({ result, lang, t, onClose }) {
     // effect icinde faz set etmek gerekmez.
     const [phase, setPhase] = useState(result ? 'shake' : 'reveal');
     // multiEgg: kac sonucun kartlandigi (0 = hepsi kapali)
-    const [multiShown, setMultiShown] = useState(result?.type === 'multiEgg' ? 1 : 0);
+    const [multiShown, setMultiShown] = useState(result?.type === 'multiEgg' || result?.type === 'multiChest' ? 1 : 0);
     const timers = useRef([]);
 
     useEffect(() => {
@@ -152,7 +185,7 @@ function GachaRevealModal({ result, lang, t, onClose }) {
         haptic(20);
         timers.current.push(setTimeout(() => haptic(15), 400), setTimeout(() => haptic(15), 800));
 
-        const isMulti = result.type === 'multiEgg';
+        const isMulti = result.type === 'multiEgg' || result.type === 'multiChest';
         const revealDelay = isMulti ? 900 : (result.rarity === 'legendary' ? 1400 : 1100);
         timers.current.push(setTimeout(() => {
             setPhase('reveal');
@@ -177,7 +210,7 @@ function GachaRevealModal({ result, lang, t, onClose }) {
             }
         }, revealDelay));
 
-        // Coklu yumurta: kartlar sirayla acilir (her kartta hafif ses)
+        // Coklu acilis (yumurta/kutu): kartlar sirayla acilir (her kartta hafif ses)
         if (isMulti && result.results) {
             for (let i = 1; i < result.results.length; i++) {
                 timers.current.push(setTimeout(() => {
@@ -233,7 +266,9 @@ function GachaRevealModal({ result, lang, t, onClose }) {
                         }}
                     >
                         {result.type === 'multiEgg' && result.results ? (
-                            <MultiEggGrid results={result.results} shown={multiShown} lang={lang} t={t} />
+                            <MultiGrid results={result.results} shown={multiShown} lang={lang} t={t} mode="egg" />
+                        ) : result.type === 'multiChest' && result.results ? (
+                            <MultiGrid results={result.results} shown={multiShown} lang={lang} t={t} mode="chest" />
                         ) : (
                             <ResultCard result={result} lang={lang} t={t} />
                         )}

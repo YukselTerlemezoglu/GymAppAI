@@ -4,6 +4,7 @@ import { Shield, Save, RefreshCcw, Trash2, ArrowLeft, Cloud, LogOut } from 'luci
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
 import { error as logError } from '../../utils/logger';
+import { clearAllGymAppStorage } from '../../hooks/useLocalStorage';
 
 // Admin parolasinin SHA-256 hex hash'i (.env: VITE_ADMIN_PASSWORD_HASH).
 // Parola kendisi degil hash'i bundle'a gomulur; duz metin sifre expose edilmez.
@@ -177,10 +178,13 @@ function AdminPanel({
             if (setSavedAiProgram) setSavedAiProgram(null);
             if (setUnlockedThemes) setUnlockedThemes(['default']);
             if (setActiveTheme) setActiveTheme('default');
-            // Sadece GymApp'ye ait anahtarları sil (origin'i korumak için).
+            // GERCEK hard reset: localStorage + IndexedDB (birincil depo) temizlenir.
+            // await edilir ki IndexedDB temizligi reload'dan once tamamlansin.
             clearGymAppStorage();
-            toast.success(t('admin_full_reset_success'));
-            setTimeout(() => window.location.reload(), 900);
+            clearAllGymAppStorage().finally(() => {
+                toast.success(t('admin_full_reset_success'));
+                setTimeout(() => window.location.reload(), 900);
+            });
         }
     };
 

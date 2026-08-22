@@ -40,6 +40,7 @@ export const toggleSound = () => {
 };
 
 const getCtx = () => {
+    if (typeof window === 'undefined') return null;
     if (!ctx) {
         const AC = window.AudioContext || window.webkitAudioContext;
         if (!AC) return null;
