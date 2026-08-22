@@ -8,9 +8,12 @@ const tr = {
 
     // Action Buttons
     btn_ai_coach: "YAPAY ZEKA KOÇU",
+    back: "Geri",
+    boost_snack_title: "Dost Atıştırmalığı",
     tab_today: "Bugün",
     tab_train: "Antrenman",
     tab_progress: "Gelişim",
+    tab_shop: "Dükkan",
     btn_anatomy: "KAS ANATOMİSİ & REHBER",
     btn_create_program: "KENDİ PROGRAMINI YARAT",
     btn_exit: "Çıkış",
@@ -538,6 +541,23 @@ const tr = {
     // Profil
     profile_no_buddy: "Henüz dostun yok.",
     profile_open_shop: "Dükkanı aç",
+    // Envanter (yeni: dukkan boostlari)
+    myinv_title: "Envanterim",
+    myinv_count: "{{count}} eşya",
+    myinv_empty: "Envanterin boş. Boost almak için dükkanı aç.",
+    myinv_usage_freeze: "Otomatik: haftalık hedefi kaçırırsan seriyi korur.",
+    myinv_usage_xp2: "Antrenman başında sorulur: kabul edersen XP 2x.",
+    myinv_usage_snack: "Aktif dostunu +150 XP ile besle.",
+    myinv_feed_btn: "Besle",
+    myinv_no_buddy: "Önce bir dost edin (Dost Yumurtası)!",
+    myinv_hint: "Dondurucu ve iksir kendiliğinden çalışır; atıştırmalığı Besle ile kullanırsın.",
+    // Profil ozelleştirme
+    cos_title: "Profili Özelleştir",
+    cos_empty: "Henüz kozmetiğin yok. Çerçeve, isim stili ve daha fazlası dükmanda seni bekliyor.",
+    cos_applies_frame: "→ dost kapsülün + paylaşım kartı kenarlığı",
+    cos_applies_name: "→ profil, lider tablosu ve paylaşım kartındaki ismin",
+    cos_applies_flame: "→ skor kartı + paylaşım kartındaki 🔥 seri alevi",
+    cos_applies_prfx: "→ rekor kırdığında patlayan konfeti stili",
     // Dondurucu + iksir
     freeze_used_toast: "Seri Dondurucu kullanıldı! Serin korundu. ({{count}}x)",
     potion_ask_title: "Çifte XP İksiri kullan",

@@ -8,9 +8,12 @@ const en = {
 
     // Action Buttons
     btn_ai_coach: "AI COACH",
+    back: "Back",
+    boost_snack_title: "Buddy Snack",
     tab_today: "Today",
     tab_train: "Train",
     tab_progress: "Progress",
+    tab_shop: "Shop",
     btn_anatomy: "MUSCLE ANATOMY & GUIDE",
     btn_create_program: "CREATE YOUR OWN PROGRAM",
     btn_exit: "Exit",
@@ -521,6 +524,23 @@ const en = {
     // Profile
     profile_no_buddy: "You don't have a buddy yet.",
     profile_open_shop: "Open shop",
+    // Inventory (new: shop boosts)
+    myinv_title: "My Inventory",
+    myinv_count: "{{count}} items",
+    myinv_empty: "Your inventory is empty. Open the shop to buy boosts.",
+    myinv_usage_freeze: "Automatic: protects your streak if you miss the weekly goal.",
+    myinv_usage_xp2: "Asked at workout start: accept to double your XP.",
+    myinv_usage_snack: "Feed your active buddy +150 XP.",
+    myinv_feed_btn: "Feed",
+    myinv_no_buddy: "Get a buddy first (Buddy Egg)!",
+    myinv_hint: "Freeze and potion work automatically; use Feed for snacks.",
+    // Profile customization
+    cos_title: "Customize Profile",
+    cos_empty: "You don't own cosmetics yet. Frames, name styles and more await in the shop.",
+    cos_applies_frame: "→ buddy capsule + share card border",
+    cos_applies_name: "→ your name in profile, leaderboard and share card",
+    cos_applies_flame: "→ 🔥 streak flame in score + share card",
+    cos_applies_prfx: "→ confetti style when you break a record",
     // Freeze + potion
     freeze_used_toast: "Streak Freeze used! Your streak is safe. ({{count}}x)",
     potion_ask_title: "Use Double XP Potion",

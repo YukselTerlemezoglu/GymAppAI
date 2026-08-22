@@ -369,6 +369,7 @@ function AppContent() {
       dashboardTab={dashboardTab}
       onGoHome={handleNavGoProfile}
       onSelectTab={handleNavSelectTab}
+      onOpenShop={() => setShowShopModal(true)}
     />
   );
 
@@ -434,8 +435,12 @@ function AppContent() {
             setUserName={setUserName}
             activeBuddyId={activeBuddyId}
             buddyCollection={buddyCollection}
+            setBuddyCollection={setBuddyCollection}
             activeCosmetics={activeCosmetics}
+            setActiveCosmetics={setActiveCosmetics}
             ownedCosmetics={ownedCosmetics}
+            inventory={inventory}
+            setInventory={setInventory}
             onOpenShop={() => setShowShopModal(true)}
           />
         );

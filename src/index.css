@@ -271,6 +271,7 @@ textarea {
 
 .bottom-nav-item .bn-icon {
   display: flex;
+  position: relative;
   padding: 3px 12px;
   border-radius: 10px;
   transition: all 0.2s ease;

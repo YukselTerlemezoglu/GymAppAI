@@ -19,10 +19,12 @@ import CloudSyncCard from '../dashboard/CloudSyncCard';
 import ShareCard from './ShareCard';
 import InviteFriends from './InviteFriends';
 import FriendsCard from './FriendsCard';
+import InventoryCard from './InventoryCard';
+import CosmeticCard from './CosmeticCard';
 import { ensureProfile, publishProfile } from '../../utils/friends';
 import { error as logError } from '../../utils/logger';
 
-function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, weeklyGoal = 3, setWeeklyGoal, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName, activeBuddyId = null, buddyCollection = {}, activeCosmetics = {}, ownedCosmetics = [], onOpenShop }) {
+function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, weeklyGoal = 3, setWeeklyGoal, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName, activeBuddyId = null, buddyCollection = {}, setBuddyCollection, activeCosmetics = {}, setActiveCosmetics, ownedCosmetics = [], inventory = {}, setInventory, onOpenShop }) {
     const { t, lang, setLang } = useTranslation();
     const { toast, confirmDialog, haptic } = useToast();
     const [nameDraft, setNameDraft] = useState(userName);
@@ -314,6 +316,27 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                         🥚 {t('shop_tab_buddy')}
                     </button>
                 </div>
+
+                {/* 0b. ENVANTER: satin alinan boostlar + kullanim */}
+                <InventoryCard
+                    inventory={inventory}
+                    activeBuddyId={activeBuddyId}
+                    onFeedSnack={() => {
+                        setInventory((prev) => ({ ...prev, snack: Math.max(0, (prev?.snack || 1) - 1) }));
+                        setBuddyCollection((prev) => activeBuddyId in (prev || {})
+                            ? { ...prev, [activeBuddyId]: { xp: (prev[activeBuddyId]?.xp || 0) + 150 } }
+                            : prev);
+                    }}
+                    onOpenShop={onOpenShop}
+                />
+
+                {/* 0c. PROFIL OZELLESTIRME: kozmetikleri kusan/cikar */}
+                <CosmeticCard
+                    ownedCosmetics={ownedCosmetics}
+                    activeCosmetics={activeCosmetics}
+                    setActiveCosmetics={setActiveCosmetics}
+                    onOpenShop={onOpenShop}
+                />
 
                 {/* 0. AYARLAR: isim + dil */}
                 <div className="glass-card slide-in">
