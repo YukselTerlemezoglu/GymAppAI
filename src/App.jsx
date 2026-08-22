@@ -372,6 +372,9 @@ function AppContent() {
     />
   );
 
+  // Active name-style cosmetic (dashboard top bar)
+  const activeNameStyle = getActive(activeCosmetics, ownedCosmetics, 'nameStyle');
+
   // Alt nav her ekranda gorunur; aktif antrenman ve giris akisinda gizlenir
   const showBottomNav = currentView !== 'activeAiWorkout' && currentView !== 'auth';
   const bottomNavEl = showBottomNav && (
@@ -455,7 +458,8 @@ function AppContent() {
             inventory={inventory}
             setInventory={setInventory}
             onOpenShop={() => setCurrentView('shop')}
-          />
+       
+            onBuddyEvolved={(buddyId, newXp) => setBuddyEvolution({ buddyId, newXp })}   />
         );
       }
       if (currentView === 'shop') {
@@ -587,7 +591,7 @@ function AppContent() {
                 </div>
 
                 <div className="greeting" style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minWidth: 0 }}>
-                  <h1 style={{ fontSize: '1.05rem', margin: 0, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</h1>
+                  <h1 style={{ fontSize: '1.05rem', margin: 0, color: activeNameStyle ? activeNameStyle.cssColor : 'var(--text-primary)', textShadow: activeNameStyle ? activeNameStyle.cssTextShadow : undefined, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</h1>
                   {/* Rank + seviye + XP tek satırda */}
                   {(() => {
                     const currentRank = getRank(userLevel) || { icon: '🛡️', color: '#fff', title_tr: '...', title_en: '...' };

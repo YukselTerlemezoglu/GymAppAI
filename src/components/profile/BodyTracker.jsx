@@ -4,7 +4,7 @@ import { useToast } from '../ui/ToastProvider';
 import ReminderSettingsCard from './ReminderSettingsCard';
 import { Save, Trash2, LineChart as LineChartIcon, TrendingUp, Award, Zap, RefreshCcw, Camera, X, Image as ImageIcon, Settings, Type, Globe, CalendarCheck } from 'lucide-react';
 import BuddyCapsule from '../shop/BuddyCapsule';
-import { findBuddy, getBuddyStageInfo } from '../../utils/buddy';
+import { findBuddy, getBuddyStageInfo, addBuddyXp } from '../../utils/buddy';
 import { RARITY } from '../../data/shopItems';
 import { getActive } from '../../utils/inventory';
 import useLocalStorage from '../../hooks/useLocalStorage';
@@ -24,7 +24,7 @@ import CosmeticCard from './CosmeticCard';
 import { ensureProfile, publishProfile } from '../../utils/friends';
 import { error as logError } from '../../utils/logger';
 
-function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, weeklyGoal = 3, setWeeklyGoal, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName, activeBuddyId = null, buddyCollection = {}, setBuddyCollection, activeCosmetics = {}, setActiveCosmetics, ownedCosmetics = [], inventory = {}, setInventory, onOpenShop }) {
+function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, weeklyGoal = 3, setWeeklyGoal, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName, activeBuddyId = null, buddyCollection = {}, setBuddyCollection, activeCosmetics = {}, setActiveCosmetics, ownedCosmetics = [], inventory = {}, setInventory, onOpenShop, onBuddyEvolved }) {
     const { t, lang, setLang } = useTranslation();
     const { toast, confirmDialog, haptic } = useToast();
     const [nameDraft, setNameDraft] = useState(userName);
@@ -323,9 +323,12 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                     activeBuddyId={activeBuddyId}
                     onFeedSnack={() => {
                         setInventory((prev) => ({ ...prev, snack: Math.max(0, (prev?.snack || 1) - 1) }));
-                        setBuddyCollection((prev) => activeBuddyId in (prev || {})
-                            ? { ...prev, [activeBuddyId]: { xp: (prev[activeBuddyId]?.xp || 0) + 150 } }
-                            : prev);
+                        setBuddyCollection((prev) => {
+                            // addBuddyXp evrimi tespit eder; evrim varsa App'teki kutlama acilir
+                            const res = addBuddyXp(prev, activeBuddyId, 150);
+                            if (res.evolved) onBuddyEvolved?.(activeBuddyId, res.xp);
+                            return res.collection;
+                        });
                     }}
                     onOpenShop={onOpenShop}
                 />

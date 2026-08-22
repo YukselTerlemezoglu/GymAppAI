@@ -5,6 +5,7 @@ import confetti from 'canvas-confetti';
 import { RARITY, findCosmetic } from '../../data/shopItems';
 import { findBuddy, DUPE_XP } from '../../utils/buddy';
 import { haptic } from '../ui/ToastProvider';
+import { playSound } from '../../utils/sounds';
 
 /*
  * Gacha acilis modali: kutu / yumurta / cark sonucunu gosterir.
@@ -24,6 +25,49 @@ const shakeColors = (rarity) => {
         default: return ['#a1a1aa', '#d4d4d8', '#f4f4f5'];
     }
 };
+
+/*
+ * Coklu yumurta izgarasi: 10 kart sirayla acilir. Acilan kartlar
+ * nadirlik rengine gore parlaklik kazanir; acilmayanlar kapali karttir.
+ */
+function MultiEggGrid({ results, shown, lang, t }) {
+    return (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', maxWidth: '360px', margin: '0 auto' }}>
+            {results.map((r, i) => {
+                const opened = i < shown;
+                const rarity = RARITY[r.rarity] || RARITY.common;
+                const buddy = opened ? findBuddy(r.buddyId) : null;
+                return (
+                    <motion.div
+                        key={i}
+                        initial={false}
+                        animate={opened ? { rotateY: 0, scale: 1 } : { rotateY: 180, scale: 1 }}
+                        transition={{ duration: 0.4 }}
+                        style={{
+                            aspectRatio: '1', borderRadius: '10px', overflow: 'hidden', position: 'relative',
+                            background: opened ? `radial-gradient(circle at 50% 30%, ${rarity.glow} 0%, rgba(0,0,0,0.5) 75%)` : 'rgba(0,0,0,0.5)',
+                            border: opened ? `2px solid ${rarity.color}` : '1px solid rgba(255,255,255,0.1)',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: opened && r.rarity !== 'common' ? `0 0 12px ${rarity.glow}` : 'none'
+                        }}
+                    >
+                        {opened ? (
+                            <>
+                                <span style={{ fontSize: '1.6rem' }}>{buddy ? buddy.icon : '?'}{r.dupe ? '' : ''}</span>
+                                <span style={{ fontSize: '0.5rem', color: rarity.color, fontWeight: 'bold', textAlign: 'center', padding: '0 2px' }}>
+                                    {buddy ? (lang === 'tr' ? buddy.title_tr : buddy.title_en).slice(0, 8) : '?'}
+                                </span>
+                                {r.dupe && <span style={{ fontSize: '0.45rem', color: 'var(--text-muted)' }} title={t('shop_dupe_converted', { xp: DUPE_XP[r.rarity] })}>+{DUPE_XP[r.rarity]}</span>}
+                            </>
+                        ) : (
+                            <span style={{ fontSize: '1.4rem', opacity: 0.5 }}>🥚</span>
+                        )}
+                    </motion.div>
+                );
+            })}
+        </div>
+    );
+}
 
 function ResultCard({ result, lang, t }) {
     const rarity = RARITY[result.rarity] || RARITY.common;
@@ -99,6 +143,8 @@ function GachaRevealModal({ result, lang, t, onClose }) {
     // yeni mount edilir (parent key ile ya da conditional render), bu yuzden
     // effect icinde faz set etmek gerekmez.
     const [phase, setPhase] = useState(result ? 'shake' : 'reveal');
+    // multiEgg: kac sonucun kartlandigi (0 = hepsi kapali)
+    const [multiShown, setMultiShown] = useState(result?.type === 'multiEgg' ? 1 : 0);
     const timers = useRef([]);
 
     useEffect(() => {
@@ -106,7 +152,8 @@ function GachaRevealModal({ result, lang, t, onClose }) {
         haptic(20);
         timers.current.push(setTimeout(() => haptic(15), 400), setTimeout(() => haptic(15), 800));
 
-        const revealDelay = result.rarity === 'legendary' ? 1400 : 1100;
+        const isMulti = result.type === 'multiEgg';
+        const revealDelay = isMulti ? 900 : (result.rarity === 'legendary' ? 1400 : 1100);
         timers.current.push(setTimeout(() => {
             setPhase('reveal');
             const colors = shakeColors(result.rarity);
@@ -129,6 +176,18 @@ function GachaRevealModal({ result, lang, t, onClose }) {
                 haptic([40, 60, 40, 60, 80]);
             }
         }, revealDelay));
+
+        // Coklu yumurta: kartlar sirayla acilir (her kartta hafif ses)
+        if (isMulti && result.results) {
+            for (let i = 1; i < result.results.length; i++) {
+                timers.current.push(setTimeout(() => {
+                    setMultiShown(i + 1);
+                    playSound('tick');
+                    const r = result.results[i];
+                    if (r.rarity !== 'common') playSound('reveal_' + r.rarity);
+                }, revealDelay + 300 + i * 650));
+            }
+        }
 
         return () => { timers.current.forEach(clearTimeout); timers.current = []; };
     }, [result]);
@@ -173,7 +232,11 @@ function GachaRevealModal({ result, lang, t, onClose }) {
                             boxShadow: `0 0 40px ${rarity.glow}`
                         }}
                     >
-                        <ResultCard result={result} lang={lang} t={t} />
+                        {result.type === 'multiEgg' && result.results ? (
+                            <MultiEggGrid results={result.results} shown={multiShown} lang={lang} t={t} />
+                        ) : (
+                            <ResultCard result={result} lang={lang} t={t} />
+                        )}
                         <button onClick={onClose} className="neon-btn" style={{ marginTop: '1.5rem', width: '100%', borderColor: rarity.color, color: rarity.color }}>
                             {t('shop_reveal_ok')}
                         </button>

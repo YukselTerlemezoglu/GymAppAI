@@ -519,6 +519,8 @@ const tr = {
     shop_chest_confirm: "Kutuyu {{price}} Jetona açmak istiyor musun?",
     shop_egg_title: "Dost Yumurtası aç",
     shop_egg_confirm: "Yumurtayı {{price}} Jetona açmak istiyor musun?",
+    shop_egg_pack_confirm: "10 yumurta aç, 9 fiyatı öde! Toplam: {{price}} jeton.",
+    shop_egg_pack_badge: "KAMPANYA -1 BEDAVA",
     // BuddyDex
     shop_buddydex_title: "BuddyDex Koleksiyonu",
     shop_buddy_locked: "Bu dost henüz yumurtadan çıkmadı!",

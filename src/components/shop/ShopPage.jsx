@@ -57,30 +57,38 @@ function ShopPage({
     const [revealKey, setRevealKey] = useState(0);
     // Evrim kutlamasi: { buddyId, newXp } / null
     const [evolution, setEvolution] = useState(null);
+    // Toplu satin alma adetleri (boostId -> adet, varsayilan 1)
+    const [buyAmounts, setBuyAmounts] = useState({});
+    // Yumurta 10'lu paketi: 10 yumurta 9 fiyatina (indirim)
+    const EGG_PACK = { count: 10, payFor: 9 };
 
     const wheel = useMemo(() => getWheelState(wheelState), [wheelState]);
 
     // ---------- BOOST SATIN AL ----------
     const handleBuyBoost = async (boost) => {
-        if (!canBuyBoost(inventory, boost.id)) {
+        const amount = Math.max(1, buyAmounts[boost.id] || 1);
+        const maxByStock = boost.maxStock - (inventory?.[boost.id] || 0);
+        if (maxByStock <= 0) {
             toast.warning(t('shop_stock_full'));
             return;
         }
-        if (userCoins < boost.price) {
-            playSound('deny'); toast.warning(t('shop_insufficient_coins', { needed: boost.price - userCoins }));
+        const buyN = Math.min(amount, maxByStock);
+        const total = boost.price * buyN;
+        if (userCoins < total) {
+            playSound('deny'); toast.warning(t('shop_insufficient_coins', { needed: total - userCoins }));
             return;
         }
         const ok = await confirmDialog({
             title: t('shop_buy_title'),
-            message: t('shop_buy_confirm', { name: lang === 'tr' ? boost.title_tr : boost.title_en, price: boost.price }),
+            message: t('shop_buy_confirm', { name: `${lang === 'tr' ? boost.title_tr : boost.title_en} x${buyN}`, price: total }),
             confirmLabel: t('shop_buy_yes'),
             cancelLabel: t('shop_buy_no')
         });
         if (!ok) return;
         haptic(12);
-        setUserCoins(userCoins - boost.price); playSound('buy');
-        setInventory({ ...(inventory || {}), [boost.id]: (inventory?.[boost.id] || 0) + 1 });
-        toast.success(t('shop_bought', { name: lang === 'tr' ? boost.title_tr : boost.title_en }));
+        setUserCoins(userCoins - total); playSound('buy');
+        setInventory({ ...(inventory || {}), [boost.id]: (inventory?.[boost.id] || 0) + buyN });
+        toast.success(t('shop_bought', { name: `${lang === 'tr' ? boost.title_tr : boost.title_en} x${buyN}` }));
     };
 
     // ---------- KOZMETIK SATIN AL / KUSAN ----------
@@ -139,35 +147,45 @@ function ShopPage({
     };
 
     // ---------- DOST YUMURTASI ----------
-    const handleOpenEgg = async () => {
-        if (userCoins < BOXES[1].price) {
-            playSound('deny'); toast.warning(t('shop_insufficient_coins', { needed: BOXES[1].price - userCoins }));
+    const handleOpenEgg = async (count = 1) => {
+        const unit = BOXES[1].price;
+        const total = count === EGG_PACK.count ? unit * EGG_PACK.payFor : unit * count;
+        if (userCoins < total) {
+            playSound('deny'); toast.warning(t('shop_insufficient_coins', { needed: total - userCoins }));
             return;
         }
         const ok = await confirmDialog({
             title: t('shop_egg_title'),
-            message: t('shop_egg_confirm', { price: BOXES[1].price }),
+            message: count === EGG_PACK.count
+                ? t('shop_egg_pack_confirm', { count: EGG_PACK.count, price: total })
+                : t('shop_egg_confirm', { price: unit }),
             confirmLabel: t('shop_buy_yes'),
             cancelLabel: t('shop_buy_no')
         });
         if (!ok) return;
 
-        const result = openEgg(gachaPity);
-        const dupe = !!(buddyCollection && buddyCollection[result.buddyId]);
-        setUserCoins(userCoins - BOXES[1].price); playSound('buy');
-        setGachaPity(updateEggPity(gachaPity, result));
-
-        if (dupe) {
-            // Tekrar: buddy XP'ye donustur
-            const gain = result.dupeXp;
-            setBuddyCollection((prev) => ({ ...(prev || {}), [result.buddyId]: { xp: (prev?.[result.buddyId]?.xp || 0) + gain } }));
-            // Aktif dost yoksa bunu aktiflestir
-            setActiveBuddyId((cur) => cur || result.buddyId);
-        } else {
-            setBuddyCollection((prev) => ({ ...(prev || {}), [result.buddyId]: { xp: 0 } }));
-            setActiveBuddyId((cur) => cur || result.buddyId);
+        let pity = gachaPity;
+        let collection = buddyCollection;
+        const results = [];
+        const newBuddyIds = [];
+        for (let i = 0; i < count; i++) {
+            const result = openEgg(pity);
+            pity = updateEggPity(pity, result);
+            const dupe = !!(collection && collection[result.buddyId]);
+            if (dupe) {
+                collection = { ...collection, [result.buddyId]: { xp: (collection[result.buddyId]?.xp || 0) + result.dupeXp } };
+            } else {
+                collection = { ...collection, [result.buddyId]: { xp: 0 } };
+                newBuddyIds.push(result.buddyId);
+            }
+            results.push({ ...result, dupe });
         }
-        applyGachaResult({ ...result, source: 'egg', dupe });
+        setUserCoins(userCoins - total); playSound('buy');
+        setGachaPity(pity);
+        setBuddyCollection(collection);
+        if (!activeBuddyId && newBuddyIds.length > 0) setActiveBuddyId(newBuddyIds[0]);
+        // Coklu acilis: tum sonuclar tek modale gider (siralı kartlanma)
+        applyGachaResult({ type: 'multiEgg', source: 'egg', results, rarity: results.reduce((acc, r) => (r.rarity === 'legendary' || acc === 'legendary') ? 'legendary' : (r.rarity === 'epic' || acc === 'epic') ? 'epic' : 'common', 'common') });
     };
 
     // ---------- CARK ----------
@@ -260,7 +278,7 @@ function ShopPage({
         setRevealKey((k) => k + 1);
         setReveal(result);
         // Acilis sesi reveal aninda (GachaRevealModal patlamasiyla es zamanli)
-        const delay = result.source === 'wheel' ? 0 : (result.rarity === 'legendary' ? 1400 : 1100);
+        const delay = result.source === 'wheel' ? 0 : result.type === 'multiEgg' ? 900 : (result.rarity === 'legendary' ? 1400 : 1100);
         setTimeout(() => playSound('reveal_' + result.rarity), delay);
     };
 
@@ -353,13 +371,30 @@ function ShopPage({
                                         </div>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => handleBuyBoost(boost)}
-                                    className="neon-btn"
-                                    style={{ padding: '0.5rem 0.9rem', fontSize: '0.85rem', width: 'auto', flexShrink: 0, borderColor: '#ffd700', color: canBuy ? '#ffd700' : 'rgba(255,215,0,0.4)', background: 'transparent' }}
-                                >
-                                    🪙 {boost.price}
-                                </button>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+                                    {/* Adet secici: stok sinirina gore x1/x5/x10 cipleri */}
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                        {[1, 5, 10].filter((n) => n === 1 || n <= boost.maxStock - stock).map((n) => {
+                                            const active = (buyAmounts[boost.id] || 1) === n;
+                                            return (
+                                                <button
+                                                    key={n}
+                                                    onClick={() => setBuyAmounts((prev) => ({ ...prev, [boost.id]: n }))}
+                                                    style={{ padding: '3px 8px', borderRadius: '8px', border: `1px solid ${active ? 'var(--accent-primary)' : 'rgba(255,255,255,0.15)'}`, background: active ? 'rgba(0,195,255,0.15)' : 'transparent', color: active ? 'var(--accent-primary)' : 'var(--text-light)', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}
+                                                >
+                                                    x{n}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <button
+                                        onClick={() => handleBuyBoost(boost)}
+                                        className="neon-btn"
+                                        style={{ padding: '0.5rem 0.9rem', fontSize: '0.85rem', width: 'auto', flexShrink: 0, borderColor: '#ffd700', color: canBuy ? '#ffd700' : 'rgba(255,215,0,0.4)', background: 'transparent' }}
+                                    >
+                                        🪙 {boost.price * Math.max(1, buyAmounts[boost.id] || 1)}
+                                    </button>
+                                </div>
                             </div>
                         );
                     })}
@@ -379,9 +414,17 @@ function ShopPage({
                                     <div style={{ color: 'var(--text-light)', fontSize: '0.72rem', lineHeight: 1.35 }}>{lang === 'tr' ? BOXES[1].desc_tr : BOXES[1].desc_en}</div>
                                 </div>
                             </div>
-                            <button onClick={handleOpenEgg} className="neon-btn" style={{ padding: '0.5rem 0.9rem', fontSize: '0.85rem', width: 'auto', flexShrink: 0, borderColor: '#ffd700', color: '#ffd700', background: 'transparent' }}>
-                                🪙 {BOXES[1].price}
-                            </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+                                {/* Tek yumurta */}
+                                <button onClick={() => handleOpenEgg(1)} className="neon-btn" style={{ padding: '0.5rem 0.9rem', fontSize: '0.85rem', width: 'auto', flexShrink: 0, borderColor: '#ffd700', color: '#ffd700', background: 'transparent' }}>
+                                    🪙 {BOXES[1].price}
+                                </button>
+                                {/* 10'lu paket: 9 fiyatina - eski fiyat ustunun cizili */}
+                                <button onClick={() => handleOpenEgg(EGG_PACK.count)} className="neon-btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem', width: 'auto', flexShrink: 0, borderColor: '#ff6b81', color: '#ff6b81', background: 'rgba(255,107,129,0.08)', display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: 1.2 }}>
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 'bold', color: '#ff6b81' }}>x10 {t('shop_egg_pack_badge')}</span>
+                                    <span><span style={{ textDecoration: 'line-through', opacity: 0.5, fontSize: '0.7rem' }}>🪙{BOXES[1].price * 10}</span> <span style={{ fontWeight: 'bold' }}>🪙{BOXES[1].price * EGG_PACK.payFor}</span></span>
+                                </button>
+                            </div>
                         </div>
 
                         {/* Pity gostergesi */}
