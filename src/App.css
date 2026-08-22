@@ -525,6 +525,18 @@
   }
 }
 
+/* Dukkan: ucretsiz cark hazir gostergesi (jeton rozetinde yanip soner) */
+@keyframes wheelHint {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.15); }
+}
+
+/* Dost kapsulu parcaciklari (Usta+ evreler) */
+@keyframes buddySpark {
+  0%, 100% { opacity: 0.3; transform: translateY(0) scale(0.9); }
+  50% { opacity: 1; transform: translateY(-3px) scale(1.1); }
+}
+
 .timer-display {
   font-family: monospace;
   font-size: 2rem;

@@ -3,19 +3,59 @@ import { Trophy, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useLanguage } from '../../i18n/LanguageContext';
 
-function PrCelebrationModal({ prs, onClose }) {
+/*
+ * PR konfeti stilleri (dukkandan satin alinan kozmetikler).
+ * activePrEffect: kozmetik id (null = klasik default stil).
+ */
+const PR_EFFECTS = {
+    prfx_hearts: (conf) => {
+        const hearts = ['#ff6b81', '#ff4757', '#ffa8b8'];
+        conf({ particleCount: 30, spread: 100, origin: { y: 0.55 }, colors: hearts, shapes: ['circle'], scalar: 1.3 });
+        setTimeout(() => conf({ particleCount: 25, angle: 70, spread: 80, origin: { x: 0.1, y: 0.6 }, colors: hearts, scalar: 1.1 }), 250);
+        setTimeout(() => conf({ particleCount: 25, angle: 110, spread: 80, origin: { x: 0.9, y: 0.6 }, colors: hearts, scalar: 1.1 }), 400);
+    },
+    prfx_gold: (conf) => {
+        const gold = ['#ffd700', '#ffaa00', '#fff3b0'];
+        conf({ particleCount: 130, spread: 30, startVelocity: 55, origin: { y: 0 }, colors: gold, scalar: 0.9, gravity: 1.2, ticks: 300 });
+        setTimeout(() => conf({ particleCount: 90, spread: 40, startVelocity: 45, origin: { x: 0.3, y: 0 }, colors: gold, scalar: 0.8, gravity: 1.2, ticks: 300 }), 300);
+        setTimeout(() => conf({ particleCount: 90, spread: 40, startVelocity: 45, origin: { x: 0.7, y: 0 }, colors: gold, scalar: 0.8, gravity: 1.2, ticks: 300 }), 550);
+    },
+    prfx_fireworks: (conf) => {
+        const fw = ['#00c3ff', '#ff0088', '#ffd700', '#00ff88'];
+        for (let i = 0; i < 6; i++) {
+            setTimeout(() => {
+                conf({ particleCount: 60, spread: 360, startVelocity: 30, origin: { x: 0.2 + Math.random() * 0.6, y: 0.2 + Math.random() * 0.3 }, colors: [fw[i % fw.length]], ticks: 200, scalar: 1.1 });
+            }, 200 * (i + 1));
+        }
+    },
+    prfx_stars: (conf) => {
+        const stars = ['#ffd700', '#fff', '#c06bff', '#00c3ff'];
+        const star = conf.shapeFromText ? conf.shapeFromText({ text: '★', scalar: 2 }) : undefined;
+        const opts = star ? { shapes: [star] } : {};
+        conf({ particleCount: 90, spread: 100, origin: { y: 0.5 }, colors: stars, scalar: 1.4, ...opts });
+        setTimeout(() => conf({ particleCount: 60, spread: 120, startVelocity: 40, origin: { x: 0.5, y: 0.35 }, colors: stars, ...opts }), 300);
+        setTimeout(() => conf({ particleCount: 60, spread: 160, startVelocity: 50, origin: { x: 0.5, y: 0.45 }, colors: stars, ...opts }), 600);
+    }
+};
+
+function PrCelebrationModal({ prs, onClose, activePrEffect = null }) {
     const { t, lang } = useLanguage();
     const firedRef = useRef(false);
 
     useEffect(() => {
         if (prs && prs.length > 0 && !firedRef.current) {
             firedRef.current = true;
-            const colors = ['#00ff88', '#00c3ff', '#ffd700', '#ff0088'];
-            confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors });
-            setTimeout(() => confetti({ particleCount: 90, angle: 60, spread: 70, origin: { x: 0, y: 0.7 }, colors }), 250);
-            setTimeout(() => confetti({ particleCount: 90, angle: 120, spread: 70, origin: { x: 1, y: 0.7 }, colors }), 450);
+            const custom = activePrEffect && PR_EFFECTS[activePrEffect];
+            if (custom) {
+                custom(confetti);
+            } else {
+                const colors = ['#00ff88', '#00c3ff', '#ffd700', '#ff0088'];
+                confetti({ particleCount: 140, spread: 80, origin: { y: 0.6 }, colors });
+                setTimeout(() => confetti({ particleCount: 90, angle: 60, spread: 70, origin: { x: 0, y: 0.7 }, colors }), 250);
+                setTimeout(() => confetti({ particleCount: 90, angle: 120, spread: 70, origin: { x: 1, y: 0.7 }, colors }), 450);
+            }
         }
-    }, [prs]);
+    }, [prs, activePrEffect]);
 
     if (!prs || prs.length === 0) return null;
 

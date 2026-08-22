@@ -3,14 +3,23 @@ import { Share2, Download, Trophy, Flame, Zap } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast, haptic } from '../ui/ToastProvider';
 import { totalXpForLevel } from '../../utils/levelSystem';
+import { findBuddy } from '../../utils/buddy';
+import { getActive } from '../../utils/inventory';
 
 // Antrenman ozetini PNG kart olarak uretir (canvas) ve paylasir/indirir.
 // Istatistikler: toplam antrenman, seri, toplam hacim, seviye/XP.
-function ShareCard({ userName, userLevel, userXP, streak, workoutHistory }) {
+// Dukkan kozmetikleri: cerceve rengi, isim stili, alev rengi, dost rozeti.
+function ShareCard({ userName, userLevel, userXP, streak, workoutHistory, activeBuddyId = null, activeCosmetics = {}, ownedCosmetics = [] }) {
     const { t, lang } = useTranslation();
     const { toast } = useToast();
     const canvasRef = useRef(null);
     const [preview, setPreview] = useState(null);
+
+    // Kozmetikler
+    const frame = getActive(activeCosmetics, ownedCosmetics, 'frame');
+    const nameStyle = getActive(activeCosmetics, ownedCosmetics, 'nameStyle');
+    const flame = getActive(activeCosmetics, ownedCosmetics, 'flame');
+    const buddy = activeBuddyId ? findBuddy(activeBuddyId) : null;
 
     const stats = useMemo(() => {
         if (!workoutHistory || workoutHistory.length === 0) return null;
@@ -35,6 +44,27 @@ function ShareCard({ userName, userLevel, userXP, streak, workoutHistory }) {
         ctx.fillStyle = bg;
         ctx.fillRect(0, 0, 1080, 1350);
 
+        // KOZMETIK: cerceve (kart kenarligi)
+        if (frame) {
+            let frameColor = 'rgba(255,255,255,0.35)', frameW = 6;
+            if (frame.id === 'frame_gold' || frame.id === 'frame_crown') { frameColor = '#ffd700'; frameW = 10; }
+            else if (frame.id === 'frame_neon') { frameColor = '#00c3ff'; frameW = 8; }
+            else if (frame.id === 'frame_retro') { frameColor = '#ff7e5f'; frameW = 8; }
+            ctx.save();
+            ctx.strokeStyle = frameColor;
+            ctx.lineWidth = frameW;
+            roundRect(ctx, 20, 20, 1040, 1310, 28);
+            ctx.stroke();
+            // Efsanevi cercevede ikinci ince halka
+            if (frame.id === 'frame_crown') {
+                ctx.strokeStyle = 'rgba(255,215,0,0.4)';
+                ctx.lineWidth = 3;
+                roundRect(ctx, 38, 38, 1004, 1274, 22);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
         // Neon isik efektleri
         const glow1 = ctx.createRadialGradient(180, 200, 20, 180, 200, 500);
         glow1.addColorStop(0, 'rgba(0,195,255,0.25)');
@@ -57,18 +87,30 @@ function ShareCard({ userName, userLevel, userXP, streak, workoutHistory }) {
         ctx.font = '24px system-ui, -apple-system, sans-serif';
         ctx.fillText(lang === 'tr' ? 'ANTRENMAN KARNE' : 'WORKOUT REPORT CARD', 540, 175);
 
-        // Isim + seviye
-        ctx.fillStyle = '#fff';
+        // Isim + seviye (+ kozmetik: isim stili, dost rozeti)
+        ctx.save();
+        if (nameStyle) {
+            ctx.shadowColor = nameStyle.cssColor || '#fff';
+            ctx.shadowBlur = 18;
+            ctx.fillStyle = nameStyle.cssColor || '#fff';
+        } else {
+            ctx.fillStyle = '#fff';
+        }
         ctx.font = 'bold 56px system-ui, -apple-system, sans-serif';
         ctx.fillText(String(userName || (lang === 'tr' ? 'Sporcu' : 'Athlete')), 540, 320);
+        ctx.restore();
+        if (buddy) {
+            ctx.font = '56px system-ui, -apple-system, sans-serif';
+            ctx.fillText(`${buddy.icon}`, 540 - ctx.measureText(String(userName || '')).width / 2 - 50, 322);
+        }
         ctx.fillStyle = '#ff0088';
         ctx.font = 'bold 30px system-ui, -apple-system, sans-serif';
         ctx.fillText(`${t('level')} ${userLevel} · ${totalXpForLevel(userLevel) + (Number(userXP) || 0)} XP`, 540, 370);
 
-        // Istatislik kartlari (2x2)
+        // Istatislik kartlari (2x2) - alev rengi kozmetigi seride uygulanir
         const cards = [
             { label: lang === 'tr' ? 'Antrenman' : 'Workouts', value: String(stats.totalWorkouts), color: '#00c3ff' },
-            { label: lang === 'tr' ? 'Haftalık Seri' : 'Week Streak', value: String(streak || 0), color: '#ff9f43' },
+            { label: lang === 'tr' ? 'Haftalık Seri' : 'Week Streak', value: String(streak || 0), color: flame ? flame.color : '#ff9f43' },
             { label: lang === 'tr' ? 'Toplam Hacim' : 'Total Volume', value: `${Math.round(stats.totalVolume).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US')} kg`, color: '#2ed573' },
             { label: lang === 'tr' ? 'Seviye' : 'Level', value: String(userLevel), color: '#ff0088' }
         ];

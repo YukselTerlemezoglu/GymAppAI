@@ -3,6 +3,10 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
 import ReminderSettingsCard from './ReminderSettingsCard';
 import { Save, Trash2, LineChart as LineChartIcon, TrendingUp, Award, Zap, RefreshCcw, Camera, X, Image as ImageIcon, Settings, Type, Globe, CalendarCheck } from 'lucide-react';
+import BuddyCapsule from '../shop/BuddyCapsule';
+import { findBuddy, getBuddyStageInfo } from '../../utils/buddy';
+import { RARITY } from '../../data/shopItems';
+import { getActive } from '../../utils/inventory';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { BADGE_LIBRARY } from '../../data/badges';
@@ -18,7 +22,7 @@ import FriendsCard from './FriendsCard';
 import { ensureProfile, publishProfile } from '../../utils/friends';
 import { error as logError } from '../../utils/logger';
 
-function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, weeklyGoal = 3, setWeeklyGoal, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName }) {
+function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, weeklyGoal = 3, setWeeklyGoal, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName, activeBuddyId = null, buddyCollection = {}, activeCosmetics = {}, ownedCosmetics = [], onOpenShop }) {
     const { t, lang, setLang } = useTranslation();
     const { toast, confirmDialog, haptic } = useToast();
     const [nameDraft, setNameDraft] = useState(userName);
@@ -269,6 +273,48 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
 
             <div className="workout-tracker-list fade-in" style={{ animationDelay: '0.1s', display: 'flex', flexDirection: 'column', gap: '2rem', paddingTop: '1.5rem', paddingBottom: '3rem' }}>
 
+                {/* 0a. DOST VITRINI: aktif dost kapsulu + evre (Steam profili tarzi) */}
+                <div className="glass-card slide-in" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <BuddyCapsule
+                        buddyId={activeBuddyId}
+                        xp={buddyCollection?.[activeBuddyId]?.xp || 0}
+                        size={72}
+                        frameCosmeticId={getActive(activeCosmetics, ownedCosmetics, 'frame')?.id}
+                        onClick={onOpenShop}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        {activeBuddyId && buddyCollection?.[activeBuddyId] ? (
+                            (() => {
+                                const def = findBuddy(activeBuddyId);
+                                const info = getBuddyStageInfo(buddyCollection[activeBuddyId].xp || 0);
+                                const rarity = RARITY[def?.rarity] || RARITY.common;
+                                return (
+                                    <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                            <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.05rem' }}>{lang === 'tr' ? def.title_tr : def.title_en}</span>
+                                            <span style={{ fontSize: '0.7rem', color: rarity.color, border: `1px solid ${rarity.color}`, borderRadius: '10px', padding: '1px 8px' }}>{t(`rarity_${def.rarity}`)}</span>
+                                        </div>
+                                        <div style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginTop: '2px', marginBottom: '4px' }}>
+                                            {lang === 'tr' ? info.stage.title_tr : info.stage.title_en}
+                                            {info.next ? ` · ${(info.currentXp).toLocaleString()}/${(info.next.threshold).toLocaleString()} XP` : ` · ${t('shop_buddy_max_stage')}`}
+                                        </div>
+                                        <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
+                                            <div style={{ width: `${info.percent}%`, height: '100%', background: rarity.color, borderRadius: '4px', transition: 'width 0.6s ease' }} />
+                                        </div>
+                                    </>
+                                );
+                            })()
+                        ) : (
+                            <div style={{ color: 'var(--text-light)', fontSize: '0.85rem' }}>
+                                {t('profile_no_buddy')} <button onClick={onOpenShop} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: '0.85rem' }}>{t('profile_open_shop')}</button>
+                            </div>
+                        )}
+                    </div>
+                    <button onClick={onOpenShop} className="neon-btn-secondary" style={{ padding: '8px 12px', fontSize: '0.8rem', flexShrink: 0 }}>
+                        🥚 {t('shop_tab_buddy')}
+                    </button>
+                </div>
+
                 {/* 0. AYARLAR: isim + dil */}
                 <div className="glass-card slide-in">
                     <h3 style={{ color: '#fff', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -372,6 +418,8 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                     userName={userName}
                     userXP={userXP}
                     userLevel={userLevel}
+                    activeBuddyId={activeBuddyId}
+                    nameStyle={getActive(activeCosmetics, ownedCosmetics, 'nameStyle')}
                 />
 
                 {/* Arkadas Davet Karti */}
@@ -384,6 +432,9 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                     userXP={userXP}
                     streak={streak}
                     workoutHistory={workoutHistory}
+                    activeBuddyId={activeBuddyId}
+                    activeCosmetics={activeCosmetics}
+                    ownedCosmetics={ownedCosmetics}
                 />
 
                 {/* 1. SEVİYE VE XP BARI (Gamification v2) */}

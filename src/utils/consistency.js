@@ -66,30 +66,74 @@ export const getWeeksMap = (workoutHistory) => {
  * Gecmis haftalara dogru yurur; hedefe ulasamayan hafta seriyi keser.
  * MEVCUT hafta sayilmaz (daha bitmedi) - sadece "bu hafta s/ hedef"
  * gostergesi olarak kullanilir.
+ *
+ * DONDURUCU (freeze) DESTEĞI:
+ * freezeData: { weeks: [weekKey...], stock: number }
+ *  - weeks: gecmiste harcanmis dondurucu haftalari (kalici kayit)
+ *  - stock: henuz harcanmamis dondurucu stogu; kacirilan haftayi otomatik
+ *    korumak icin harcanir ve cagirana "freezeUsed" olarak bildirilir.
+ *
+ * Algoritma: geriye dogru yururken kacirilan hafta icin stok varsa
+ * GECICI olarak dondurucu harcanir. Yolun sonunda hic GERCEK tamamlanmis
+ * haftaya ulasilmadiysa (ankraj yok), donduruculer BOSA harcanmis olur -
+ * bu durumda tum gecici harcamalar geri alinir ve seri 0'dir. Dondurulmus
+ * haftalar ancak arkalarinda gercek bir seri varken sayilir.
  */
-export const calcWeeklyStreak = (workoutHistory, weeklyGoal = 3) => {
+export const calcWeeklyStreak = (workoutHistory, weeklyGoal = 3, freezeData = null) => {
     const weeks = getWeeksMap(workoutHistory);
     const currentWeek = getWeekKey(new Date());
+    const frozenWeeks = new Set((freezeData && Array.isArray(freezeData.weeks)) ? freezeData.weeks : []);
+    let freezeStock = (freezeData && typeof freezeData.stock === 'number') ? freezeData.stock : 0;
+
     let streak = 0;
+    let anchored = false; // seriyi tasiyan en az bir GERCEK tamamlanmis hafta var mi?
+    const newlyFrozen = [];
+
     let cursor = currentWeek;
-    // Onceki haftadan basla (mevcut hafta henuz tamamlanmadi)
-    let weeksBack = 1;
     const maxIter = 520; // ~10 yil guvenlik siniri
+    let weeksBack = 1;
     while (weeksBack <= maxIter) {
-        // Bir onceki haftanin anahtarini hesapla
         const monday = weekKeyToMonday(cursor);
         monday.setDate(monday.getDate() - 7);
         cursor = getWeekKey(monday);
         const info = weeks.get(cursor);
         if (info && info.count >= weeklyGoal) {
             streak++;
+            anchored = true;
+        } else if (frozenWeeks.has(cursor)) {
+            // Gecmiste kalici dondurulmus hafta: seri korunur
+            streak++;
+        } else if (freezeStock > 0 && weeksBack === 1) {
+            // Otomatik koruma YALNIZCA en yakin gecmis hafta icindir:
+            // kullanicinin henuz "fark edemedigi" tek hafta. Daha eski
+            // bosluklar seriyi o zaman zaten kirmisti - oraya stok gomulmez.
+            freezeStock--;
+            newlyFrozen.push(cursor);
+            streak++;
         } else {
             break;
         }
         weeksBack++;
     }
-    // En az bir antrenman var ama seri 0 ise: kullanici yeni baslamis olabilir
-    return { streak, currentWeek, weeksThisWeek: weeks.get(currentWeek)?.count || 0 };
+
+    // Ankraj yok: hic gercek hafta yok, dondurucu bosuna harcanmaz
+    if (!anchored) {
+        return {
+            streak: 0,
+            currentWeek,
+            weeksThisWeek: weeks.get(currentWeek)?.count || 0,
+            freezeUsed: [],
+            frozenCount: 0
+        };
+    }
+
+    return {
+        streak,
+        currentWeek,
+        weeksThisWeek: weeks.get(currentWeek)?.count || 0,
+        freezeUsed: newlyFrozen,
+        frozenCount: frozenWeeks.size + newlyFrozen.length
+    };
 };
 
 // Hafta anahtarindan Pazartesi Date'ine

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { Trophy, CalendarCheck } from 'lucide-react';
 
-function ScoreTracker({ workoutHistory, streak, weeklyGoal = 3, weeksThisWeek = 0 }) {
+function ScoreTracker({ workoutHistory, streak, weeklyGoal = 3, weeksThisWeek = 0, flameColor = '#ffa502' }) {
     const { t } = useTranslation();
     const { volumeScore, prScore, streakScore, totalScore } = useMemo(() => {
         if (!workoutHistory || workoutHistory.length === 0) return { volumeScore: 0, prScore: 0, streakScore: 0, totalScore: 0 };
@@ -97,7 +97,7 @@ function ScoreTracker({ workoutHistory, streak, weeklyGoal = 3, weeksThisWeek = 
                     </div>
                     {streak > 0 && (
                         <div style={{ textAlign: 'center', flexShrink: 0, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '8px' }}>
-                            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#ffa502' }}>🔥{streak}</div>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: flameColor, filter: `drop-shadow(0 0 6px ${flameColor})` }}>🔥{streak}</div>
                             <div style={{ fontSize: '0.6rem', color: 'var(--text-light)' }}>{t('score_week_streak_unit')}</div>
                         </div>
                     )}

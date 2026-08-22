@@ -25,7 +25,7 @@ import OnboardingOverlay from './components/ui/OnboardingOverlay';
 import { ToastProvider, useToast } from './components/ui/ToastProvider';
 import { startReminderTicker } from './utils/notificationScheduler';
 import LevelUpModal from './components/ui/LevelUpModal';
-import ShopModal from './components/profile/ShopModal';
+import ShopPage from './components/shop/ShopPage';
 import BadgeUnlockModal from './components/ui/BadgeUnlockModal';
 import AdminPanel from './components/admin/AdminPanel';
 import AnatomyLibrary from './components/anatomy/AnatomyLibrary';
@@ -36,6 +36,8 @@ import { migrateLevelData, levelProgress } from './utils/levelSystem';
 import { countAllTimePRs } from './utils/prTracker';
 import { subscribeFriendships } from './utils/friends';
 import { calcWeeklyStreak } from './utils/consistency';
+import { getActive } from './utils/inventory';
+import { getWheelState } from './utils/gacha';
 import './App.css';
 import { getRank } from './utils/ranks';import { auth } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -90,7 +92,6 @@ function AppContent() {
   };
 
   const [showLevelUpModal, setShowLevelUpModal] = useState(false);
-  const [showShopModal, setShowShopModal] = useState(false);
   const [showBadgeUnlockModal, setShowBadgeUnlockModal] = useState(null);
 
   const [userName, setUserName] = useLocalStorage('gym_app_user_name', 'Athlete');
@@ -101,7 +102,9 @@ function AppContent() {
 
   // Storage State
   const [workoutHistory, setWorkoutHistory] = useLocalStorage('gym_app_history', []);
-  const [lastWorkoutDate, setLastWorkoutDate] = useLocalStorage('gym_app_last_date', null);
+  // lastWorkoutDate yalnizca yazilir (ActiveWorkoutView setLastWorkoutDate);
+  // okuma tarafı yok, bu yuzden destructure edilmemis birakilir.
+  const [, setLastWorkoutDate] = useLocalStorage('gym_app_last_date', null);
   const [savedAiProgram, setSavedAiProgram] = useLocalStorage('gym_app_ai_program', null);
   const [userXP, setUserXP] = useLocalStorage('gym_app_xp', 0);
   const [userLevel, setUserLevel] = useLocalStorage('gym_app_level', 1);
@@ -111,12 +114,44 @@ function AppContent() {
   // Haftalik hedef: kac gun antrenman (dinlenme gunleri seriyi bozmaz)
   const [weeklyGoal, setWeeklyGoal] = useLocalStorage('gym_app_weekly_goal', 3);
 
+  // --- DUKKAN EKONOMI STATE'LERI ---
+  // Envanter (boost stoklari), kozmetikler, dostlar, pity, cark.
+  const [inventory, setInventory] = useLocalStorage('gym_app_inventory', {});
+  const [ownedCosmetics, setOwnedCosmetics] = useLocalStorage('gym_app_cosmetics', []);
+  const [activeCosmetics, setActiveCosmetics] = useLocalStorage('gym_app_cosmetics_active', {});
+  const [buddyCollection, setBuddyCollection] = useLocalStorage('gym_app_buddies', {});
+  const [activeBuddyId, setActiveBuddyId] = useLocalStorage('gym_app_buddy_active', null);
+  const [gachaPity, setGachaPity] = useLocalStorage('gym_app_gacha_pity', {});
+  const [wheelState, setWheelState] = useLocalStorage('gym_app_wheel', null);
+  const [showShopModal, setShowShopModal] = useState(false);
+
   // STREAK ARTIK TURETILMIS DEGER: workoutHistory'den haftalik seri hesaplanir.
   // Eskiden gunluk Duolingo serisi saklaniyordu; artik ayri depolama yok.
-  const { streak, weeksThisWeek } = React.useMemo(
-    () => calcWeeklyStreak(workoutHistory, weeklyGoal),
-    [workoutHistory, weeklyGoal]
+  // DONDURUCU: hedefi kacirilan haftayi stok varsa otomatik korur; harcanan
+  // dondurucular freezeData'ya yazilir (ayni hafta tekrar harcanmaz).
+  const [freezeData, setFreezeData] = useLocalStorage('gym_app_freeze', { weeks: [] });
+  const freezeKey = (freezeData?.weeks || []).join(',');
+  const { streak, weeksThisWeek, freezeUsed } = React.useMemo(
+    () => calcWeeklyStreak(workoutHistory, weeklyGoal, { weeks: freezeData?.weeks || [], stock: inventory?.freeze ?? 0 }),
+    // freezeKey ile referans degismelerine karsi stabil bagimlilik
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [workoutHistory, weeklyGoal, freezeKey, inventory?.freeze]
   );
+
+  // Hesap sirasinda sanal harcanan donduruculari kalici yap + stoktan dus
+  useEffect(() => {
+    if (!freezeUsed || freezeUsed.length === 0) return;
+    setFreezeData((prev) => ({ weeks: [...new Set([...(prev?.weeks || []), ...freezeUsed])].slice(-52) }));
+    setInventory((prev) => {
+      const cur = (prev && prev.freeze) || 0;
+      if (cur <= 0) return prev;
+      const next = { ...prev };
+      const used = freezeUsed.length;
+      if (cur - used <= 0) delete next.freeze; else next.freeze = cur - used;
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sadece yeni harcama olunca
+  }, [freezeUsed.join(',')]);
 
   const [completedDays, setCompletedDays] = useLocalStorage('gym_app_completed_days', []);
   const [lastResetDate, setLastResetDate] = useLocalStorage('gym_app_last_reset_date', null);
@@ -355,7 +390,6 @@ function AppContent() {
             workoutHistory={workoutHistory}
             setWorkoutHistory={setWorkoutHistory}
             weeklyGoal={weeklyGoal}
-            lastWorkoutDate={lastWorkoutDate}
             setLastWorkoutDate={setLastWorkoutDate}
             completedDays={completedDays}
             setCompletedDays={setCompletedDays}
@@ -365,6 +399,12 @@ function AppContent() {
             setUserXP={setUserXP}
             userLevel={userLevel}
             setUserLevel={setUserLevel}
+            inventory={inventory}
+            setInventory={setInventory}
+            buddyCollection={buddyCollection}
+            setBuddyCollection={setBuddyCollection}
+            activeBuddyId={activeBuddyId}
+            activePrEffect={getActive(activeCosmetics, ownedCosmetics, 'prEffect')?.id}
             userCoins={userCoins}
             setUserCoins={setUserCoins}
           />
@@ -392,6 +432,11 @@ function AppContent() {
             unlockedBadges={unlockedBadges}
             userName={userName}
             setUserName={setUserName}
+            activeBuddyId={activeBuddyId}
+            buddyCollection={buddyCollection}
+            activeCosmetics={activeCosmetics}
+            ownedCosmetics={ownedCosmetics}
+            onOpenShop={() => setShowShopModal(true)}
           />
         );
       }
@@ -512,12 +557,15 @@ function AppContent() {
                   })()}
                 </div>
 
-                {/* Coin: profil kartının içinde, sağda */}
+                {/* Coin: profil kartının içinde, sağda. Ucretsiz cark varsa 🎡 isareti yanip soner */}
                 <div
                   onClick={(e) => { e.stopPropagation(); setShowShopModal(true); }}
                   style={{ background: 'rgba(255, 215, 0, 0.1)', border: '1px solid #ffd700', borderRadius: '12px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#ffd700', fontWeight: 'bold', fontSize: '0.85rem', flexShrink: 0, marginLeft: '4px' }}
                   title={t('app_shop_tooltip')}
                 >
+                  {getWheelState(wheelState).freeAvailable && (
+                    <span style={{ animation: 'wheelHint 1.2s ease-in-out infinite', fontSize: '0.95rem' }} title={t('shop_wheel_free_ready')}>🎡</span>
+                  )}
                   <span>🪙</span> {userCoins}
                 </div>
               </div>
@@ -564,6 +612,7 @@ function AppContent() {
                 streak={streak}
                 weeklyGoal={weeklyGoal}
                 weeksThisWeek={weeksThisWeek}
+                flameColor={getActive(activeCosmetics, ownedCosmetics, 'flame')?.color || '#ffa502'}
               />
             </div>
 
@@ -678,17 +727,34 @@ function AppContent() {
           )
         }
 
-        {/* Shop Modal */}
+        {/* Shop Modal (tam sayfa dukkan) */}
         {
           showShopModal && (
-            <ShopModal
-              onClose={() => setShowShopModal(false)}
+            <ShopPage
+              onBack={() => setShowShopModal(false)}
               userCoins={userCoins}
               setUserCoins={setUserCoins}
+              inventory={inventory}
+              setInventory={setInventory}
+              ownedCosmetics={ownedCosmetics}
+              setOwnedCosmetics={setOwnedCosmetics}
+              activeCosmetics={activeCosmetics}
+              setActiveCosmetics={setActiveCosmetics}
+              buddyCollection={buddyCollection}
+              setBuddyCollection={setBuddyCollection}
+              activeBuddyId={activeBuddyId}
+              setActiveBuddyId={setActiveBuddyId}
+              gachaPity={gachaPity}
+              setGachaPity={setGachaPity}
+              wheelState={wheelState}
+              setWheelState={setWheelState}
+              setUserXP={setUserXP}
+              userLevel={userLevel}
               unlockedThemes={unlockedThemes}
               setUnlockedThemes={setUnlockedThemes}
               activeTheme={activeTheme}
               setActiveTheme={setActiveTheme}
+              applyThemeFn={applyTheme}
             />
           )
         }

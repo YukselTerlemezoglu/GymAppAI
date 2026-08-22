@@ -7,6 +7,7 @@ import {
     sendRequest, subscribeRequests, acceptRequest, declineRequest,
     subscribeFriendships, getFriendProfiles, removeFriend
 } from '../../utils/friends';
+import { findBuddy } from '../../utils/buddy';
 
 /*
  * Arkadaslar karti: kendi kodun, kodla arkadas ekleme, gelen istekler ve
@@ -14,7 +15,7 @@ import {
  * Giris yoksa bilgi karti gosterir (giris yaptiktan sonra acilir).
  * myCode prop'u BodyTracker'daki ensureProfile cagrisindan gelir.
  */
-function FriendsCard({ currentUser, myCode, userName, userXP, userLevel }) {
+function FriendsCard({ currentUser, myCode, userName, userXP, userLevel, activeBuddyId, nameStyle }) {
     const { t } = useTranslation();
     const { toast, confirmDialog } = useToast();
     const [codeInput, setCodeInput] = useState('');
@@ -63,12 +64,12 @@ function FriendsCard({ currentUser, myCode, userName, userXP, userLevel }) {
     // (friendUids bos ise eski profiller gosterilmez - arkadas silinince aninda duser)
     const board = useMemo(() => {
         const myTotal = totalXpForLevel(Number(userLevel) || 1) + (Number(userXP) || 0);
-        const me = { uid: 'me', name: userName, totalXp: myTotal, level: Number(userLevel) || 1, isMe: true };
+        const me = { uid: 'me', name: userName, totalXp: myTotal, level: Number(userLevel) || 1, isMe: true, buddyId: activeBuddyId || null };
         const valid = friendUids.length > 0 ? friendProfiles.filter((p) => friendUids.includes(p.uid)) : [];
         const rows = [me, ...valid.map((p) => ({ ...p, totalXp: totalXpForLevel(Number(p.level) || 1) + (Number(p.xp) || 0), isMe: false }))];
         rows.sort((a, b) => b.totalXp - a.totalXp);
         return rows;
-    }, [userName, userXP, userLevel, friendProfiles, friendUids]);
+    }, [userName, userXP, userLevel, friendProfiles, friendUids, activeBuddyId]);
 
     const copyCode = async () => {
         haptic(8);
@@ -291,8 +292,19 @@ function FriendsCard({ currentUser, myCode, userName, userXP, userLevel }) {
                         }}>
                             {i + 1}
                         </span>
-                        <span style={{ flex: 1, color: '#fff', fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {row.name} {row.isMe && <span style={{ color: '#00c3ff', fontSize: '0.7rem' }}>({t('fr_you')})</span>}
+                        <span style={{ flex: 1, color: '#fff', fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {row.isMe && activeBuddyId && (
+                                <span style={{ fontSize: '0.95rem' }} title={t('shop_buddy_title')}>
+                                    {findBuddy(activeBuddyId)?.icon}
+                                </span>
+                            )}
+                            <span style={{
+                                color: row.isMe && nameStyle ? nameStyle.cssColor : undefined,
+                                textShadow: row.isMe && nameStyle ? nameStyle.cssTextShadow : undefined
+                            }}>
+                                {row.name}
+                            </span>
+                            {row.isMe && <span style={{ color: '#00c3ff', fontSize: '0.7rem' }}>({t('fr_you')})</span>}
                         </span>
                         <span style={{ color: 'var(--text-light)', fontSize: '0.75rem', flexShrink: 0 }}>
                             {t('fr_lvl_short')} {row.level}

@@ -11,6 +11,7 @@ import PlateCalculator from '../ui/PlateCalculator';
 import { detectPRs, getOverloadSuggestion, getExerciseHistory } from '../../utils/prTracker';
 import { totalXpForLevel, levelFromTotalXp } from '../../utils/levelSystem';
 import { calcWeeklyStreak, weeklyMultiplier } from '../../utils/consistency';
+import { buddyGainFromWorkout, addBuddyXp, findBuddy } from '../../utils/buddy';
 import { normalizeAiWeight, normalizeAiReps } from '../../utils/aiNormalizer';
 
 function ActiveWorkoutView({
@@ -29,7 +30,12 @@ function ActiveWorkoutView({
     setUserXP,
     userLevel,
     setUserLevel,
-    
+    // Dukkan entegrasyonu
+    inventory, setInventory,
+    buddyCollection, setBuddyCollection,
+    activeBuddyId,
+    activePrEffect,
+
     setUserCoins
 }) {
     const { t, lang } = useLanguage();
@@ -59,6 +65,53 @@ function ActiveWorkoutView({
     const [isTrackingMode, setIsTrackingMode] = useLocalStorage('gym_app_tracking_mode', false);
 
     const timerIntervalRef = useRef(null);
+
+    // DUKKAN ENTEGRASYONU: iksir + dost durumu refleri.
+    // XP hesabi seans sonunda (feedback sonrasi) yapilir; o ana kadar
+    // prop degisimleri hesabi bozmasin diye mevcut degerler ref'te tutulur.
+    const xp2ActiveRef = useRef(false);
+    const baseBuddyMsgRef = useRef(null);
+    const buddyStateRef = useRef({ activeId: null, collection: null, rarity: null, icon: null });
+    useEffect(() => {
+        const def = activeBuddyId ? findBuddy(activeBuddyId) : null;
+        buddyStateRef.current = {
+            activeId: activeBuddyId || null,
+            collection: buddyCollection || null,
+            rarity: def?.rarity || null,
+            icon: def?.icon || '🐾'
+        };
+    }, [activeBuddyId, buddyCollection]);
+
+    // ANTRENMAN BASINDA IKSIR SORGUSU: stokta iksir varsa kullaniciya sor.
+    // Cevap evetse xp2ActiveRef true olur ve seans sonunda tuketilir.
+    // potionAsked ref olarak tutulur (render etkilemez); set-state-in-effect
+    // kuralina uygun sekilde sorgu yalnizca zamanlayici callback'inde yapilir.
+    const potionAskedRef = useRef(false);
+    const potionTimerRef = useRef(null);
+    useEffect(() => {
+        if (potionAskedRef.current) return undefined;
+        const stock = inventory?.xp2 || 0;
+        if (stock > 0) {
+            potionAskedRef.current = true;
+            // Kullaniciya sor: ekran gecisi tamamlandiktan sonra gosterilir
+            potionTimerRef.current = setTimeout(async () => {
+                const ok = await confirmDialog({
+                    title: t('potion_ask_title'),
+                    message: t('potion_ask_msg', { count: stock }),
+                    confirmLabel: t('potion_yes'),
+                    cancelLabel: t('potion_no')
+                });
+                xp2ActiveRef.current = ok;
+                if (ok) {
+                    haptic(12);
+                    toast.info('⚡ ' + t('potion_active_toast'));
+                }
+            }, 600);
+        }
+        return () => { if (potionTimerRef.current) clearTimeout(potionTimerRef.current); };
+        // Sadece ilk montajda bir kez sorulur (potionAskedRef guard'i)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Tek seferlik temizlik: eski persistent timer/log storage anahtarları
     // artık kullanılmıyor. Bir defaya mahsus temizleyelim (geriye dönük uyum).
@@ -334,6 +387,20 @@ function ActiveWorkoutView({
             const timeInMinutes = Math.floor(activeAiWorkoutTimer / 60);
             const rpe = parseFloat(aiFeedbackRpe) || 5;
 
+            // CIFT XP IKSIRI: stokta varsa ve kullanici kabul ettiyse bu
+            // antrenmanin XP + coin kazancini 2x yapar ve iksir tuketilir.
+            // Onay ActiveWorkoutView montajinda (xp2PendingRef) alinir.
+            const potionActive = xp2ActiveRef.current === true;
+            if (potionActive) {
+                setInventory((prev) => {
+                    const cur = (prev && prev.xp2) || 0;
+                    if (cur <= 0) return prev; // stok bu arada bittiyse etkisiz
+                    const next = { ...prev };
+                    if (cur - 1 <= 0) delete next.xp2; else next.xp2 = cur - 1;
+                    return next;
+                });
+            }
+
             let calculatedXP = 50; // Temel idman bitirme XP'si
             calculatedXP += totalSets * 5; // Her set için 5 XP
             calculatedXP += totalReps * 0.5; // Her kaldırılan tekrar için 0.5 XP
@@ -358,7 +425,10 @@ function ActiveWorkoutView({
             // Add extra gamification XP for AMRAP/Drop Sets
             calculatedXP += extraXpFromDifficulty;
 
-            const gainedXP = Math.max(10, Math.min(2000, calculatedXP)); // Minimum 10, maksimum 2000 XP
+            // Iksir carpani en son uygulanir (tum odullerin uzerine 2x)
+            if (potionActive) calculatedXP = calculatedXP * 2;
+
+            const gainedXP = Math.max(10, Math.min(4000, calculatedXP)); // Minimum 10, maksimum 4000 XP (iksr ile)
 
             // --- EGRISEL SEVIYE SISTEMI (levelSystem.js) ---
             // Toplam XP uzerinden hesap; birden fazla seviye atlanabilir.
@@ -370,14 +440,29 @@ function ActiveWorkoutView({
             setUserXP(after.xp);
 
             // Jeton (Coin) Ekleme: Kazanılan XP'nin %10'u kadar Jeton verilir (Ödül Sistemi)
+            // Iksir aktifse coin de 2x.
             const earnedCoins = Math.max(1, Math.round(gainedXP * 0.1));
             setUserCoins((prev) => (prev || 0) + earnedCoins);
+
+            // DOST (BUDDY) XP: antrenman XP'sinin %30 KOPYASI - kullanici
+            // XP'sinden dusmez; aktif dostun nadirlik carpani uygulanir.
+            if (buddyStateRef.current?.activeId && buddyStateRef.current.collection) {
+                const gain = buddyGainFromWorkout(gainedXP, buddyStateRef.current.rarity);
+                const res = addBuddyXp(buddyStateRef.current.collection, buddyStateRef.current.activeId, gain);
+                setBuddyCollection(res.collection);
+                if (res.evolved) {
+                    toast.success(`🎉 ${lang === 'tr' ? 'Dostun evrim geçirdi!' : 'Your buddy evolved!'}`, { duration: 4200 });
+                }
+                baseBuddyMsgRef.current = `${buddyStateRef.current.icon} ${lang === 'tr' ? 'dost' : 'buddy'} +${gain} XP`;
+            }
 
             let baseMsg = `${lang === 'tr' ? `+${gainedXP} XP` : `+${gainedXP} XP`}`;
             if (streakMultiplier > 1.0) {
                 baseMsg += ` · 🔥 ${streakMultiplier}x (${weeklyStreak}${lang === 'tr' ? ' hafta' : 'w'})`;
             }
+            if (potionActive) baseMsg += ` · ⚡ 2x`;
             baseMsg += ` · 🪙 +${earnedCoins}`;
+            if (baseBuddyMsgRef.current) baseMsg += ` · ${baseBuddyMsgRef.current}`;
 
             // Seviye atlama ve optimizasyon mesaji toast'larla gosterilir
             if (leveledUp) {
@@ -685,6 +770,7 @@ function ActiveWorkoutView({
                 <PrCelebrationModal
                     prs={pendingPRs}
                     onClose={() => setPendingPRs(null)}
+                    activePrEffect={activePrEffect}
                 />
             )}
 
