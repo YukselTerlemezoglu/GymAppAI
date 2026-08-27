@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Play, Plus, ArrowLeft, Trash2, Check, Bot, Activity, Cloud, Wand2 } from 'lucide-react';
+import { Trophy, Play, Plus, ArrowLeft, Trash2, Check, Bot, Activity, Cloud, Wand2, Timer, PersonStanding } from 'lucide-react';
 import useLocalStorage from './hooks/useLocalStorage';
 import ErrorBoundary from './components/ErrorBoundary';
 import AICoachOnboarding from './components/aicoach/AICoachOnboarding';
@@ -31,6 +31,8 @@ import BottomNav from './components/ui/BottomNav';
 import OnboardingOverlay from './components/ui/OnboardingOverlay';
 import { ToastProvider, useToast } from './components/ui/ToastProvider';
 import { startReminderTicker } from './utils/notificationScheduler';
+import HiitTimerView from './components/workout/HiitTimerView';
+import MobilityView from './components/workout/MobilityView';
 import LevelUpModal from './components/ui/LevelUpModal';
 import ShopPage from './components/shop/ShopPage';
 import EvolutionModal from './components/shop/EvolutionModal';
@@ -551,6 +553,12 @@ function AppContent() {
       if (currentView === 'nutrition') {
         return <NutritionTracker onBack={() => setCurrentView('dashboard')} />;
       }
+      if (currentView === 'hiit') {
+        return <HiitTimerView onBack={() => setCurrentView('dashboard')} />;
+      }
+      if (currentView === 'mobility') {
+        return <MobilityView onBack={() => setCurrentView('dashboard')} />;
+      }
       if (currentView === 'prhistory') {
         return <PrHistoryPage workoutHistory={workoutHistory} onBack={() => setCurrentView('dashboard')} />;
       }
@@ -808,6 +816,28 @@ function AppContent() {
               >
                 <Activity size={20} /> {t('btn_anatomy')}
               </motion.button>
+
+              <motion.button
+                onClick={() => setCurrentView('hiit')}
+                className="neon-btn"
+                style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', background: 'rgba(255, 107, 61, 0.1)', borderColor: '#ff6b3d', color: '#ff6b3d', boxShadow: 'none' }}
+                whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(255, 107, 61, 0.4)' }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.05 }}
+              >
+                <Timer size={20} /> {t('btn_hiit')}
+              </motion.button>
+
+              <motion.button
+                onClick={() => setCurrentView('mobility')}
+                className="neon-btn"
+                style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', background: 'rgba(0, 195, 255, 0.08)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none' }}
+                whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(0, 195, 255, 0.35)' }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.05 }}
+              >
+                <PersonStanding size={20} /> {t('btn_mobility')}
+              </motion.button>
             </div>
           </>
         )}
@@ -842,13 +872,17 @@ function AppContent() {
           onSave={(entry) => saveCheckIn(entry, checkinData, setCheckinData)}
         />
 
-        {/* FAZ 3: Program Uretici Sihirbazi */}
-        <ProgramWizard
-          open={showWizard}
-          onClose={() => setShowWizard(false)}
-          workoutHistory={workoutHistory}
-          onProgramCreated={(prog) => setSavedAiProgram(prog)}
-        />
+        {/* FAZ 3: Program Uretici Sihirbazi — kosullu render: her acilista
+            taze check-in agrisiyla yeniden mount edilir (kara liste on-secimi) */}
+        {showWizard && (
+          <ProgramWizard
+            open
+            onClose={() => setShowWizard(false)}
+            workoutHistory={workoutHistory}
+            painData={checkinToPainData(checkinData)}
+            onProgramCreated={(prog) => setSavedAiProgram(prog)}
+          />
+        )}
 
         {/* Level Up Confetti Modal */}
         {

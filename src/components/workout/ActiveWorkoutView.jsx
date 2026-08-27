@@ -13,6 +13,7 @@ import { totalXpForLevel, levelFromTotalXp } from '../../utils/levelSystem';
 import { calcWeeklyStreak, weeklyMultiplier } from '../../utils/consistency';
 import { buddyGainFromWorkout, addBuddyXp, findBuddy } from '../../utils/buddy';
 import { normalizeAiWeight, normalizeAiReps } from '../../utils/aiNormalizer';
+import { getGhostSets, compareSetToGhost, ghostScore } from '../../utils/ghostRival';
 
 function ActiveWorkoutView({
     onBuddyEvolved,
@@ -278,6 +279,13 @@ function ActiveWorkoutView({
             let parsedReps = parseInt(ex.reps);
             if (isNaN(parsedReps)) parsedReps = 0;
 
+            // HAYALET RAKIP: set set gercel veri sakla (sonraki seansin ayni
+            // numarali setleriyle karsilastirma icin). Gecersiz setler kayda
+            // girmesin; hic gecerli set yoksa setLogs bos kalir (fallback devreye girer).
+            const setLogs = logs
+                .filter(s => (isTrackingMode ? s.completed : true) && (parseFloat(s.weight) || 0) > 0 && (parseInt(s.reps) || 0) > 0)
+                .map(s => ({ weight: parseFloat(s.weight) || 0, reps: parseInt(s.reps) || 0, mode: s.mode || 'Normal' }));
+
             newWorkouts.push({
                 id: Date.now() + index,
                 date: new Date().toISOString(),
@@ -285,6 +293,7 @@ function ActiveWorkoutView({
                 sets: performedSetsCount > 0 ? performedSetsCount : parseInt(ex.sets) || 1,
                 maxWeight: logs.reduce((max, s) => Math.max(max, parseFloat(s.weight) || 0), parsedWeight) || parsedWeight,
                 bestReps: logs.reduce((max, s) => Math.max(max, parseInt(s.reps) || 0), parsedReps) || parsedReps,
+                setLogs,
                 totalWeight: exTotalWeight > 0 ? exTotalWeight : (parsedWeight * parsedReps * parseInt(ex.sets || 1)),
                 totalReps: exTotalReps > 0 ? exTotalReps : (parsedReps * parseInt(ex.sets || 1)),
                 avgRpe: parseFloat(aiFeedbackRpe) || 0,
@@ -573,6 +582,8 @@ function ActiveWorkoutView({
             <div className="workout-tracker-list fade-in" style={{ paddingBottom: '100px', paddingTop: '1rem' }}>
                 {activeAiWorkoutDayParams?.exercises?.map((ex, eIdx) => {
                     const setsArray = activeAiWorkoutLogs[eIdx] || getSetsForExercise(eIdx, ex);
+                    // Hayalet rakip: bu harekette gecen seansin setleri
+                    const ghostSets = getGhostSets(ex.name, workoutHistory);
                     const isSuperset = !!ex.supersetWithPrev;
                     // Superset rozet numarasi (A1, A2, ...)
                     let supBadge = null;
@@ -610,6 +621,13 @@ function ActiveWorkoutView({
                             </div>
 
                             <LastPerformanceCard exerciseName={ex.name} history={workoutHistory} lang={lang} t={t} />
+                            <GhostRivalBar
+                                exerciseName={ex.name}
+                                history={workoutHistory}
+                                currentSets={setsArray}
+                                trackingMode={isTrackingMode}
+                                lang={lang}
+                            />
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                                 {setsArray.map((setLog, sIdx) => {
                                     const isChecked = setLog.completed;
@@ -618,6 +636,21 @@ function ActiveWorkoutView({
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                                                     <span style={{ color: 'rgba(255,255,255,0.5)', width: '20px', fontWeight: 'bold' }}>{sIdx + 1}</span>
+
+                                                    {/* Hayalet rakip: gecen seansin ayni seti */}
+                                                    {ghostSets && ghostSets[sIdx] && (
+                                                        <span
+                                                            style={{
+                                                                fontSize: '0.68rem', fontWeight: 700, padding: '2px 7px', borderRadius: '6px',
+                                                                background: 'rgba(154,106,255,0.12)',
+                                                                border: '1px solid rgba(154,106,255,0.3)',
+                                                                color: '#b794ff', display: 'flex', alignItems: 'center', gap: '4px'
+                                                            }}
+                                                            title={lang === 'tr' ? 'Geçen seans bu sette' : 'Last session this set'}
+                                                        >
+                                                            👻 {ghostSets[sIdx].weight}kg×{ghostSets[sIdx].reps}
+                                                        </span>
+                                                    )}
 
                                                     {/* Mode Selector */}
                                                     <select
@@ -670,6 +703,16 @@ function ActiveWorkoutView({
                                                     </button>
                                                 )}
                                             </div>
+                                            {ghostSets && ghostSets[sIdx] && (
+                                                <GhostSetVerdict
+                                                    curWeight={setLog.weight}
+                                                    curReps={setLog.reps}
+                                                    ghostSet={ghostSets[sIdx]}
+                                                    done={isChecked || !isTrackingMode}
+                                                    lang={lang}
+                                                    haptic={haptic}
+                                                />
+                                            )}
                                         </div>
                                     );
                                 })}
@@ -780,6 +823,95 @@ function ActiveWorkoutView({
             {showPlateCalc && (
                 <PlateCalculator onClose={() => setShowPlateCalc(false)} />
             )}
+        </div>
+    );
+}
+
+// HAYALET RAKIP (Faz 5d): hareket basi skor cubugu.
+// Gecen seansin ayni hareketteki setleriyle duselme skorunu gosterir.
+function GhostRivalBar({ exerciseName, history, currentSets, trackingMode, lang }) {
+    const ghostSets = useMemo(() => getGhostSets(exerciseName, history), [exerciseName, history]);
+    const score = useMemo(
+        () => ghostSets ? ghostScore(currentSets, ghostSets, trackingMode) : null,
+        [currentSets, ghostSets, trackingMode]
+    );
+    if (!ghostSets || !score) return null;
+    const total = score.you + score.ghost + score.pending;
+    if (total === 0) return null;
+    const youPct = total > 0 ? Math.round((score.you / total) * 100) : 0;
+    const leading = score.you > score.ghost;
+    const tied = score.you === score.ghost;
+    return (
+        <div style={{
+            background: 'rgba(154,106,255,0.07)',
+            border: '1px solid rgba(154,106,255,0.22)',
+            borderRadius: '8px',
+            padding: '7px 12px',
+            marginBottom: '0.8rem',
+            fontSize: '0.78rem'
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 700, color: '#b794ff', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    👻 {lang === 'tr' ? 'Hayalet Rakip' : 'Ghost Rival'}
+                </span>
+                <span style={{
+                    fontWeight: 800, fontSize: '0.85rem',
+                    color: tied ? 'var(--text-light)' : leading ? '#00ff88' : '#ff6b81'
+                }}>
+                    {score.you} – {score.ghost}
+                </span>
+                {!tied && (
+                    <span style={{ color: 'var(--text-light)', fontSize: '0.72rem' }}>
+                        {leading
+                            ? (lang === 'tr' ? 'Öndesin! 👑' : 'You lead! 👑')
+                            : (lang === 'tr' ? 'Hayalet önde — yakala!' : 'Ghost leads — catch up!')}
+                        </span>
+                )}
+                {score.pending > 0 && (
+                    <span style={{ color: 'var(--text-light)', fontSize: '0.7rem', opacity: 0.7 }}>
+                        {score.pending} {lang === 'tr' ? 'set beklemede' : 'sets pending'}
+                    </span>
+                )}
+            </div>
+            {total > 0 && (
+                <div style={{ height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', marginTop: '6px', overflow: 'hidden' }}>
+                    <div style={{
+                        width: `${youPct}%`, height: '100%',
+                        background: 'linear-gradient(90deg, #00ff88, #b794ff)',
+                        borderRadius: '3px', transition: 'width 0.4s ease'
+                    }} />
+                </div>
+            )}
+        </div>
+    );
+}
+
+// Tek set hayalet karsilastirma rozeti — set tamamlaninca sonucu gosterir.
+function GhostSetVerdict({ curWeight, curReps, ghostSet, done, lang, haptic }) {
+    const res = useMemo(
+        () => done ? compareSetToGhost(curWeight, curReps, ghostSet) : null,
+        [done, curWeight, curReps, ghostSet]
+    );
+    // Kazaninca tek seferlik hafif tik titremesi
+    const firedRef = useRef(false);
+    useEffect(() => {
+        if (res === 'win' && !firedRef.current) {
+            firedRef.current = true;
+            haptic?.(15);
+        }
+        if (res === null || res === 'lose' || res === 'tie') firedRef.current = false;
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- rozetin kendi dongusu
+    }, [res]);
+    if (!done || !res) return null;
+    const cfg = {
+        win: { icon: '✓', color: '#00ff88', bg: 'rgba(0,255,136,0.1)', label: lang === 'tr' ? 'Seti aldın!' : 'Set won!' },
+        lose: { icon: '✗', color: '#ff6b81', bg: 'rgba(255,107,129,0.1)', label: lang === 'tr' ? 'Hayalet aldı' : 'Ghost took it' },
+        tie: { icon: '=', color: 'var(--text-light)', bg: 'rgba(255,255,255,0.06)', label: lang === 'tr' ? 'Berabere' : 'Tied' }
+    }[res];
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color: cfg.color, background: cfg.bg, borderRadius: '6px', padding: '3px 8px', width: 'fit-content' }}>
+            <span style={{ fontWeight: 800 }}>{cfg.icon}</span>
+            <span style={{ fontWeight: 600 }}>{cfg.label}</span>
         </div>
     );
 }

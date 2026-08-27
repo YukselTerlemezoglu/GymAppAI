@@ -185,6 +185,34 @@ const ALTERNATIVES = {
 };
 
 /**
+ * Bugunun check-in agri haritasini program uretici icin kara liste
+ * cevirir: seviyesi >= 3 olan bolgelerin kas grubu ID'leri.
+ * @param {Object} painMap - { regionId: 1-5 } (MuscleMap bolge anahtarlari)
+ * @returns {string[]} kas grubu ID'leri ('chest', 'legs', ...)
+ */
+export function painMapToBlacklist(painMap) {
+    if (!painMap) return [];
+    const REGION_GROUP = {
+        chestL: 'chest', chestR: 'chest',
+        deltFrontL: 'shoulders', deltFrontR: 'shoulders', deltRearL: 'shoulders', deltRearR: 'shoulders',
+        bicepsL: 'biceps', bicepsR: 'biceps',
+        tricepsL: 'triceps', tricepsR: 'triceps',
+        forearmsL: 'forearms', forearmsR: 'forearms',
+        abs: 'core', obliquesL: 'core', obliquesR: 'core',
+        quadsL: 'legs', quadsR: 'legs', hamsL: 'legs', hamsR: 'legs',
+        glutes: 'glutes',
+        calvesL: 'calves', calvesR: 'calves',
+        trapsL: 'back', trapsR: 'back', latsL: 'back', latsR: 'back', lowerBack: 'back'
+    };
+    const out = new Set();
+    Object.entries(painMap).forEach(([region, lvl]) => {
+        const g = REGION_GROUP[region];
+        if (g && (parseInt(lvl) || 0) >= 3) out.add(g);
+    });
+    return [...out];
+}
+
+/**
  * Agri haritasina gore programdaki hareketlere alternatif onerir.
  * @param {Object} program - savedAiProgram formati
  * @param {Object} painMap - { regionId: 1-5 } (MuscleMap bolge anahtarlari)

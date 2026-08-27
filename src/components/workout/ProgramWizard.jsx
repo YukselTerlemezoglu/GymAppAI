@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { X, Wand2, Dumbbell, Timer, Building2, Home, User } from 'lucide-react';
+import { X, Wand2, Dumbbell, Timer, Building2, Home, User, HeartCrack } from 'lucide-react';
 import { generateProgram } from '../../utils/programGenerator';
+import { MUSCLE_GROUPS } from '../../data/exercises';
+import { painMapToBlacklist } from '../../utils/readiness';
 import { useToast } from '../ui/ToastProvider';
 
-// PROGRAM URETICI SIHIRBAZI (Faz 3 UI).
-// 5 adim: hedef -> gun sayisi -> seans suresi -> ekipman -> deneyim.
+// PROGRAM URETICI SIHIRBAZI (Faz 3 UI + Faz 4 kara liste).
+// 6 adim: hedef -> gun sayisi -> seans suresi -> ekipman -> deneyim -> sakatlik/kara liste.
 // Sonuc: mevcut AI program akisina (savedAiProgram) kaydedilir.
 
-const STEPS = 5;
+const STEPS = 6;
 
-function ProgramWizard({ open, onClose, onProgramCreated, workoutHistory }) {
-    const { t } = useLanguage();
+function ProgramWizard({ open, onClose, onProgramCreated, workoutHistory, painData }) {
+    const { t, lang } = useLanguage();
     const { toast, haptic } = useToast();
     const [step, setStep] = useState(0);
     const [goal, setGoal] = useState('hypertrophy');
@@ -20,6 +22,8 @@ function ProgramWizard({ open, onClose, onProgramCreated, workoutHistory }) {
     const [minutes, setMinutes] = useState(60);
     const [equipment, setEquipment] = useState('gym');
     const [experience, setExperience] = useState('intermediate');
+    // Bugunun check-in'indeki agri (>=3) bolgeleri kara listeye on-sec
+    const [blacklist, setBlacklist] = useState(() => painMapToBlacklist(painData?.pain));
     const [loading, setLoading] = useState(false);
 
     if (!open) return null;
@@ -32,7 +36,7 @@ function ProgramWizard({ open, onClose, onProgramCreated, workoutHistory }) {
         haptic([20, 40, 20]);
         // Kural motoru program uretir (senkron, API yok)
         const { program } = generateProgram(
-            { goal, daysPerWeek: days, sessionMinutes: minutes, equipment, experience },
+            { goal, daysPerWeek: days, sessionMinutes: minutes, equipment, experience, blacklist },
             workoutHistory || []
         );
         setTimeout(() => {
@@ -143,6 +147,43 @@ function ProgramWizard({ open, onClose, onProgramCreated, workoutHistory }) {
                         </div>
                     </div>
                 );
+            case 5: {
+                // Sakatlik / kara liste: secilen kas grubuna yuklenen hareketler programa girmez
+                const groupLabel = (g) => lang === 'en' ? (g.name_en || g.name) : g.name;
+                return (
+                    <div>
+                        <p style={{ color: '#fff', fontWeight: 600, marginBottom: '0.3rem' }}>
+                            <HeartCrack size={16} color="#ff6b81" style={{ verticalAlign: '-3px' }} /> {t('wizard_blacklist_q')}
+                        </p>
+                        <p style={{ color: 'var(--text-light)', fontSize: '0.75rem', margin: '0 0 0.8rem 0' }}>
+                            {t('wizard_blacklist_hint')}
+                        </p>
+                        <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+                            {MUSCLE_GROUPS.map(g => {
+                                const sel = blacklist.includes(g.id);
+                                return (
+                                    <button key={g.id}
+                                        onClick={() => { haptic(8); setBlacklist(b => sel ? b.filter(x => x !== g.id) : [...b, g.id]); }}
+                                        style={{
+                                            padding: '0.45rem 0.85rem', borderRadius: '999px', cursor: 'pointer',
+                                            fontSize: '0.8rem', fontWeight: 600,
+                                            background: sel ? 'rgba(255,107,129,0.18)' : 'rgba(255,255,255,0.04)',
+                                            border: sel ? '1.5px solid #ff6b81' : '1px solid rgba(255,255,255,0.12)',
+                                            color: sel ? '#ff6b81' : 'var(--text-light)'
+                                        }}>
+                                        {sel ? '🚫 ' : ''}{groupLabel(g)}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {blacklist.length === 0 && (
+                            <p style={{ color: 'var(--text-light)', fontSize: '0.72rem', marginTop: '0.7rem', opacity: 0.7 }}>
+                                {t('wizard_blacklist_none')}
+                            </p>
+                        )}
+                    </div>
+                );
+            }
             default:
                 return null;
         }

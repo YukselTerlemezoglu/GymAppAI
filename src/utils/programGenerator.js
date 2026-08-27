@@ -137,13 +137,32 @@ export function generateProgram(wizard, workoutHistory = []) {
     const neglected = neglectedGroups(workoutHistory, 7, 3);
     const neglectedSet = new Set(neglected.map(n => n.group));
 
-    // Kara liste kontrolu: hareket adindan kas grubuna bak, eslesiyorsa atla
-    const isBlacklisted = (name) => blacklist.some(b => {
-        if (!b) return false;
-        const n = name.toLowerCase();
-        const bl = String(b).toLowerCase();
-        return n.includes(bl) || bl.includes(n.split(' ')[0]);
+// Kara liste: sihirbazdan kas grubu ID'si ('chest', 'legs'...) veya
+// hareket adi gelebilir. Hareket adini POOL anahtari uzerinden kas
+// grubuna esleyip kontrol eder.
+const exerciseToGroups = {};
+Object.entries(POOL).forEach(([g, entry]) => {
+    [...entry.compound, ...entry.isolation].forEach(name => {
+        (exerciseToGroups[name] = exerciseToGroups[name] || []).push(g);
     });
+});
+// Ikincil grup eslesmeleri: hareketin POOL'daki ana grubu disinda
+// anlamli olcude yuklendigi bolgeler (agri oradaysa hareket girmez)
+const SECONDARY_GROUPS = {
+    'Close Grip Bench Press': ['chest'],   // triseps ana, gogus ikincil
+    'Dips': ['chest'],                     // triseps/gogus cift yonlu
+    'Romanian Deadlift': ['back'],         // legs ana, arka zincir ikincil
+    'Hip Thrust': ['back']                 // glutes ana, arka zincir ikincil
+};
+Object.entries(SECONDARY_GROUPS).forEach(([name, groups]) => {
+    if (exerciseToGroups[name]) exerciseToGroups[name].push(...groups);
+});
+const blSet = new Set(blacklist.map(b => String(b).toLowerCase()));
+const isBlacklisted = (name) => {
+    if (blSet.has(String(name).toLowerCase())) return true;
+    const groups = exerciseToGroups[name];
+    return !!groups && groups.some(g => blSet.has(g.toLowerCase()));
+};
 
     // Hareket secici: havuzdan, kara liste disi, tanidik oncelikli.
     // compoundCount/isoCount GUN BASINA toplam hedeftir — gruplar arasi
