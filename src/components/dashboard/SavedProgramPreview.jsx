@@ -2,9 +2,12 @@ import React from 'react';
 import { Bot, Trash2, Check, Play, Info, BedDouble } from 'lucide-react';
 import ExerciseModal from '../workout/ExerciseModal';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { suggestAlternatives } from '../../utils/readiness';
+import { AlertTriangle, Repeat } from 'lucide-react';
 
 function SavedProgramPreview({
     savedAiProgram,
+    painData,
     showCustomBuilder,
     completedDays,
     clearAiProgram,
@@ -15,6 +18,9 @@ function SavedProgramPreview({
     const [selectedExerciseForModal, setSelectedExerciseForModal] = React.useState(null);
 
     if (!savedAiProgram || showCustomBuilder) return null;
+
+    // Faz 4: agri haritasina gore hareket onerileri (check-in verisi)
+    const altSuggestions = suggestAlternatives(savedAiProgram, painData?.pain || null);
 
     return (
         <section className="recent-activity fade-in" style={{ animationDelay: '0.25s', marginBottom: '3rem' }}>
@@ -116,6 +122,21 @@ function SavedProgramPreview({
                     onClose={() => setSelectedExerciseForModal(null)}
                 />
             )}
+            {altSuggestions.length > 0 && (
+                        <div className="glass-card fade-in" style={{ marginTop: '1rem', padding: '1rem 1.2rem', borderLeft: '4px solid #ffa502', background: 'rgba(255,165,2,0.06)' }}>
+                            <h4 style={{ color: '#ffa502', margin: '0 0 0.6rem 0', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <AlertTriangle size={16} /> {t('alt_suggest_title')}
+                            </h4>
+                            <ul style={{ margin: 0, paddingLeft: '1.2rem', color: 'var(--text-light)', fontSize: '0.85rem', lineHeight: 1.6 }}>
+                                {altSuggestions.map((a, i) => (
+                                    <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <Repeat size={12} color="#ffa502" />
+                                        <span><b style={{ color: '#fff' }}>{a.from}</b> → <b style={{ color: '#00ff88' }}>{a.to}</b></span>
+                                    </li>
+                                ))}
+                            </ul>
+            </div>
+        )}
         </section>
     );
 }

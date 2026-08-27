@@ -1,13 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Play, Plus, ArrowLeft, Trash2, Check, Bot, Activity, Cloud } from 'lucide-react';
+import { Trophy, Play, Plus, ArrowLeft, Trash2, Check, Bot, Activity, Cloud, Wand2 } from 'lucide-react';
 import useLocalStorage from './hooks/useLocalStorage';
 import ErrorBoundary from './components/ErrorBoundary';
 import AICoachOnboarding from './components/aicoach/AICoachOnboarding';
 import CustomProgramBuilder from './components/dashboard/CustomProgramBuilder';
 import ActiveWorkoutView from './components/workout/ActiveWorkoutView';
 import ScoreTracker from './components/dashboard/ScoreTracker';
-import AICoachInsights from './components/dashboard/AICoachInsights';
+import CoachInsightFeed from './components/dashboard/CoachInsightFeed';
+import WorkoutCalendar from './components/dashboard/WorkoutCalendar';
+import StrengthCurves from './components/dashboard/StrengthCurves';
+import CheckInModal from './components/dashboard/CheckInModal';
+import ProgramWizard from './components/workout/ProgramWizard';
+import SeasonCard from './components/dashboard/SeasonCard';
+import DailyQuestsCard from './components/dashboard/DailyQuestsCard';
+import { seasonInfo, SEASON_EPOCH, leagueForSP } from './utils/season';
 import SavedProgramPreview from './components/dashboard/SavedProgramPreview';
 import WorkoutProgressCharts from './components/dashboard/WorkoutProgressCharts';
 import WorkoutHeatmap from './components/dashboard/WorkoutHeatmap';
@@ -124,6 +131,15 @@ function AppContent() {
   const [activeBuddyId, setActiveBuddyId] = useLocalStorage('gym_app_buddy_active', null);
   const [gachaPity, setGachaPity] = useLocalStorage('gym_app_gacha_pity', {});
   const [wheelState, setWheelState] = useLocalStorage('gym_app_wheel', null);
+  // FAZ 1d: gunluk check-in (ruh hali + agri haritasi) — opsiyonel
+  const [checkinData, setCheckinData] = useLocalStorage('gym_app_checkin', null);
+  // FAZ 5a: sezon durumu (SP + lig + gecmis)
+  const [seasonData, setSeasonData] = useLocalStorage('gym_app_season', null);
+  // FAZ 5b: gunluk gorev tahsil durumu
+  const [questsData, setQuestsData] = useLocalStorage('gym_app_quests', null);
+  // FAZ 3: program sihirbazi
+  const [showWizard, setShowWizard] = useState(false);
+  const [showCheckIn, setShowCheckIn] = useState(false);
   // Evrim kutlamasi: { buddyId, newXp } / null (antrenman + dukkan ortak)
   const [buddyEvolution, setBuddyEvolution] = useState(null);
 
@@ -154,6 +170,46 @@ function AppContent() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sadece yeni harcama olunca
   }, [freezeUsed.join(',')]);
+
+  // --- FAZ 1d yardimcilari: check-in veri yapisi ---
+  // checkinData: { entries: [{ date, mood, pain }] } — en yeni ilk
+  const todayStr = new Date().toISOString().split('T')[0];
+  const checkinToday = (data) => {
+    const e = data?.entries?.[0];
+    if (!e) return false;
+    return (new Date(e.date).toISOString().split('T')[0]) === todayStr;
+  };
+  const checkinToPainData = (data) => {
+    const e = data?.entries?.[0];
+    if (!e || !e.pain) return null;
+    const vals = Object.values(e.pain).map(v => parseInt(v) || 0);
+    if (vals.length === 0) return null;
+    const maxLevel = Math.max(...vals);
+    const maxRegion = Object.keys(e.pain).find(k => (parseInt(e.pain[k]) || 0) === maxLevel);
+    return { pain: e.pain, maxLevel, maxRegion };
+  };
+  const saveCheckIn = (entry, data, setter) => {
+    setter({ entries: [entry, ...(data?.entries || [])].slice(0, 60) });
+  };
+
+  // FAZ 5a: sezon baslatma + sezon degistiyse rollover. Ilk acilista sezon 1'e kayit.
+  const season = seasonInfo(SEASON_EPOCH);
+  useEffect(() => {
+    if (!seasonData) {
+      setSeasonData({ seasonNumber: season.number, seasonSP: 0, totalSP: 0, league: 'bronze', history: [] });
+    } else if (seasonData.seasonNumber !== season.number) {
+      // yeni sezon: SP sifirla, totalSP'ye ekle, lig koru (dusus yok)
+      const total = (seasonData.totalSP || 0) + (seasonData.seasonSP || 0);
+      setSeasonData({
+        seasonNumber: season.number,
+        seasonSP: 0,
+        totalSP: total,
+        league: leagueForSP(total).id,
+        history: [...(seasonData.history || []), { season: seasonData.seasonNumber, sp: seasonData.seasonSP || 0, league: seasonData.league || 'bronze' }]
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [season.number]);
 
   const [completedDays, setCompletedDays] = useLocalStorage('gym_app_completed_days', []);
   const [lastResetDate, setLastResetDate] = useLocalStorage('gym_app_last_reset_date', null);
@@ -677,6 +733,16 @@ function AppContent() {
               />
               <WaterTrackerWidget />
               <RecoveryWidget workoutHistory={workoutHistory} />
+              <SeasonCard seasonData={seasonData} workoutHistory={workoutHistory} userCoins={userCoins} setUserCoins={setUserCoins} setSeasonData={setSeasonData} />
+              <DailyQuestsCard workoutHistory={workoutHistory} userName={userName} userCoins={userCoins} setUserCoins={setUserCoins} userXP={userXP} setUserXP={setUserXP} questsData={questsData} setQuestsData={setQuestsData} />
+              <motion.button
+                onClick={() => setShowCheckIn(true)}
+                className="neon-btn"
+                style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem', background: 'rgba(255, 107, 129, 0.1)', borderColor: '#ff6b81', color: '#ff6b81', boxShadow: 'none' }}
+                whileTap={{ scale: 0.97 }}
+              >
+                {checkinToday(checkinData) ? '✅ ' + t('checkin_done_btn') : '🩺 ' + t('checkin_open_btn')}
+              </motion.button>
             </div>
 
             {/* AI Koc: grid disinda tam genislik (mobil + PC ayni gorunum) */}
@@ -699,6 +765,7 @@ function AppContent() {
             {/* AI Saved Program */}
             <SavedProgramPreview
               savedAiProgram={savedAiProgram}
+              painData={checkinToPainData(checkinData)}
               showCustomBuilder={showCustomBuilder}
               completedDays={completedDays}
               clearAiProgram={clearAiProgram}
@@ -721,14 +788,14 @@ function AppContent() {
             {/* Aksiyon butonları */}
             <div className="fade-in" style={{ animationDelay: '0.15s', marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', flexDirection: 'column' }}>
               <motion.button
-                onClick={() => setShowCustomBuilder(true)}
+                onClick={() => setShowWizard(true)}
                 className="neon-btn"
                 style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', background: 'rgba(255, 0, 136, 0.1)', borderColor: '#ff0088', color: '#ff0088', boxShadow: 'none' }}
                 whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(255, 0, 136, 0.4)' }}
                 whileTap={{ scale: 0.95 }}
                 transition={{ duration: 0.05 }}
               >
-                <Plus size={20} /> {t('btn_create_program')}
+                <Wand2 size={20} /> {t('btn_wizard_program')}
               </motion.button>
 
               <motion.button
@@ -759,9 +826,29 @@ function AppContent() {
               <WorkoutProgressCharts workoutHistory={workoutHistory} onOpenPrHistory={() => setCurrentView('prhistory')} />
             )}
 
-            <AICoachInsights workoutHistory={workoutHistory} />
+            <StrengthCurves workoutHistory={workoutHistory} />
+
+            <WorkoutCalendar workoutHistory={workoutHistory} />
+
+            <CoachInsightFeed workoutHistory={workoutHistory} weeklyGoal={weeklyGoal} activeBuddyId={activeBuddyId} painData={checkinToPainData(checkinData)} />
           </>
         )}
+
+        {/* FAZ 1d: Gunluk Check-In */}
+        <CheckInModal
+          open={showCheckIn}
+          onClose={() => setShowCheckIn(false)}
+          initial={checkinToday(checkinData) ? checkinData.entries[0] : null}
+          onSave={(entry) => saveCheckIn(entry, checkinData, setCheckinData)}
+        />
+
+        {/* FAZ 3: Program Uretici Sihirbazi */}
+        <ProgramWizard
+          open={showWizard}
+          onClose={() => setShowWizard(false)}
+          workoutHistory={workoutHistory}
+          onProgramCreated={(prog) => setSavedAiProgram(prog)}
+        />
 
         {/* Level Up Confetti Modal */}
         {

@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
-import { Play, Pause, X, Plus } from 'lucide-react';
+import { Play, Pause, X, Plus, Volume2, VolumeX } from 'lucide-react';
 import { error as logError } from '../../utils/logger';
+import { speak, stopSpeaking, restAnnouncement, isVoiceCoachEnabled, setVoiceCoachEnabled } from '../../utils/voiceCoach';
 
 // Modül skobunda tek bir AudioContext paylaş.
 // Sebep: tarayıcılar ~6 AudioContext örneklemesine izin verir; her beep'te
@@ -27,7 +28,17 @@ function RestTimer({
     setIsActive,
     onClose
 }) {
-    const { t } = useTranslation();
+    const { t, lang } = useTranslation();
+
+    // SESLI KOC: acik/kapali durumu — lazy init (effect gerekmez)
+    const [voiceOn, setVoiceOn] = React.useState(() => isVoiceCoachEnabled());
+
+    const toggleVoice = () => {
+        const next = !voiceOn;
+        setVoiceOn(next);
+        setVoiceCoachEnabled(next);
+        if (!next) stopSpeaking();
+    };
 
     // Ses dosyası (cache'lenmiş AudioContext ile basit beep)
     const playBeep = () => {
@@ -79,6 +90,10 @@ function RestTimer({
         } else if (isActive && timeRemaining === 0) {
             setIsActive(false);
             playBeep();
+            // SESLI KOC: dinlenme bitti anonsu
+            if (isVoiceCoachEnabled()) {
+                speak(restAnnouncement(0, lang), lang === 'tr' ? 'tr-TR' : 'en-US');
+            }
             if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
                 try {
                     new Notification(t('timer_times_up'), {
@@ -90,10 +105,18 @@ function RestTimer({
             }
         }
 
+        // SESLI KOC: kilit anlarda geri sayim anonsu (60/30/10/3)
+        if (isActive && [60, 30, 10, 3].includes(timeRemaining) && isVoiceCoachEnabled()) {
+            const msg = restAnnouncement(timeRemaining, lang);
+            if (msg) speak(msg, lang === 'tr' ? 'tr-TR' : 'en-US');
+        }
+
         return () => clearInterval(interval);
-    }, [isActive, timeRemaining, setTimeRemaining, setIsActive, t]);
+    }, [isActive, timeRemaining, setTimeRemaining, setIsActive, t, lang]);
 
     if (!isActive && timeRemaining === 0) return null;
+    // Kapatilirken bekleyen anonsu da kes
+    const handleClose = () => { stopSpeaking(); onClose(); };
 
     const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60);
@@ -112,6 +135,14 @@ function RestTimer({
             </div>
 
             <div className="timer-controls">
+                <button
+                    className="timer-btn"
+                    onClick={toggleVoice}
+                    title={voiceOn ? t('voice_coach_on') : t('voice_coach_off')}
+                    style={{ color: voiceOn ? '#00c3ff' : undefined }}
+                >
+                    {voiceOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                </button>
                 <button className="timer-btn" onClick={() => addTime(30)}>+30s</button>
                 <button className="timer-btn" onClick={() => addTime(60)}>+60s</button>
 
@@ -125,7 +156,7 @@ function RestTimer({
                     </button>
                 )}
 
-                <button className="timer-btn stop" onClick={onClose} title={t('btn_close')}>
+                <button className="timer-btn stop" onClick={handleClose} title={t('btn_close')}>
                     <X size={14} />
                 </button>
             </div>
