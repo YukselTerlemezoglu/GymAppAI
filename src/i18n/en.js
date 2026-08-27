@@ -183,6 +183,18 @@ const en = {
     radar_no_data: "Not enough workout data. Your muscle distribution chart will appear here as you log workouts.",
     radar_description: "Distribution of completed sets across muscle groups based on your workout history. Identify your weak areas!",
     radar_sets: "Completed Sets",
+
+    // Muscle Map (Color Muscle Map)
+    musclemap_title: "Muscle Map",
+    musclemap_description: "Regions you trained in the last 7 days. Hotter color means higher volume.",
+    musclemap_last7: "Last 7 days",
+    musclemap_front: "Front",
+    musclemap_back_view: "Back",
+    musclemap_low: "Low",
+    musclemap_high: "High",
+    musclemap_sets: "sets",
+    musclemap_cb: "Colorblind mode",
+    musclemap_cb_hint: "Single-hue scale for red-green color blindness",
     muscle_chest: "Chest",
     muscle_back: "Back",
     muscle_legs: "Legs",

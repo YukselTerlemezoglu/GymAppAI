@@ -201,6 +201,18 @@ const tr = {
     radar_no_data: "Yeterli idman verisi bulunmuyor. İdman kaydettikçe kas dağılımınız burada belirecektir.",
     radar_description: "Tüm idman geçmişinize göre tamamladığınız set sayılarının kas gruplarına dağılımı. Zayıf kalan bölgelerinizi tespit edin!",
     radar_sets: "Tamamlanan Set",
+
+    // Muscle Map (Renkli Kas Haritasi)
+    musclemap_title: "Kas Haritası",
+    musclemap_description: "Son 7 günde çalıştırdığın bölgeler. Renk ne kadar sıcaksa hacim o kadar yüksek.",
+    musclemap_last7: "Son 7 gün",
+    musclemap_front: "Ön",
+    musclemap_back_view: "Arka",
+    musclemap_low: "Az",
+    musclemap_high: "Çok",
+    musclemap_sets: "set",
+    musclemap_cb: "Renk körü modu",
+    musclemap_cb_hint: "Kırmızı-yeşil renk körlüğü için tek renk skala",
     muscle_chest: "Göğüs",
     muscle_back: "Sırt",
     muscle_legs: "Bacak",
