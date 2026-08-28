@@ -43,10 +43,10 @@ function LevelUpModal({ level, prevLevel = 1, onClose }) {
     const rankUp = getRankIndex(level) > getRankIndex(prevLevel);
 
     return createPortal(
-        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem', backdropFilter: 'blur(5px)' }}>
-            <div className="glass-card slide-in" style={{ width: '100%', maxWidth: '350px', border: `2px solid ${rank.color}`, background: 'rgba(15, 17, 21, 0.95)', textAlign: 'center', position: 'relative' }}>
+        <div className="modal-overlay">
+            <div className="modal-card modal-card-sm" style={{ border: `2px solid ${rank.color}`, textAlign: 'center', position: 'relative', padding: '1.5rem' }}>
 
-                <button onClick={onClose} style={{ position: 'absolute', top: '10px', right: '10px', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
+                <button onClick={onClose} className="icon-btn" style={{ position: 'absolute', top: '10px', right: '10px', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)' }}>
                     <X size={24} />
                 </button>
 

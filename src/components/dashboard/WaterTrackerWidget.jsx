@@ -106,10 +106,11 @@ function WaterTrackerWidget() {
                     </span>
                     <button
                         onClick={() => { setShowGoalEditor(!showGoalEditor); setManualGoalL(isManual ? (goalSetting.ml / 1000).toFixed(1) : (autoGoalMl / 1000).toFixed(1)); }}
-                        style={{ background: 'transparent', border: 'none', color: 'var(--text-light)', cursor: 'pointer', padding: '2px', display: 'flex' }}
+                        style={{ background: 'transparent', border: 'none', color: 'var(--text-light)', cursor: 'pointer', padding: '8px', margin: '-6px', display: 'flex' }}
                         title={t('water_goal_edit')}
+                        aria-label={t('water_goal_edit')}
                     >
-                        <Settings2 size={15} />
+                        <Settings2 size={16} />
                     </button>
                 </div>
             </div>
@@ -155,7 +156,7 @@ function WaterTrackerWidget() {
                 <button
                     onClick={() => update(-GLASS_ML)}
                     disabled={currentMl === 0}
-                    style={{ width: '34px', height: '34px', borderRadius: '50%', background: currentMl > 0 ? 'rgba(0,195,255,0.15)' : 'rgba(255,255,255,0.05)', border: '1px solid rgba(0,195,255,0.3)', color: currentMl > 0 ? '#00c3ff' : 'var(--text-muted)', cursor: currentMl > 0 ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                    style={{ width: '40px', height: '40px', borderRadius: '50%', background: currentMl > 0 ? 'rgba(0,195,255,0.15)' : 'rgba(255,255,255,0.05)', border: '1px solid rgba(0,195,255,0.3)', color: currentMl > 0 ? '#00c3ff' : 'var(--text-muted)', cursor: currentMl > 0 ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                     aria-label={t('water_remove')}
                 >
                     <Minus size={16} />
@@ -170,8 +171,8 @@ function WaterTrackerWidget() {
                                 onClick={() => update(filled || partial ? -(currentMl - i * GLASS_ML) : (i + 1) * GLASS_ML - currentMl)}
                                 title={`${(i + 1) * GLASS_ML}ml`}
                                 style={{
-                                    width: '26px',
-                                    height: '34px',
+                                    width: '30px',
+                                    height: '40px',
                                     borderRadius: '4px 4px 8px 8px',
                                     border: `1.5px solid ${filled ? '#00c3ff' : 'rgba(0,195,255,0.3)'}`,
                                     background: filled
@@ -191,7 +192,7 @@ function WaterTrackerWidget() {
 
                 <button
                     onClick={() => update(GLASS_ML)}
-                    style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'rgba(0,195,255,0.15)', border: '1px solid rgba(0,195,255,0.3)', color: '#00c3ff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                    style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(0,195,255,0.15)', border: '1px solid rgba(0,195,255,0.3)', color: '#00c3ff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                     aria-label={t('water_add')}
                 >
                     <Plus size={16} />

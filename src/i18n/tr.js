@@ -318,6 +318,10 @@ const tr = {
     rec_state_bad: "Toparlanma düşük — vücuduna kulak ver.",
     rec_light_day_suggest: "Bugün antrenman planlıysan hafif geçir.",
     rec_avg_sleep: "Son 3 gün ort. uyku",
+    rec_sleep_q: "Dün gece kaç saat uyudun?",
+    rec_mood_q: "Formun nasıl?",
+    rec_hours: "{{n}} saat",
+    rec_mood_label: "Form notu {{n}}",
 
     // Superset
     sup_first_row_hint: "İlk egzersiz bir öncekiyle eşleştirilemez",

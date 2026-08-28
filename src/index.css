@@ -1,5 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
+/* =====================================================
+   TASARIM SİSTEMİ v2 — profesyonel, tutarlı, erişilebilir
+   Tek doğruluk kaynağı: bu dosya. Bileşenler utility sınıfları kullanır.
+   ===================================================== */
+
 :root {
   /* Core Colors */
   --bg-dark: #0f1115;
@@ -20,22 +25,37 @@
   --text-primary: #ffffff;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
-  /* Bazi bilesenler --text-light kullaniyor; yedek deger tanimli
-     ki tum temalarda tanimli olsun (tema tablosu bunu ezmez). */
   --text-light: #c7d2e0;
 
   /* Effects */
   --glass-border: rgba(255, 255, 255, 0.05);
   --neon-glow: 0 0 20px rgba(0, 255, 136, 0.15);
   --neon-glow-strong: 0 0 30px rgba(0, 255, 136, 0.4);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.25);
+  --shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.35);
 
   /* Layout */
   --shell-max: 780px;
+  --shell-max-wide: 1120px;
   --nav-h: 64px;
 
   /* Typography */
   --font-heading: 'Outfit', sans-serif;
   --font-body: 'Inter', sans-serif;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* Radius scale */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
 
   /* Transitions */
   --transition-fast: 0.05s ease;
@@ -47,6 +67,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -54,10 +75,10 @@ body {
   background-color: var(--bg-dark);
   color: var(--text-primary);
   min-height: 100vh;
-  min-height: 100dvh; /* Dynamic Viewport Height for mobile */
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-image: 
+  background-image:
     radial-gradient(circle at 15% 50%, var(--gradient-1) 0%, transparent 50%),
     radial-gradient(circle at 85% 30%, var(--gradient-2) 0%, transparent 50%);
   background-attachment: fixed;
@@ -70,44 +91,84 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 #root {
-  max-width: 1280px;
+  max-width: var(--shell-max-wide);
   margin: 0 auto;
   min-height: 100vh;
   min-height: 100dvh;
 }
 
-/* iOS Safari 16px'ten kucuk fontlu inputlara odaklaninca sayfayi
-   zoom yapar. Tum input/select/textarea'larda asgari 16px garanti. */
+/* iOS Safari zoom önleme: inputlarda asgari 16px */
 input,
 select,
 textarea {
   font-size: max(16px, 1em);
 }
 
-/* Glassmorphism Card Utility */
+/* =====================================================
+   KART SİSTEMİ
+   ===================================================== */
+
 .glass-card {
   background: var(--bg-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   padding: 1.5rem;
-  transition: all var(--transition-medium);
+  transition: background var(--transition-medium), border-color var(--transition-medium), transform var(--transition-medium), box-shadow var(--transition-medium);
+  box-shadow: var(--shadow-card);
+  min-width: 0;
 }
 
+/* Kartlarin genel hover'i: sadece hafif parlama (yukari kalkma yok,
+   bilgi kartlarinda gereksiz hareket onlenir). Interaktifler .hoverable ile kalkar. */
 .glass-card:hover {
   background: var(--bg-card-hover);
   border-color: rgba(255, 255, 255, 0.1);
-  transform: translateY(-2px);
 }
 
-/* Neon Button Utility */
+.glass-card.hoverable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* Kart basligi standardi: ikon + baslik + sag aksiyon */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  min-width: 0;
+}
+
+.card-title {
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 1.05rem;
+  font-weight: 700;
+  min-width: 0;
+}
+
+.card-subtitle {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  margin: 2px 0 0;
+}
+
+/* =====================================================
+   BUTON SİSTEMİ — varyantlar + dokunma hedefleri
+   ===================================================== */
+
 .neon-btn {
   background: transparent;
   color: var(--accent-primary);
   border: 1px solid var(--accent-primary);
   padding: 0.8rem 1.5rem;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   font-family: var(--font-heading);
   font-weight: 600;
   font-size: 1rem;
@@ -118,19 +179,26 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  touch-action: manipulation; /* Removes 300ms delay and prevents zoom on double tap */
+  min-height: 44px;
+  touch-action: manipulation;
 }
 
-.neon-btn:hover {
+.neon-btn:hover:not(:disabled) {
   background: var(--accent-primary);
   color: var(--bg-dark);
   box-shadow: var(--neon-glow-strong);
   transform: translateY(-2px) scale(1.02);
 }
 
-.neon-btn:active {
+.neon-btn:active:not(:disabled) {
   transform: scale(0.93);
   transition: transform 0.05s ease;
+}
+
+.neon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .neon-btn-secondary {
@@ -138,11 +206,12 @@ textarea {
   color: var(--text-secondary);
   border: 1px solid var(--glass-border);
   padding: 0.8rem 1.5rem;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   font-family: var(--font-heading);
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-medium);
+  min-height: 44px;
   touch-action: manipulation;
 }
 
@@ -152,7 +221,174 @@ textarea {
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-/* Custom Scrollbar */
+/* Renkli vurgu butonu varyantlari (dashboard aksiyonlari) */
+.btn-accent {
+  min-height: 48px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+/* Kucuk capraz buton (kapat, geri) — 44px dokunma hedefi */
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-medium);
+  touch-action: manipulation;
+}
+
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.icon-btn:active {
+  transform: scale(0.92);
+}
+
+/* =====================================================
+   MODAL STANDARDI — tek overlay, tek animasyon
+   ===================================================== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 10, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-4);
+  z-index: 10000;
+  animation: overlayIn 0.18s ease-out;
+}
+
+.modal-card {
+  background: rgba(15, 17, 21, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 420px;
+  max-height: min(86dvh, 720px);
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  animation: modalIn 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.modal-card-sm { max-width: 360px; }
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* =====================================================
+   FORM ELEMANLARI
+   ===================================================== */
+
+.neon-input,
+.neon-select {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  font-family: var(--font-body);
+  transition: border-color var(--transition-medium), box-shadow var(--transition-medium), background var(--transition-medium);
+}
+
+.neon-input:focus,
+.neon-select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.12);
+  background: rgba(26, 29, 36, 0.9);
+}
+
+.field-label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+  letter-spacing: 0.3px;
+}
+
+/* Segment secici (uyku saatleri, mood, sekmeler) — 44px hedef */
+.seg-group {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.seg-btn {
+  flex: 1;
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-light);
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all var(--transition-medium);
+  touch-action: manipulation;
+}
+
+.seg-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.seg-btn.selected {
+  border-color: var(--accent-primary);
+  background: rgba(0, 195, 255, 0.15);
+  color: var(--accent-primary);
+  font-weight: 700;
+  box-shadow: 0 0 12px rgba(0, 195, 255, 0.15);
+}
+
+/* =====================================================
+   PROGRESS BAR STANDARDI
+   ===================================================== */
+
+.progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent-secondary), #ff0088);
+  transition: width 0.5s ease;
+}
+
+/* =====================================================
+   SCROLLBAR
+   ===================================================== */
+
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -170,30 +406,14 @@ textarea {
   background: var(--text-muted);
 }
 
-/* Mobile Optimization Utilities */
-@media (max-width: 480px) {
-  .glass-card {
-    padding: 1rem;
-    border-radius: 16px;
-  }
-  
-  .neon-btn, .neon-btn-secondary {
-    padding: 0.8rem 1rem;
-    min-height: 44px;
-    font-size: 0.95rem;
-  }
-}
-
 /* =====================================================
-   RESPONSIVE SHELL & BOTTOM NAV (tum cihazlar)
+   RESPONSIVE SHELL & BOTTOM NAV
    ===================================================== */
 
-/* Buyuk ekranda app-container 780px'e genisler (daha ferah) */
 .app-container {
   max-width: var(--shell-max);
 }
 
-/* Kenar boslugu olmayan tam ekran gorunumler icin sarmalayici */
 .page-shell {
   max-width: var(--shell-max);
   margin: 0 auto;
@@ -212,7 +432,7 @@ textarea {
 .dash-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 @media (min-width: 900px) {
@@ -230,7 +450,29 @@ textarea {
   }
 }
 
-/* BOTTOM NAV — tum cihazlarda yuzen pill stil */
+/* Aksiyon/kart listelerinde genis ekranda 2 kolon (gelistirme + antrenman) */
+.stack-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .stack-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Tek kolon kaplayan tam genislik ogeler */
+  .stack-grid > .span-both {
+    grid-column: 1 / -1;
+  }
+}
+
+/* =====================================================
+   BOTTOM NAV — yuzen pill
+   ===================================================== */
+
 .bottom-nav {
   position: fixed;
   left: 50%;
@@ -263,6 +505,7 @@ textarea {
   -webkit-tap-highlight-color: transparent;
   border-radius: 16px;
   transition: background 0.15s ease;
+  min-height: 52px;
 }
 
 .bottom-nav-item:active {
@@ -294,13 +537,13 @@ textarea {
   color: var(--accent-secondary);
 }
 
-/* Klavye erisilebilirligi: odak halkalari */
+/* Klavye erisilebilirligi */
 :focus-visible {
   outline: 2px solid var(--accent-secondary);
   outline-offset: 2px;
 }
 
-/* Hareket hassasiyeti olan kullaniciar icin animasyonlari kisalt */
+/* Hareket hassasiyeti */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -308,5 +551,25 @@ textarea {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* =====================================================
+   KUCUK EKRAN AYARLARI
+   ===================================================== */
+
+@media (max-width: 480px) {
+  .glass-card {
+    padding: 1rem;
+    border-radius: var(--radius-lg);
+  }
+
+  .neon-btn, .neon-btn-secondary {
+    padding: 0.8rem 1rem;
+    font-size: 0.95rem;
+  }
+
+  .modal-card {
+    max-width: 100%;
   }
 }

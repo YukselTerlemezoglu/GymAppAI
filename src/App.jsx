@@ -728,8 +728,8 @@ function AppContent() {
         {/* ============ BUGÜN ============ */}
         {dashboardTab === 'today' && (
           <div className="dash-grid">
-            {/* Sol kolon: ana skor kartı */}
-            <div className="dash-main">
+            {/* Sol kolon: skor + gunun oyunsal kartlari */}
+            <div className="dash-main" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <ScoreTracker
                 workoutHistory={workoutHistory}
                 streak={streak}
@@ -737,9 +737,11 @@ function AppContent() {
                 weeksThisWeek={weeksThisWeek}
                 flameColor={getActive(activeCosmetics, ownedCosmetics, 'flame')?.color || '#ffa502'}
               />
+              <DailyQuestsCard workoutHistory={workoutHistory} userName={userName} userCoins={userCoins} setUserCoins={setUserCoins} userXP={userXP} setUserXP={setUserXP} questsData={questsData} setQuestsData={setQuestsData} donData={donData} setDonData={setDonData} marks={activityMarks?.day === new Date().toISOString().split('T')[0] ? activityMarks.marks : {}} />
+              <SeasonCard seasonData={seasonData} workoutHistory={workoutHistory} userCoins={userCoins} setUserCoins={setUserCoins} setSeasonData={setSeasonData} />
             </div>
 
-            {/* Sag kolon: beslenme + su + AI koç kısayolu */}
+            {/* Sag kolon: gunluk bakim (beslenme/su/toparlanma/check-in) */}
             <div className="dash-side" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <NutritionSummary
                 nutritionData={nutritionData}
@@ -747,12 +749,10 @@ function AppContent() {
               />
               <WaterTrackerWidget />
               <RecoveryWidget workoutHistory={workoutHistory} />
-              <SeasonCard seasonData={seasonData} workoutHistory={workoutHistory} userCoins={userCoins} setUserCoins={setUserCoins} setSeasonData={setSeasonData} />
-              <DailyQuestsCard workoutHistory={workoutHistory} userName={userName} userCoins={userCoins} setUserCoins={setUserCoins} userXP={userXP} setUserXP={setUserXP} questsData={questsData} setQuestsData={setQuestsData} donData={donData} setDonData={setDonData} marks={activityMarks?.day === new Date().toISOString().split('T')[0] ? activityMarks.marks : {}} />
               <motion.button
                 onClick={() => setShowCheckIn(true)}
                 className="neon-btn"
-                style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem', background: 'rgba(255, 107, 129, 0.1)', borderColor: '#ff6b81', color: '#ff6b81', boxShadow: 'none' }}
+                style={{ background: 'rgba(255, 107, 129, 0.1)', borderColor: '#ff6b81', color: '#ff6b81', boxShadow: 'none', fontSize: '0.9rem' }}
                 whileTap={{ scale: 0.97 }}
               >
                 {checkinToday(checkinData) ? '✅ ' + t('checkin_done_btn') : '🩺 ' + t('checkin_open_btn')}
@@ -762,8 +762,8 @@ function AppContent() {
             {/* AI Koc: grid disinda tam genislik (mobil + PC ayni gorunum) */}
             <motion.button
               onClick={() => setCurrentView('aicoach')}
-              className="neon-btn"
-              style={{ width: '100%', padding: '1rem', fontSize: '1.05rem', background: 'rgba(0, 195, 255, 0.1)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none', gridColumn: '1 / -1' }}
+              className="neon-btn btn-accent span-both"
+              style={{ background: 'rgba(0, 195, 255, 0.1)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none' }}
               whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(0, 195, 255, 0.4)' }}
               whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.05 }}
@@ -775,7 +775,7 @@ function AppContent() {
 
         {/* ============ ANTRENMAN ============ */}
         {dashboardTab === 'train' && (
-          <>
+          <div className="stack-grid">
             {/* AI Saved Program */}
             <SavedProgramPreview
               savedAiProgram={savedAiProgram}
@@ -799,12 +799,12 @@ function AppContent() {
               onStartTemplate={(params) => startActiveAiWorkout(-1, params)}
             />
 
-            {/* Aksiyon butonları */}
-            <div className="fade-in" style={{ animationDelay: '0.15s', marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', flexDirection: 'column' }}>
+            {/* Aksiyon butonlari: 2x2 grid (mobilde tek kolon) */}
+            <div className="fade-in span-both" style={{ animationDelay: '0.15s', display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
               <motion.button
                 onClick={() => setShowWizard(true)}
-                className="neon-btn"
-                style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', background: 'rgba(255, 0, 136, 0.1)', borderColor: '#ff0088', color: '#ff0088', boxShadow: 'none' }}
+                className="neon-btn btn-accent"
+                style={{ background: 'rgba(255, 0, 136, 0.1)', borderColor: '#ff0088', color: '#ff0088', boxShadow: 'none' }}
                 whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(255, 0, 136, 0.4)' }}
                 whileTap={{ scale: 0.95 }}
                 transition={{ duration: 0.05 }}
@@ -814,8 +814,8 @@ function AppContent() {
 
               <motion.button
                 onClick={() => setCurrentView('anatomy')}
-                className="neon-btn"
-                style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', background: 'rgba(173, 255, 47, 0.1)', borderColor: '#adff2f', color: '#adff2f', boxShadow: 'none' }}
+                className="neon-btn btn-accent"
+                style={{ background: 'rgba(173, 255, 47, 0.1)', borderColor: '#adff2f', color: '#adff2f', boxShadow: 'none' }}
                 whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(173, 255, 47, 0.4)' }}
                 whileTap={{ scale: 0.95 }}
                 transition={{ duration: 0.05 }}
@@ -825,8 +825,8 @@ function AppContent() {
 
               <motion.button
                 onClick={() => setCurrentView('hiit')}
-                className="neon-btn"
-                style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', background: 'rgba(255, 107, 61, 0.1)', borderColor: '#ff6b3d', color: '#ff6b3d', boxShadow: 'none' }}
+                className="neon-btn btn-accent"
+                style={{ background: 'rgba(255, 107, 61, 0.1)', borderColor: '#ff6b3d', color: '#ff6b3d', boxShadow: 'none' }}
                 whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(255, 107, 61, 0.4)' }}
                 whileTap={{ scale: 0.95 }}
                 transition={{ duration: 0.05 }}
@@ -836,8 +836,8 @@ function AppContent() {
 
               <motion.button
                 onClick={() => setCurrentView('mobility')}
-                className="neon-btn"
-                style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', background: 'rgba(0, 195, 255, 0.08)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none' }}
+                className="neon-btn btn-accent"
+                style={{ background: 'rgba(0, 195, 255, 0.08)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none' }}
                 whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(0, 195, 255, 0.35)' }}
                 whileTap={{ scale: 0.95 }}
                 transition={{ duration: 0.05 }}
@@ -845,13 +845,13 @@ function AppContent() {
                 <PersonStanding size={20} /> {t('btn_mobility')}
               </motion.button>
             </div>
-          </>
+          </div>
         )}
 
         {/* ============ GELİŞİM ============ */}
-        {/* Grafikler genislik ister; bu sekme tek kolon akar (PC dahil) */}
+        {/* Masaustunde 2 kolon; grafikler span-both ile tam genislik */}
         {dashboardTab === 'progress' && (
-          <>
+          <div className="stack-grid">
             <WorkoutHeatmap workoutHistory={workoutHistory} />
 
             <StrengthStandards workoutHistory={workoutHistory} />
@@ -867,7 +867,7 @@ function AppContent() {
             <WorkoutCalendar workoutHistory={workoutHistory} />
 
             <CoachInsightFeed workoutHistory={workoutHistory} weeklyGoal={weeklyGoal} activeBuddyId={activeBuddyId} painData={checkinToPainData(checkinData)} />
-          </>
+          </div>
         )}
 
         {/* FAZ 1d: Gunluk Check-In */}

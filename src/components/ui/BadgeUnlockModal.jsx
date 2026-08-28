@@ -41,8 +41,8 @@ function BadgeUnlockModal({ badge, onClose }) {
     const badgeDesc = lang === 'tr' ? badge.description : badge.description_en;
 
     return createPortal(
-        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem', backdropFilter: 'blur(5px)' }}>
-            <div className="glass-card slide-in" style={{ width: '100%', maxWidth: '350px', background: 'rgba(15, 17, 21, 0.95)', border: '2px solid #ffd700', position: 'relative', overflow: 'hidden', textAlign: 'center' }}>
+        <div className="modal-overlay">
+            <div className="modal-card modal-card-sm" style={{ border: '2px solid #ffd700', position: 'relative', overflow: 'hidden', textAlign: 'center', padding: '1.5rem' }}>
                 <div style={{ fontSize: '4rem', marginBottom: '1rem', animation: 'pulse 2s infinite' }}>
                     {badge.icon}
                 </div>

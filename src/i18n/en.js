@@ -301,6 +301,10 @@ const en = {
     rec_state_bad: "Recovery is low — listen to your body.",
     rec_light_day_suggest: "If training today, keep it light.",
     rec_avg_sleep: "3-day avg sleep",
+    rec_sleep_q: "How many hours did you sleep last night?",
+    rec_mood_q: "How's your form?",
+    rec_hours: "{{n}} hours",
+    rec_mood_label: "Form rating {{n}}",
 
     // Superset
     sup_first_row_hint: "First exercise cannot be paired with a previous one",

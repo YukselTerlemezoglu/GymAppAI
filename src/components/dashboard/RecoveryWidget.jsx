@@ -72,31 +72,26 @@ function RecoveryWidget({ workoutHistory }) {
     const SleepOption = ({ h }) => (
         <button
             onClick={() => saveLog(h, todayLog?.mood || 3)}
-            style={{
-                padding: '6px 0', flex: 1, borderRadius: '8px', cursor: 'pointer',
-                border: `1px solid ${todayLog?.hours === h ? 'var(--accent-primary)' : 'rgba(255,255,255,0.15)'}`,
-                background: todayLog?.hours === h ? 'rgba(0,195,255,0.15)' : 'transparent',
-                color: todayLog?.hours === h ? 'var(--accent-primary)' : 'var(--text-light)',
-                fontWeight: todayLog?.hours === h ? 'bold' : 400, fontSize: '0.8rem'
-            }}
+            className={`seg-btn${todayLog?.hours === h ? ' selected' : ''}`}
+            aria-pressed={todayLog?.hours === h}
+            aria-label={`${h} ${t('rec_hours', { n: h })}`}
         >{h}s</button>
     );
 
     const MoodOption = ({ m, emoji }) => (
         <button
             onClick={() => saveLog(todayLog?.hours || 7.5, m)}
-            style={{
-                padding: '6px 0', flex: 1, borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem',
-                border: `1px solid ${todayLog?.mood === m ? 'var(--accent-primary)' : 'rgba(255,255,255,0.15)'}`,
-                background: todayLog?.mood === m ? 'rgba(0,195,255,0.15)' : 'transparent'
-            }}
+            className={`seg-btn${todayLog?.mood === m ? ' selected' : ''}`}
+            style={{ fontSize: '1.15rem' }}
+            aria-pressed={todayLog?.mood === m}
+            aria-label={t('rec_mood_label', { n: m })}
         >{emoji}</button>
     );
 
     return (
         <div className="glass-card slide-in">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
-                <h3 style={{ color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1rem' }}>
+            <div className="card-header">
+                <h3 className="card-title">
                     {state.icon} {t('rec_title')}
                 </h3>
                 {score !== null && (
@@ -112,18 +107,18 @@ function RecoveryWidget({ workoutHistory }) {
 
             {/* Skor barı */}
             {score !== null && (
-                <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden', marginBottom: '0.7rem' }}>
-                    <div style={{ height: '100%', width: `${score}%`, background: state.color, borderRadius: '4px', transition: 'width 0.5s ease' }} />
+                <div className="progress-track" style={{ marginBottom: '0.7rem' }}>
+                    <div className="progress-fill" style={{ width: `${score}%`, background: state.color }} />
                 </div>
             )}
 
             {/* Hizli uyku girisi */}
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
+            <div className="seg-group" style={{ marginBottom: '6px' }} role="group" aria-label={t('rec_sleep_q')}>
                 {[5, 6, 7, 8, 9].map(h => <SleepOption key={h} h={h} />)}
             </div>
 
             {/* Form notu */}
-            <div style={{ display: 'flex', gap: '4px' }}>
+            <div className="seg-group" role="group" aria-label={t('rec_mood_q')}>
                 {[1, 2, 3, 4, 5].map(m => (
                     <MoodOption key={m} m={m} emoji={['😫', '😕', '😐', '🙂', '😄'][m - 1]} />
                 ))}
@@ -131,7 +126,7 @@ function RecoveryWidget({ workoutHistory }) {
 
             {/* Uyku ortalamasi detay */}
             {sleepAvg !== null && (
-                <p style={{ color: 'var(--text-light)', fontSize: '0.7rem', margin: '8px 0 0 0', textAlign: 'center', opacity: 0.7 }}>
+                <p style={{ color: 'var(--text-light)', fontSize: '0.72rem', margin: '8px 0 0 0', textAlign: 'center', opacity: 0.7 }}>
                     {t('rec_avg_sleep')}: {sleepAvg.toFixed(1)}s
                     {todayLog && ` · ${new Date(todayLog.at).toLocaleTimeString(lang === 'tr' ? 'tr-TR' : 'en-US', { hour: '2-digit', minute: '2-digit' })}`}
                 </p>

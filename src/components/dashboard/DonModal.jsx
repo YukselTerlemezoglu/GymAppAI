@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
@@ -9,8 +9,8 @@ import { playSound } from '../../utils/sounds';
 
 // DOUBLE OR NOTHING MODALI
 // Gorev odulu coin'i escrow "pot" olarak burada tutulur.
-// Fazlar: offer -> flipping -> won -> (won|lost|banked)
-// Zincir tavanı: 8x. Tavana ulaşınca otomatik bankalanır.
+// Fazlar: offer -> flipping -> won -> lost -> banked
+// Zincir tavani: 8x. Tavana ulasinca otomatik bankalanir.
 
 const FLIP_MS = 1300;
 
@@ -41,8 +41,7 @@ function DonModal({ baseCoins, dayKey, onFinish, onClose }) {
 
         timeoutRef.current = setTimeout(() => {
             if (outcome === 'heads') {
-                const newPot = pot * 2;
-                setPot(newPot);
+                setPot(pot * 2);
                 setMult(mult * 2);
                 setFlips(flips + 1);
                 setWins(wins + 1);
@@ -62,7 +61,7 @@ function DonModal({ baseCoins, dayKey, onFinish, onClose }) {
     const safeFromOffer = () => { setStage('banked'); finish(baseCoins, 0); playSound('buy'); };
     const closeAfterLoss = () => finish(0, pot);
 
-    // 8x tavanina ulasildi mi? (won asamasinda "devam" yerine otomatik bankala)
+    // 8x tavanina ulasildi mi? (won asamasinda otomatik bankala)
     const atCap = mult >= DON_MAX_MULT;
     useEffect(() => {
         if (stage === 'won' && atCap) {
@@ -79,15 +78,15 @@ function DonModal({ baseCoins, dayKey, onFinish, onClose }) {
     };
 
     return createPortal(
-        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem', backdropFilter: 'blur(5px)' }}>
+        <div className="modal-overlay">
             <motion.div
                 initial={{ scale: 0.85, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="glass-card"
-                style={{ width: '100%', maxWidth: '360px', border: '2px solid #ffd700', background: 'rgba(15,17,21,0.97)', textAlign: 'center', position: 'relative', overflow: 'hidden' }}
+                className="modal-card modal-card-sm"
+                style={{ border: '2px solid #ffd700', textAlign: 'center', position: 'relative', overflow: 'hidden' }}
             >
                 {/* Baslik */}
-                <div style={{ padding: '1rem 1rem 0.4rem' }}>
+                <div style={{ padding: '1.4rem 1rem 0.4rem' }}>
                     <h3 style={{ margin: 0, color: '#ffd700', fontSize: '1.15rem', letterSpacing: '0.5px' }}>
                         🎲 {t('don_title')}
                     </h3>
@@ -137,10 +136,10 @@ function DonModal({ baseCoins, dayKey, onFinish, onClose }) {
                 <div style={{ padding: '0.6rem 1rem 1.2rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {stage === 'offer' && (
                         <>
-                            <button onClick={doFlip} className="neon-btn" style={{ padding: '0.8rem', background: 'rgba(255,215,0,0.12)', borderColor: '#ffd700', color: '#ffd700', fontWeight: 800 }}>
+                            <button onClick={doFlip} className="neon-btn" style={{ background: 'rgba(255,215,0,0.12)', borderColor: '#ffd700', color: '#ffd700', fontWeight: 800 }}>
                                 🎲 {t('don_risk')} ({t('don_next', { coins: baseCoins * 2 })})
                             </button>
-                            <button onClick={safeFromOffer} className="neon-btn" style={{ padding: '0.7rem', background: 'rgba(255,255,255,0.05)', fontSize: '0.85rem' }}>
+                            <button onClick={safeFromOffer} className="neon-btn-secondary" style={{ fontSize: '0.85rem' }}>
                                 {t('don_safe', { coins: baseCoins })}
                             </button>
                         </>
@@ -152,10 +151,10 @@ function DonModal({ baseCoins, dayKey, onFinish, onClose }) {
 
                     {stage === 'won' && !atCap && (
                         <>
-                            <button onClick={doFlip} className="neon-btn" style={{ padding: '0.8rem', background: 'rgba(255,215,0,0.12)', borderColor: '#ffd700', color: '#ffd700', fontWeight: 800 }}>
+                            <button onClick={doFlip} className="neon-btn" style={{ background: 'rgba(255,215,0,0.12)', borderColor: '#ffd700', color: '#ffd700', fontWeight: 800 }}>
                                 🎲 {t('don_continue')} ({t('don_next', { coins: pot * 2 })})
                             </button>
-                            <button onClick={() => { takeSafe(); fireConfetti(); }} className="neon-btn" style={{ padding: '0.7rem', background: 'rgba(0,255,136,0.1)', borderColor: '#00ff88', color: '#00ff88', fontSize: '0.85rem', fontWeight: 800 }}>
+                            <button onClick={() => { takeSafe(); fireConfetti(); }} className="neon-btn" style={{ background: 'rgba(0,255,136,0.1)', borderColor: '#00ff88', color: '#00ff88', fontSize: '0.85rem', fontWeight: 800 }}>
                                 💰 {t('don_take', { coins: pot })}
                             </button>
                             <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.65rem' }}>{t('don_cap_hint', { max: DON_MAX_MULT })}</p>
@@ -167,13 +166,13 @@ function DonModal({ baseCoins, dayKey, onFinish, onClose }) {
                     )}
 
                     {stage === 'lost' && (
-                        <button onClick={closeAfterLoss} className="neon-btn" style={{ padding: '0.8rem', background: 'rgba(255,255,255,0.05)' }}>
+                        <button onClick={closeAfterLoss} className="neon-btn-secondary">
                             {t('don_ok')}
                         </button>
                     )}
 
                     {stage === 'banked' && (
-                        <button onClick={onClose} className="neon-btn" style={{ padding: '0.8rem', background: 'rgba(0,255,136,0.1)', borderColor: '#00ff88', color: '#00ff88' }}>
+                        <button onClick={onClose} className="neon-btn" style={{ background: 'rgba(0,255,136,0.1)', borderColor: '#00ff88', color: '#00ff88' }}>
                             {t('don_nice')}
                         </button>
                     )}

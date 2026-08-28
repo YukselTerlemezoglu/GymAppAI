@@ -149,8 +149,9 @@ function DailyQuestsCard({ workoutHistory, userName, userCoins, setUserCoins, us
                                         onClick={(ev) => { ev.stopPropagation(); claim(e); }}
                                         style={{
                                             background: 'linear-gradient(90deg, #00c3ff, #00ff88)', border: 'none',
-                                            borderRadius: '8px', padding: '4px 12px', cursor: 'pointer',
-                                            color: '#001a26', fontWeight: 800, fontSize: '0.72rem'
+                                            borderRadius: '8px', padding: '8px 14px', cursor: 'pointer',
+                                            color: '#001a26', fontWeight: 800, fontSize: '0.72rem',
+                                            minHeight: '36px'
                                         }}
                                     >
                                         {t('quest_claim_btn')}
