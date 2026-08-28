@@ -82,9 +82,8 @@ body {
     radial-gradient(circle at 15% 50%, var(--gradient-1) 0%, transparent 50%),
     radial-gradient(circle at 85% 30%, var(--gradient-2) 0%, transparent 50%);
   background-attachment: fixed;
-  /* PWA standalone / iOS cebirma: durum cubugu saydam, icerik onu icermez.
-     env() desteklemeyen eski tarayicilarda JS fallback (asagida) devreye girer. */
-  padding-top: env(safe-area-inset-top, 0px);
+  /* Safe-area payi app-container/page-shell uzerinde uygulanir (body'de
+     degil — cift hesap iOS'ta gereksiz bosluk yaratir). */
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -429,7 +428,7 @@ textarea {
 
 @media (max-width: 600px) {
   .page-shell {
-    padding: 1rem 0.75rem calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 1.5rem);
+    padding: calc(env(safe-area-inset-top, 0px) + 0.75rem) 0.75rem calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 1.5rem);
   }
 }
 
@@ -452,6 +451,11 @@ textarea {
 
   .dash-grid > .dash-side {
     grid-column: 2;
+  }
+
+  /* Tam genislik ogeler (AI koc + check-in satiri) */
+  .dash-grid > .span-both {
+    grid-column: 1 / -1;
   }
 }
 

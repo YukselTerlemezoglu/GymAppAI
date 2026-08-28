@@ -413,11 +413,10 @@ function AppContent() {
   };
   // ------------------------------
 
-  // --- ANDROID/HARDWARE BACK BUTTON ---
-  // Görünümler history'ye TEK girdi olarak işlenir; cihaz geri tuşu
-  // (Android) veya tarayıcı geri tuşu her zaman dashboard'a döner,
-  // uygulamayı kapatmaz. View'dan view'a geçiş replaceState ile güncellenir
-  // (geri tuşu yine tek adımda dashboard'a iner).
+  // --- CIHAZ/TARAYICI GERI TUSU ---
+  // Gorunumler history'ye TEK girdi olarak islenir; Android geri tusu veya
+  // tarayici geri tusu her zaman dashboard'a doner, uygulamayi kapatmaz.
+  // View'dan view'a gecis replaceState ile tek girdide tutulur.
   const viewRef = useRef(currentView);
   const currentViewRef = useRef(currentView);
   useEffect(() => { currentViewRef.current = currentView; }, [currentView]);
@@ -425,8 +424,8 @@ function AppContent() {
   useEffect(() => {
     if (viewRef.current === currentView) return;
     if (currentView === 'dashboard') {
-      // Butonla dashboard'a dönüş: kesişen girdiyi temizle ki geri tuşu
-      // uygulamadan çıkmaya (veya önceki sayfaya) devam etsin.
+      // Butonla dashboard'a donus: kesisen girdiyi temizle ki geri tusu
+      // uygulamadan cikmaya devam etsin.
       if (window.history.state?.gymView) window.history.back();
     } else if (viewRef.current !== 'dashboard' && window.history.state?.gymView) {
       window.history.replaceState({ gymView: currentView }, '');
@@ -444,7 +443,7 @@ function AppContent() {
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
-  // ------------------------------------
+  // --------------------------------
 
   // Alt navigasyon: sekmeye gec veya profil ekranina git
   const handleNavSelectTab = (tabId) => {
@@ -782,6 +781,10 @@ function AppContent() {
               />
               <WaterTrackerWidget />
               <RecoveryWidget workoutHistory={workoutHistory} />
+            </div>
+
+            {/* AI Koc + Check-in: yanyana 2 kolon (mobilde alt alta) */}
+            <div className="span-both" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.75rem' }}>
               <motion.button
                 onClick={() => setShowCheckIn(true)}
                 className="neon-btn"
@@ -790,19 +793,17 @@ function AppContent() {
               >
                 {checkinToday(checkinData) ? '✅ ' + t('checkin_done_btn') : '🩺 ' + t('checkin_open_btn')}
               </motion.button>
+              <motion.button
+                onClick={() => setCurrentView('aicoach')}
+                className="neon-btn"
+                style={{ background: 'rgba(0, 195, 255, 0.1)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none', fontSize: '0.9rem' }}
+                whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(0, 195, 255, 0.4)' }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.05 }}
+              >
+                <Bot size={20} /> {t('btn_ai_coach')}
+              </motion.button>
             </div>
-
-            {/* AI Koc: grid disinda tam genislik (mobil + PC ayni gorunum) */}
-            <motion.button
-              onClick={() => setCurrentView('aicoach')}
-              className="neon-btn btn-accent span-both"
-              style={{ background: 'rgba(0, 195, 255, 0.1)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none' }}
-              whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(0, 195, 255, 0.4)' }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ duration: 0.05 }}
-            >
-              <Bot size={20} /> {t('btn_ai_coach')}
-            </motion.button>
           </div>
         )}
 

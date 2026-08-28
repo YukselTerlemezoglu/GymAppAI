@@ -15,7 +15,7 @@
 @media (min-width: 600px) {
   .app-container {
     /* shorthand kullanma — padding-bottom (nav boslugu) ezilir */
-    padding-top: 2rem;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 2rem);
     padding-left: 1.5rem;
     padding-right: 1.5rem;
   }
