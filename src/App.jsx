@@ -139,6 +139,12 @@ function AppContent() {
   const [seasonData, setSeasonData] = useLocalStorage('gym_app_season', null);
   // FAZ 5b: gunluk gorev tahsil durumu
   const [questsData, setQuestsData] = useLocalStorage('gym_app_quests', null);
+  // DoN (Double or Nothing): gunluk zincir hakki + istatistik
+  const [donData, setDonData] = useLocalStorage('gym_app_don', null);
+  // Gorev baglami: bugun mobilite/HIIT akisi tamamlandi mi (isaretler)
+  // Yazma islemi MobilityView/HiitTimerView dogrudan localStorage'a yapar;
+  // burada sadece okunan deger gorevlere beslenir.
+  const [activityMarks] = useLocalStorage('gym_app_activity_marks', null);
   // FAZ 3: program sihirbazi
   const [showWizard, setShowWizard] = useState(false);
   const [showCheckIn, setShowCheckIn] = useState(false);
@@ -742,7 +748,7 @@ function AppContent() {
               <WaterTrackerWidget />
               <RecoveryWidget workoutHistory={workoutHistory} />
               <SeasonCard seasonData={seasonData} workoutHistory={workoutHistory} userCoins={userCoins} setUserCoins={setUserCoins} setSeasonData={setSeasonData} />
-              <DailyQuestsCard workoutHistory={workoutHistory} userName={userName} userCoins={userCoins} setUserCoins={setUserCoins} userXP={userXP} setUserXP={setUserXP} questsData={questsData} setQuestsData={setQuestsData} />
+              <DailyQuestsCard workoutHistory={workoutHistory} userName={userName} userCoins={userCoins} setUserCoins={setUserCoins} userXP={userXP} setUserXP={setUserXP} questsData={questsData} setQuestsData={setQuestsData} donData={donData} setDonData={setDonData} marks={activityMarks?.day === new Date().toISOString().split('T')[0] ? activityMarks.marks : {}} />
               <motion.button
                 onClick={() => setShowCheckIn(true)}
                 className="neon-btn"

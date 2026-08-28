@@ -75,34 +75,36 @@ export const BOXES = [
 ];
 
 // ---------- KOZMETIKLER (kalici) ----------
+// v2 ekonomi: gunluk gorev geliri 50-200 (tek secim) — prestij fiyatlari
+// buna gore kalibre: rare ~1.5-2 gun, epic ~2-3 gun, legendary ~3-5 gun birikim.
 // frame: dost kapsulu + paylasim karti cercevesi
 export const COSMETIC_FRAMES = [
-    { id: 'frame_neon', rarity: 'rare', price: 200, icon: '💠', title_tr: 'Neon Çerçeve', title_en: 'Neon Frame' },
-    { id: 'frame_retro', rarity: 'rare', price: 300, icon: '📺', title_tr: 'Retro Çerçeve', title_en: 'Retro Frame' },
-    { id: 'frame_gold', rarity: 'epic', price: 350, icon: '🏅', title_tr: 'Altın Çerçeve', title_en: 'Gold Frame' },
-    { id: 'frame_crown', rarity: 'legendary', price: 500, icon: '👑', title_tr: 'Şampiyon Tacı', title_en: 'Champion Crown' }
+    { id: 'frame_neon', rarity: 'rare', price: 250, icon: '💠', title_tr: 'Neon Çerçeve', title_en: 'Neon Frame' },
+    { id: 'frame_retro', rarity: 'rare', price: 350, icon: '📺', title_tr: 'Retro Çerçeve', title_en: 'Retro Frame' },
+    { id: 'frame_gold', rarity: 'epic', price: 500, icon: '🏅', title_tr: 'Altın Çerçeve', title_en: 'Gold Frame' },
+    { id: 'frame_crown', rarity: 'legendary', price: 800, icon: '👑', title_tr: 'Şampiyon Tacı', title_en: 'Champion Crown' }
 ];
 
 // nameStyle: profil + lider tablosu + paylasim karti isim stili
 export const COSMETIC_NAME_STYLES = [
-    { id: 'name_gold', rarity: 'rare', price: 300, icon: '✨', cssColor: '#ffd700', cssTextShadow: '0 0 8px rgba(255,215,0,0.6)', title_tr: 'Altın İsim', title_en: 'Golden Name' },
-    { id: 'name_neon', rarity: 'epic', price: 400, icon: '🌟', cssColor: '#00c3ff', cssTextShadow: '0 0 10px rgba(0,195,255,0.8)', title_tr: 'Neon Parıltılı İsim', title_en: 'Neon Glowing Name' },
-    { id: 'name_flame', rarity: 'legendary', price: 600, icon: '🔥', cssColor: '#ff6b35', cssTextShadow: '0 0 10px rgba(255,107,53,0.8)', title_tr: 'Alevli İsim', title_en: 'Flaming Name' }
+    { id: 'name_gold', rarity: 'rare', price: 350, icon: '✨', cssColor: '#ffd700', cssTextShadow: '0 0 8px rgba(255,215,0,0.6)', title_tr: 'Altın İsim', title_en: 'Golden Name' },
+    { id: 'name_neon', rarity: 'epic', price: 500, icon: '🌟', cssColor: '#00c3ff', cssTextShadow: '0 0 10px rgba(0,195,255,0.8)', title_tr: 'Neon Parıltılı İsim', title_en: 'Neon Glowing Name' },
+    { id: 'name_flame', rarity: 'legendary', price: 800, icon: '🔥', cssColor: '#ff6b35', cssTextShadow: '0 0 10px rgba(255,107,53,0.8)', title_tr: 'Alevli İsim', title_en: 'Flaming Name' }
 ];
 
 // flame: skor karti + paylasim kartindaki seri alevi rengi
 export const COSMETIC_FLAMES = [
-    { id: 'flame_blue', rarity: 'rare', price: 250, icon: '🔥', color: '#00c3ff', title_tr: 'Mavi Alev', title_en: 'Blue Flame' },
-    { id: 'flame_purple', rarity: 'epic', price: 350, icon: '🔥', color: '#c06bff', title_tr: 'Mor Alev', title_en: 'Purple Flame' },
-    { id: 'flame_ice', rarity: 'legendary', price: 500, icon: '🔥', color: '#a8e6ff', title_tr: 'Buz Alevi', title_en: 'Ice Flame' }
+    { id: 'flame_blue', rarity: 'rare', price: 300, icon: '🔥', color: '#00c3ff', title_tr: 'Mavi Alev', title_en: 'Blue Flame' },
+    { id: 'flame_purple', rarity: 'epic', price: 500, icon: '🔥', color: '#c06bff', title_tr: 'Mor Alev', title_en: 'Purple Flame' },
+    { id: 'flame_ice', rarity: 'legendary', price: 800, icon: '🔥', color: '#a8e6ff', title_tr: 'Buz Alevi', title_en: 'Ice Flame' }
 ];
 
 // prfx: PR kutlamasinda kullanilan konfeti stili
 export const COSMETIC_PR_EFFECTS = [
     { id: 'prfx_hearts', rarity: 'rare', price: 250, icon: '💖', title_tr: 'Kalp Patlaması', title_en: 'Heart Burst' },
-    { id: 'prfx_gold', rarity: 'rare', price: 250, icon: '💛', title_tr: 'Altın Yağmuru', title_en: 'Gold Rain' },
-    { id: 'prfx_fireworks', rarity: 'epic', price: 350, icon: '🎆', title_tr: 'Havai Fişek', title_en: 'Fireworks' },
-    { id: 'prfx_stars', rarity: 'legendary', price: 400, icon: '🌟', title_tr: 'Yıldız Şöleni', title_en: 'Star Festival' }
+    { id: 'prfx_gold', rarity: 'rare', price: 300, icon: '💛', title_tr: 'Altın Yağmuru', title_en: 'Gold Rain' },
+    { id: 'prfx_fireworks', rarity: 'epic', price: 450, icon: '🎆', title_tr: 'Havai Fişek', title_en: 'Fireworks' },
+    { id: 'prfx_stars', rarity: 'legendary', price: 650, icon: '🌟', title_tr: 'Yıldız Şöleni', title_en: 'Star Festival' }
 ];
 
 // Tum kozmetikler tek listede (sahiplik sorgulari icin)

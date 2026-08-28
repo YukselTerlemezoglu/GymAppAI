@@ -31,6 +31,18 @@ function MobilityView({ onBack }) {
         localStorage.setItem('gym_app_mobility_flow', flowId);
     }, [flowId]);
 
+    // Gorev baglami: bugunun mobilite isareti (dailyQuests taskContext okur)
+    useEffect(() => {
+        if (phase !== 'done') return;
+        try {
+            const dayKey = new Date().toISOString().split('T')[0];
+            const raw = JSON.parse(localStorage.getItem('gym_app_activity_marks') || 'null');
+            if (!raw || raw.day !== dayKey || !raw.marks?.mobility) {
+                localStorage.setItem('gym_app_activity_marks', JSON.stringify({ day: dayKey, marks: { ...(raw?.day === dayKey ? raw.marks : {}), mobility: true } }));
+            }
+        } catch { /* yoksay */ }
+    }, [phase]);
+
     // Saat + bitis (setState yalnizca interval callback icinde)
     useEffect(() => {
         if (!running) return;

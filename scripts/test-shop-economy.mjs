@@ -59,11 +59,11 @@ console.log('\n=== 1. ENVANTER (boost) ===');
 console.log('\n=== 2. KOZMETIK ===');
 {
     const goldFrame = ALL_COSMETICS.find(c => c.id === 'frame_gold');
-    ok(goldFrame.price === 350, 'Altin cerceve 350 jeton');
+    ok(goldFrame.price === 500, 'Altin cerceve 500 jeton (v2 ekonomi)');
 
-    let coins = 400, owned = [];
+    let coins = 600, owned = [];
     const r1 = buyCosmetic(coins, owned, 'frame_gold');
-    ok(r1.ok && ownsCosmetic(r1.owned, 'frame_gold') && r1.coins === 50, 'Satin alma + sahiplik');
+    ok(r1.ok && ownsCosmetic(r1.owned, 'frame_gold') && r1.coins === 100, 'Satin alma + sahiplik');
 
     const r2 = buyCosmetic(r1.coins, r1.owned, 'frame_gold');
     ok(!r2.ok && r2.reason === 'owned', 'Sahip olunan tekrar alinamaz');

@@ -49,6 +49,19 @@ function HiitTimerView({ onBack }) {
         localStorage.setItem('gym_app_hiit_weight', String(weightKg));
     }, [protoId, weightKg]);
 
+    // Gorev baglami: bugunun HIIT isareti (dailyQuests taskContext okur).
+    // Sadece tamamlanan (next >= totalSec) seans isaretlenir; erken bitis sayilmaz.
+    useEffect(() => {
+        if (phase !== 'done' || elapsed < totalSec) return;
+        try {
+            const dayKey = new Date().toISOString().split('T')[0];
+            const raw = JSON.parse(localStorage.getItem('gym_app_activity_marks') || 'null');
+            if (!raw || raw.day !== dayKey || !raw.marks?.hiit) {
+                localStorage.setItem('gym_app_activity_marks', JSON.stringify({ day: dayKey, marks: { ...(raw?.day === dayKey ? raw.marks : {}), hiit: true } }));
+            }
+        } catch { /* yoksay */ }
+    }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // Ana saat + bitis kontrolu: setState yalnizca interval callback'inde
     // cagrilir (set-state-in-effect kaskadini onler). Son tick'te elapsed
     // toplam sureye ulasir; o anda ses/titreme/anons tetiklenir ve faz

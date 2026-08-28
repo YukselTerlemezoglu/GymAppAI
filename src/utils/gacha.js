@@ -86,20 +86,20 @@ export const updateEggPity = (pity, result) => {
 export const CHEST_PITY_EPIC = 10;
 
 const CHEST_TABLE = [
-    // Sıradan %60
+    // Sıradan %60 — v2 ekonomi: coin bandi kutu fiyatina (100) gore dengeli
     { rarity: 'common', weight: 24, kind: 'xp', min: 60, max: 150 },
-    { rarity: 'common', weight: 18, kind: 'coins', min: 30, max: 80 },
+    { rarity: 'common', weight: 18, kind: 'coins', min: 40, max: 90 },
     { rarity: 'common', weight: 18, kind: 'buddyXp', min: 60, max: 120 },
     // Nadir %25
     { rarity: 'rare', weight: 10, kind: 'xp', min: 200, max: 350 },
-    { rarity: 'rare', weight: 8, kind: 'coins', min: 100, max: 200 },
+    { rarity: 'rare', weight: 8, kind: 'coins', min: 110, max: 180 },
     { rarity: 'rare', weight: 7, kind: 'snack', min: 1, max: 3 },
     // Destansı %12
     { rarity: 'epic', weight: 5, kind: 'xp', min: 400, max: 700 },
     { rarity: 'epic', weight: 4, kind: 'cosmetic' },
     { rarity: 'epic', weight: 3, kind: 'buddyXp', min: 400, max: 600 },
     // Efsanevi %3 (jackpot)
-    { rarity: 'legendary', weight: 2, kind: 'jackpot', min: 1000, max: 1500, coinsMin: 250, coinsMax: 400 },
+    { rarity: 'legendary', weight: 2, kind: 'jackpot', min: 800, max: 1200, coinsMin: 200, coinsMax: 300 },
     { rarity: 'legendary', weight: 1, kind: 'cosmetic', highValueOnly: true }
 ];
 
@@ -137,8 +137,8 @@ export const openChest = (pity = {}, ownedCosmetics = [], random = defaultRandom
             result.amount = randInt(entry.min, entry.max, random);
             break;
         case 'cosmetic': {
-            // Deger siniri: normal slot <=400, efsanevi slot <=600
-            const maxPrice = entry.highValueOnly ? 600 : 400;
+            // Deger siniri: normal slot <=500, efsanevi slot tum kozmetikler
+            const maxPrice = entry.highValueOnly ? 9999 : 500;
             let pool = ALL_COSMETICS.filter(c => !ownedCosmetics.includes(c.id) && c.price <= maxPrice);
             if (pool.length === 0) {
                 // Her seye sahipse coin'e donus (250-400)
@@ -175,14 +175,15 @@ export const updateChestPity = (pity, result) => {
 // ---------- GUNLUK CARK (pity YOK) ----------
 
 export const WHEEL_SEGMENTS = [
+    // v2 ekonomi: gunluk ucretsiz cevirme — EV ~55 jeton (gelir ~200/gun ile uyumlu)
     { label_tr: '+50 XP', label_en: '+50 XP', rarity: 'common', weight: 16, kind: 'xp', amount: 50 },
-    { label_tr: '+80 🪙', label_en: '+80 🪙', rarity: 'common', weight: 16, kind: 'coins', amount: 80 },
-    { label_tr: '+100 XP', label_en: '+100 XP', rarity: 'common', weight: 16, kind: 'xp', amount: 100 },
+    { label_tr: '+60 🪙', label_en: '+60 🪙', rarity: 'common', weight: 16, kind: 'coins', amount: 60 },
+    { label_tr: '+100 XP', label_en: '+100 XP', rarity: 'common', weight: 18, kind: 'xp', amount: 100 },
     { label_tr: '🍖 +120', label_en: '🍖 +120', rarity: 'rare', weight: 15, kind: 'buddyXp', amount: 120 },
     { label_tr: '+250 XP', label_en: '+250 XP', rarity: 'rare', weight: 15, kind: 'xp', amount: 250 },
-    { label_tr: '+400 🪙', label_en: '+400 🪙', rarity: 'epic', weight: 8, kind: 'coins', amount: 400 },
-    { label_tr: '+600 XP', label_en: '+600 XP', rarity: 'epic', weight: 8, kind: 'xp', amount: 600 },
-    { label_tr: '🎰 JACKPOT', label_en: '🎰 JACKPOT', rarity: 'legendary', weight: 6, kind: 'jackpot', amount: 1000, coins: 250 }
+    { label_tr: '+300 🪙', label_en: '+300 🪙', rarity: 'epic', weight: 8, kind: 'coins', amount: 300 },
+    { label_tr: '+500 XP', label_en: '+500 XP', rarity: 'epic', weight: 8, kind: 'xp', amount: 500 },
+    { label_tr: '🎰 JACKPOT', label_en: '🎰 JACKPOT', rarity: 'legendary', weight: 6, kind: 'jackpot', amount: 800, coins: 200 }
 ];
 
 export const WHEEL_PRICE = 125;      // ekstra cevirme fiyati

@@ -147,20 +147,81 @@ ok(rollover.seasonNumber === 2 && rollover.seasonSP === 0, 'rollover: yeni sezon
 ok(rollover.totalSP === 1500, 'rollover: totalSP birikir');
 ok(rollover.league === 'silver', 'rollover: lig korundu/yukseldi');
 
-console.log('--- dailyQuests ---');
+console.log('--- dailyQuests v2 ---');
 const dq = loadModule('src/utils/dailyQuests.js').exports;
 const t1 = dq.dailyTasks({ userName: 'test', now: new Date('2026-08-27T10:00:00') });
 const t2 = dq.dailyTasks({ userName: 'test', now: new Date('2026-08-27T22:00:00') });
 ok(t1.length === 3, '3 gorev uretildi');
 ok(JSON.stringify(t1.map(x => x.id)) === JSON.stringify(t2.map(x => x.id)), 'ayni gun ayni gorevler (deterministik)');
+ok(t1.map(x => x.tier).join(',') === 'easy,medium,hard', 'tier sirasi kolay/orta/zor');
+ok(t1[0].reward.coins === 50 && t1[1].reward.coins === 100 && t1[2].reward.coins === 200, 'oduller 50/100/200');
+
+// Kisisel esikler
+const pt = dq.personalTargets([
+    { date: '2026-08-20T10:00:00Z', sets: 12, totalWeight: 5000 },
+    { date: '2026-08-22T10:00:00Z', sets: 14, totalWeight: 5500 }
+], new Date('2026-08-28T10:00:00'));
+ok(pt.volumeTarget >= 1500 && pt.volumeTarget <= 8000, 'hacim hedefi sinirlar icinde');
+ok(pt.setTarget >= 8 && pt.setTarget <= 24, 'set hedefi sinirlar icinde');
+ok(pt.volumeTarget < 5500, 'hedef medyanin altinda (~%90)');
+
+// Kural motoru agirliklandirmasi: bacak ihmalinde legs_today agirlikli
+const t3 = dq.dailyTasks({ userName: 'test', workoutHistory: [], neglected: ['legs'], now: new Date('2026-08-28T10:00:00') });
+ok(t3.length === 3, 'kural motoru 3 oneri uretti');
 
 const ctx = dq.taskContext([
     { exercise: 'Squat', date: new Date().toISOString(), sets: 8, totalWeight: 4000, avgRpe: 8 },
     { exercise: 'Curl', date: new Date().toISOString(), sets: 4, totalWeight: 500, avgRpe: 8 }
-], new Set(['Squat']));
+], { mobility: true });
 ok(ctx.todaySets === 12, 'bugunun setleri sayildi');
 ok(ctx.todayVolume === 4500, 'bugunun hacmi dogru');
 ok(ctx.todayNewExercise === true, 'yeni hareket algilandi (Curl once yok)');
+ok(ctx.todayMobility === true, 'mobilite isareti okundu');
+ok(ctx.personal && ctx.personal.setTarget > 0, 'kisisel hedefler ctx icinde');
+
+const ev = dq.evaluateTasks(t1, ctx);
+ok(ev.every(e => typeof e.progress === 'number' && e.progress >= 0 && e.progress <= 1), 'progress 0..1 araliginda');
+ok(ev.some(e => e.done), 'en az bir gorev tamamlandi (veriye gore)');
+
+console.log('--- don (Double or Nothing) ---');
+const don = loadModule('src/utils/don.js').exports;
+ok(don.flip(() => 0.3) === 'heads' && don.flip(() => 0.7) === 'tails', 'flip deterministik random ile');
+ok(don.canStartChain(null, '2026-08-28') === true, 'ilk zincir serbest');
+ok(don.canStartChain({ day: '2026-08-28', chainsUsed: 1 }, '2026-08-28') === false, 'gunluk hak bitince kilit');
+ok(don.canStartChain({ day: '2026-08-27', chainsUsed: 1 }, '2026-08-28') === true, 'yeni gun hak sifirlanir');
+ok(don.nextMult(1) === 2 && don.nextMult(2) === 4 && don.nextMult(8) === null, 'carpan zinciri 2-4-8, tavanda null');
+const dr1 = don.applyChainResult(null, { banked: 200, lost: 0, chainLen: 2, flips: 2, wins: 2 }, '2026-08-28');
+ok(dr1.stats.biggestBank === 200 && dr1.stats.longestChain === 2, 'bankalama istatistigi');
+const dr2 = don.applyChainResult(dr1, { banked: 0, lost: 400, chainLen: 2, flips: 3, wins: 2 }, '2026-08-28');
+ok(dr2.stats.totalLost === 400 && don.donNet(dr2.stats) === -200, 'kayip + net hesap dogru');
+
+// EV nötrlük simülasyonu: riske girme, uzun vadede "güvenli alma" ile ayni getiri
+{
+    let won = 0, lost = 0, safeTotal = 0, plays = 0;
+    // mulberry32 (dailyQuests ile ayni algoritma)
+    let a = 987654321;
+    const rnd = () => {
+        a |= 0; a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    for (let i = 0; i < 50000; i++) {
+        const base = 100;
+        plays++;
+        safeTotal += base; // guvenli alma alternatifi: her tur base garantisi
+        let pot = base;
+        // %50 devam stratejisi: kaybedince kaybedilen gercek pot sayilir
+        while (pot < 800 && rnd() < 0.5) {
+            if (rnd() < 0.5) pot *= 2; else { lost += pot; pot = 0; break; }
+        }
+        if (pot > 0) won += pot;
+    }
+    // DoN'in guvenli almaya gore net etkisi ~0 olmali (EV notr)
+    const evCoins = (won - safeTotal) / plays;
+    ok(Math.abs(evCoins) < 10, 'EV ~ notr (simulasyon: basina ' + evCoins.toFixed(2) + ' fark, 0 olmali)');
+    ok(won > 0 && lost > 0, 'hem kazanclar hem kayiplar olusuyor (varyans var)');
+}
 
 console.log('--- readiness ---');
 const rd = loadModule('src/utils/readiness.js').exports;
