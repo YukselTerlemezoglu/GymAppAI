@@ -177,23 +177,25 @@ function AICoachOnboarding({ setSavedAiProgram, setCurrentView }) {
                         </h3>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>{t('coach_params_desc')}</p>
                     </div>
-                    {aiResponseJson.days.map((day, dIdx) => (
-                        <div key={dIdx} style={{ marginBottom: '1.5rem', background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '12px' }}>
-                            <h4 style={{ color: '#fff', marginBottom: '1rem' }}>{day.dayName}</h4>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                {day?.exercises?.map((ex, eIdx) => (
-                                    <div key={eIdx} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                                        <span style={{ color: 'var(--text-light)' }}>{ex.name}</span>
-                                        <div style={{ display: 'flex', gap: '10px', fontSize: '0.9rem' }}>
-                                            <span style={{ color: 'var(--accent-secondary)' }}>{ex.sets} {t('preview_sets')}</span>
-                                            <span style={{ color: 'var(--accent-primary)' }}>{ex.weight} {t('preview_weight_short')}</span>
-                                            <span>{ex.reps} {t('preview_reps_short')}</span>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', marginTop: '1.5rem', alignItems: 'start' }}>
+                        {aiResponseJson.days.map((day, dIdx) => (
+                            <div key={dIdx} style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '12px' }}>
+                                <h4 style={{ color: '#fff', marginBottom: '1rem' }}>{day.dayName}</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    {day?.exercises?.map((ex, eIdx) => (
+                                        <div key={eIdx} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', flexWrap: 'wrap', gap: '4px' }}>
+                                            <span style={{ color: 'var(--text-light)' }}>{ex.name}</span>
+                                            <div style={{ display: 'flex', gap: '10px', fontSize: '0.9rem' }}>
+                                                <span style={{ color: 'var(--accent-secondary)' }}>{ex.sets} {t('preview_sets')}</span>
+                                                <span style={{ color: 'var(--accent-primary)' }}>{ex.weight} {t('preview_weight_short')}</span>
+                                                <span>{ex.reps} {t('preview_reps_short')}</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                     <button onClick={saveProgramToDashboard} className="neon-btn" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}>
                         {t('coach_save_btn')}
                     </button>

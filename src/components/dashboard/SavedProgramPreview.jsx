@@ -33,10 +33,10 @@ function SavedProgramPreview({
                 </button>
             </div>
             <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
-                <div className="json-program-preview" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.01)' }}>
+                <div className="json-program-preview" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.01)', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
                     {(savedAiProgram?.days || []).map((day, dIdx) => (
                         <div key={dIdx} style={{
-                            marginBottom: '1.5rem', padding: '1.5rem', borderRadius: '12px',
+                            marginBottom: '0', padding: '1.5rem', borderRadius: '12px',
                             background: day.isRestDay ? 'rgba(0,195,255,0.04)' : 'rgba(0,0,0,0.3)',
                             border: day.isRestDay ? '1px dashed rgba(0,195,255,0.3)' : 'none'
                         }}>

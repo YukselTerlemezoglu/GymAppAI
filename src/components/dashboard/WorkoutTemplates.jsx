@@ -99,7 +99,7 @@ function WorkoutTemplates({ onStartTemplate }) {
                     {t('tpl_empty_hint')}
                 </p>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '0.5rem' }}>
                     {templates.map(tpl => (
                         <div key={tpl.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '0.6rem 0.8rem', background: 'rgba(0,0,0,0.25)', borderRadius: '8px' }}>
                             <div style={{ minWidth: 0, flex: 1 }}>

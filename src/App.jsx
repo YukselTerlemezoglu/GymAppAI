@@ -413,6 +413,39 @@ function AppContent() {
   };
   // ------------------------------
 
+  // --- ANDROID/HARDWARE BACK BUTTON ---
+  // Görünümler history'ye TEK girdi olarak işlenir; cihaz geri tuşu
+  // (Android) veya tarayıcı geri tuşu her zaman dashboard'a döner,
+  // uygulamayı kapatmaz. View'dan view'a geçiş replaceState ile güncellenir
+  // (geri tuşu yine tek adımda dashboard'a iner).
+  const viewRef = useRef(currentView);
+  const currentViewRef = useRef(currentView);
+  useEffect(() => { currentViewRef.current = currentView; }, [currentView]);
+
+  useEffect(() => {
+    if (viewRef.current === currentView) return;
+    if (currentView === 'dashboard') {
+      // Butonla dashboard'a dönüş: kesişen girdiyi temizle ki geri tuşu
+      // uygulamadan çıkmaya (veya önceki sayfaya) devam etsin.
+      if (window.history.state?.gymView) window.history.back();
+    } else if (viewRef.current !== 'dashboard' && window.history.state?.gymView) {
+      window.history.replaceState({ gymView: currentView }, '');
+    } else {
+      window.history.pushState({ gymView: currentView }, '');
+    }
+    viewRef.current = currentView;
+  }, [currentView]);
+
+  useEffect(() => {
+    const onPop = () => {
+      viewRef.current = 'dashboard';
+      if (currentViewRef.current !== 'dashboard') setCurrentView('dashboard');
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  // ------------------------------------
+
   // Alt navigasyon: sekmeye gec veya profil ekranina git
   const handleNavSelectTab = (tabId) => {
     haptic(8);
@@ -776,7 +809,8 @@ function AppContent() {
         {/* ============ ANTRENMAN ============ */}
         {dashboardTab === 'train' && (
           <div className="stack-grid">
-            {/* AI Saved Program */}
+            {/* AI Saved Program — tam genislik; gunler iceride coklu kolon (grid) */}
+            <div className="span-both">
             <SavedProgramPreview
               savedAiProgram={savedAiProgram}
               painData={checkinToPainData(checkinData)}
@@ -786,18 +820,23 @@ function AppContent() {
               startActiveAiWorkout={startActiveAiWorkout}
               handleUpdateAiProgram={handleUpdateAiProgram}
             />
+            </div>
 
             {/* Custom Program Builder */}
             {
               showCustomBuilder && (
+                <div className="span-both">
                 <CustomProgramBuilder setSavedAiProgram={setSavedAiProgram} setShowCustomBuilder={setShowCustomBuilder} />
+                </div>
               )
             }
 
-            {/* Sablonlar: tek dokunusla baslat */}
+            {/* Sablonlar: tam genislik; sablon kartlari iceride coklu kolon */}
+            <div className="span-both">
             <WorkoutTemplates
               onStartTemplate={(params) => startActiveAiWorkout(-1, params)}
             />
+            </div>
 
             {/* Aksiyon butonlari: 2x2 grid (mobilde tek kolon) */}
             <div className="fade-in span-both" style={{ animationDelay: '0.15s', display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>

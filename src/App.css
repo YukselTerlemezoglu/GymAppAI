@@ -9,6 +9,7 @@
   width: 100%;
   overflow-x: hidden; /* Prevent horizontal scroll */
   padding-bottom: calc(var(--nav-h, 64px) + env(safe-area-inset-bottom, 0px) + 20px); /* sabit alt nav icin bosluk */
+  padding-top: calc(env(safe-area-inset-top, 0px) + 1.5rem); /* PWA cennik/status bar payi */
 }
 
 @media (min-width: 600px) {
@@ -191,6 +192,8 @@
   margin: -0.8rem -1rem 1rem -1rem; /* Negative margin to keep alignment but increase target */
   transition: color var(--transition-fast);
   border-radius: 8px;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .back-btn:hover {
@@ -632,7 +635,8 @@ input:checked+.slider:before {
 @media (max-width: 480px) {
   .app-container {
     /* shorthand DEGIL — padding-bottom (nav boslugu) korunmali */
-    padding-top: 1rem;
+    /* Ustte cihaz cennik/status bar icin safe-area + asgari bosluk */
+    padding-top: calc(env(safe-area-inset-top, 0px) + 1rem);
     padding-left: 0.75rem;
     padding-right: 0.75rem;
   }
