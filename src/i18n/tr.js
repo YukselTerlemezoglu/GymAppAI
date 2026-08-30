@@ -275,6 +275,14 @@ const tr = {
     tpl_manual_label: "Egzersizler",
     tpl_manual_placeholder: "Squat | 4 | 8 | 80\nLeg Press | 3 | 12 | 120\nLeg Curl | 3 | 12 | 40",
     tpl_manual_hint: "Her satıra bir egzersiz: İsim | set | tekrar | kilo (kg)",
+    tpl_mode_picker: "Veritabanından Seç",
+    tpl_mode_manual: "Hızlı Yaz",
+    tpl_search_ph: "Egzersiz ara…",
+    tpl_picker_hint: "Yukarıdan egzersiz ara, set/tekrar/kilo gir ve + ile ekle.",
+    tpl_add_row: "Satır ekle",
+    tpl_sets: "Set",
+    tpl_reps: "Tekrar",
+    tpl_weight: "Kilo (kg)",
     tpl_save_btn: "Şablonu Kaydet",
     tpl_name_error: "Şablon adı boş olamaz.",
     tpl_empty_error: "En az bir egzersiz ekle.",
@@ -328,6 +336,23 @@ const tr = {
     sup_link_hint: "Önceki egzersizle superset yap (A1/A2)",
     sup_badge_hint: "Superset: bu egzersizleri arka arkaya, dinlenmesiz yap",
 
+    // Set RPE
+    set_rpe_placeholder: "RPE",
+
+    // Kart düzenleme (Bugün)
+    dash_edit_cards: "Kartları düzenle",
+    dash_edit_title: "Kartları Düzenle",
+    dash_edit_hint: "Bugün sekmesinde hangi kartların görüneceğini seç.",
+    dash_edit_reset: "Tümünü göster",
+    dash_card_visible: "Görünür",
+    dash_card_hidden: "Gizli",
+    dash_card_score: "Haftalık Skor",
+    dash_card_quests: "Günlük Görevler",
+    dash_card_season: "Sezon Ligi",
+    dash_card_nutrition: "Beslenme Özeti",
+    dash_card_water: "Su Takibi",
+    dash_card_recovery: "Toparlanma",
+
     // Paylaşım Kartı & Lider Tablosu
     shc_title: "Kartını Paylaş",
     shc_hint: "İstatistiklerini şık bir kart olarak oluştur ve arkadaşlarınla paylaş.",
@@ -378,6 +403,19 @@ const tr = {
     fr_remove_confirm: "Kaldır",
     fr_removed: "Arkadaş kaldırıldı.",
     fr_empty_board: "Henüz arkadaşın yok. Yukarıdaki davet linkini paylaş veya kodla ekle!",
+
+    // Haftalık dost düellosu
+    fr_duel_invite: "Haftalık düelloya davet et",
+    fr_duel_invited: "{{name}} bu haftaki düelloya davet edildi! O da seni işaretleyince düello başlar.",
+    fr_duel_active_title: "⚔️ Düello: {{name}}",
+    fr_duel_pending_title: "⏳ Davet bekliyor: {{name}}",
+    fr_duel_active_hint: "Hafta boyunca antrenman günü (+100) ve tonaj (+10/1000kg) puan kazandırır. Pazartesi 00:00'da biter.",
+    fr_duel_pending_hint: "Düello, {{name}} da seni işaretleyince başlar. Ona haber ver!",
+    fr_duel_won_title: "🏆 Geçen haftayı {{name}} karşısında kazandın!",
+    fr_duel_lost_title: "💪 Geçen haftayı {{name}} karşısında kaybettin",
+    fr_duel_tie_title: "🤝 Geçen hafta {{name}} ile berabere kaldın",
+    fr_duel_claim_btn: "{{amount}} 🪙 ödülü tahsil et",
+    fr_duel_claimed: "+{{amount}} 🪙 düello ödülü tahsil edildi!",
 
     // Rutbe sistemi v2
     rank_next: "Sonraki rütbe",
@@ -756,6 +794,38 @@ const tr = {
     rem_time: "Hatırlatma saati",
     rem_water: "Su hatırlatması",
     rem_disable: "Hatırlatmaları kapat",
+
+    // Takvim aktarımı
+    rem_ics_btn: "Takvime Aktar (iPhone / Android)",
+    rem_ics_hint: "Antrenman günlerini 8 haftalık etkinlik olarak telefon takvimine ekler; bildirim izni gerekmez.",
+    rem_ics_ok: "Takvim dosyası hazır! Açılan menüden takvim uygulamasını seç.",
+    rem_ics_fail: "Takvim dosyası oluşturulamadı.",
+    rem_ics_no_days: "Önce antrenman günü seç.",
+
+    // --- Yedekleme ---
+    bkp_title: "Yedekleme",
+    bkp_subtitle: "Tüm verilerini tek dosyada sakla: telefon değiştirirken veya veri kaybında geri yükle.",
+    bkp_export_btn: "Verilerimi İndir",
+    bkp_import_btn: "Yedekten Geri Yükle",
+    bkp_hint: "Geri yüklemeden önce mevcut verilerin otomatik güvenlik kopyasına alınır.",
+    bkp_download_ok: "Yedek dosyası indirildi.",
+    bkp_shared_ok: "Yedek dosyası paylaşıldı.",
+    bkp_download_cancel: "İndirme iptal edildi.",
+    bkp_invalid_format: "Dosya bozuk veya tanınmadı.",
+    bkp_invalid_app: "Bu dosya GymAppAI yedeği değil.",
+    bkp_invalid_version: "Bu yedek daha yeni bir sürümden; önce uygulamayı güncelle.",
+    bkp_invalid_sections: "Yedek dosyasının yapısı eksik/bozuk.",
+    bkp_invalid_empty: "Yedek dosyasında veri bulunamadı.",
+    bkp_preview_title: "Yedek önizleme",
+    bkp_preview_stats: "{{workouts}} antrenman · Seviye {{level}} · {{coins}} 🪙 bulundu",
+    bkp_merge_btn: "Birleştir",
+    bkp_replace_btn: "Değiştir",
+    bkp_replace_title: "Tüm veriler değiştirilsin mi?",
+    bkp_replace_msg: "Mevcut tüm verilerin silinip yedektekiyle değiştirilecek. Önce otomatik güvenlik kopyası alınır.",
+    bkp_replace_yes: "Evet, değiştir",
+    bkp_cancel: "Vazgeç",
+    bkp_restore_ok: "{{count}} veri geri yüklendi. Sayfa yenileniyor…",
+    bkp_restore_fail: "Geri yükleme başarısız oldu.",
     cloud_logout_toast: "Çıkış yapıldı.",
 
 

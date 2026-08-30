@@ -3,17 +3,7 @@ import { Dumbbell, Trash2, Plus, Check, Link2, BedDouble } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
-
-// Superset zincirinde kaçıncı cift oldugunu bulur (A1, A2, A3...)
-// Bir satir "oncekiyle bagli"ysa, zincir basindan itibaren numaralar.
-function supersetPairIndex(exercises, idx) {
-    let n = 1;
-    for (let i = 1; i <= idx; i++) {
-        if (exercises[i]?.supersetWithPrev) n++;
-        else n = 1;
-    }
-    return n;
-}
+import { supersetPairIndex } from '../../utils/superset';
 
 function CustomProgramBuilder({ setSavedAiProgram, setShowCustomBuilder }) {
     const { t } = useTranslation();

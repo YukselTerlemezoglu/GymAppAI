@@ -1,10 +1,11 @@
+import { localDayKey } from '../../utils/dateKey';
 import React from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { Utensils, ChevronsRight } from 'lucide-react';
 
 function NutritionSummary({ nutritionData = {}, onClick }) {
     const { t } = useTranslation();
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDayKey();
     const todayData = nutritionData[todayStr] || { meals: [], goals: { kcal: 2500, protein: 150, carbs: 250, fat: 80 } };
 
     const totals = todayData.meals.reduce((acc, meal) => ({
@@ -59,3 +60,4 @@ function NutritionSummary({ nutritionData = {}, onClick }) {
 }
 
 export default NutritionSummary;
+

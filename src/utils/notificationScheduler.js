@@ -2,6 +2,8 @@
 // Push sunucusu gerektirmez: uygulama acikken calisir, service worker
 // uzerinden sistem bildirimi gonderir. Tarayici destegi yoksa sessizce devre disi.
 
+import { localDayKey } from './dateKey.js';
+
 const LS_KEY = 'gym_app_reminders';
 
 const DEFAULTS = {
@@ -65,7 +67,7 @@ const NOTIFIED_KEY = 'gym_app_last_notified';
 const WATER_KEY = 'gym_app_last_water_notified';
 
 function todayStr() {
-    return new Date().toISOString().split('T')[0];
+    return localDayKey();
 }
 
 /**

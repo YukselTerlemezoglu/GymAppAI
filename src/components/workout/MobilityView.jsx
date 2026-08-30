@@ -1,3 +1,4 @@
+import { localDayKey } from '../../utils/dateKey';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { ArrowLeft, Play, Pause, Square, PersonStanding, ChevronRight, ChevronLeft, Repeat } from 'lucide-react';
@@ -35,10 +36,12 @@ function MobilityView({ onBack }) {
     useEffect(() => {
         if (phase !== 'done') return;
         try {
-            const dayKey = new Date().toISOString().split('T')[0];
+            const dayKey = localDayKey();
             const raw = JSON.parse(localStorage.getItem('gym_app_activity_marks') || 'null');
             if (!raw || raw.day !== dayKey || !raw.marks?.mobility) {
                 localStorage.setItem('gym_app_activity_marks', JSON.stringify({ day: dayKey, marks: { ...(raw?.day === dayKey ? raw.marks : {}), mobility: true } }));
+                // Ayni sekmedeki useLocalStorage abonelerini haberdar et
+                window.dispatchEvent(new Event('gymapp-storage'));
             }
         } catch { /* yoksay */ }
     }, [phase]);
@@ -299,3 +302,4 @@ function MobilityView({ onBack }) {
 }
 
 export default MobilityView;
+

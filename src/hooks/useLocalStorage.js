@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { warn as logWarn } from '../utils/logger';
 
 const DB_NAME = 'gymapp_storage';
@@ -64,23 +64,69 @@ function useLocalStorage(key, initialValue) {
         }
     });
 
+    // Hidrasyon oncesi yazmalar kuyruga alinir; IDB degeri geldikten sonra
+    // kuyruk IDB tabani uzerinden yeniden oynanir. Aksi halde mount anindaki
+    // efekt yazmalari (migrasyon, rozet acma) IDB'deki eski degerle ezilir.
+    const pendingWrites = useRef([]);
+    const hydratedRef = useRef(false);
+    const initialRef = useRef(initialValue);
+
     // Uygulama açıldığında IndexedDB'den oku ve varsa state'i güncelle
     useEffect(() => {
         let cancelled = false;
         idbGet(key).then((idbValue) => {
-            if (!cancelled && idbValue !== undefined) {
-                setStoredValue(idbValue);
-                // LocalStorage cache'ini de güncelle
-                try { window.localStorage.setItem(key, JSON.stringify(idbValue)); } catch { /* kota dolu olabilir; sessizce yoksay */ }
+            if (cancelled) return;
+            let base = idbValue;
+            if (idbValue !== undefined) {
+                try { window.localStorage.setItem(key, JSON.stringify(idbValue)); } catch { /* kota */ }
             }
+            if (pendingWrites.current.length > 0) {
+                // Kuyrugu IDB degeri uzerinden yeniden oynat
+                base = pendingWrites.current.reduce((acc, apply) => apply(acc), base);
+                if (base === undefined) base = initialRef.current;
+                setStoredValue(base);
+                try { window.localStorage.setItem(key, JSON.stringify(base)); } catch { /* kota */ }
+                idbSet(key, base);
+            } else if (idbValue !== undefined) {
+                setStoredValue(idbValue);
+            }
+            pendingWrites.current = [];
+            hydratedRef.current = true;
         });
         return () => { cancelled = true; };
+    }, [key]);
+
+    // Dis kaynakli guncellemeler: MobilityView/HiitTimerView gibi bilesenler
+    // isaretleri dogrudan localStorage'a yazar. Ayni sekmede native storage
+    // event tetiklenmedigi icin ozel bir event kullanilir. Buluttan cekilen
+    // (pull) veriler de bu yolla gelir: IDB de guncellenir ki hidrasyonda
+    // eski deger geri gelmesin.
+    useEffect(() => {
+        const onExternal = () => {
+            try {
+                const item = window.localStorage.getItem(key);
+                const next = item === null ? initialRef.current : JSON.parse(item);
+                setStoredValue(next);
+                // IDB'yi de esitle (tek dogru kaynak olmaya devam etsin)
+                idbSet(key, next);
+            } catch { /* bozuk JSON: dokunma */ }
+        };
+        window.addEventListener('gymapp-storage', onExternal);
+        return () => window.removeEventListener('gymapp-storage', onExternal);
     }, [key]);
 
     // Setter: hem IndexedDB hem LocalStorage'a yaz
     const setValue = useCallback((value) => {
         setStoredValue(prev => {
-            const valueToStore = value instanceof Function ? value(prev) : value;
+            const apply = (base) => {
+                try {
+                    return value instanceof Function ? value(base) : value;
+                } catch (error) {
+                    logWarn(`Error computing value for key "${key}":`, error);
+                    return base;
+                }
+            };
+            const valueToStore = apply(prev);
             // LocalStorage'a senkron yaz (hızlı okuma için cache)
             try {
                 if (typeof window !== 'undefined') {
@@ -89,8 +135,13 @@ function useLocalStorage(key, initialValue) {
             } catch (error) {
                 logWarn(`Error setting localStorage key "${key}":`, error);
             }
-            // IndexedDB'ye asenkron yaz (ana depolama)
-            idbSet(key, valueToStore);
+            if (hydratedRef.current) {
+                // IndexedDB'ye asenkron yaz (ana depolama)
+                idbSet(key, valueToStore);
+            } else {
+                // Hidrasyon bekleniyor: fonksiyon/elde edilen deger kuyruga
+                pendingWrites.current.push(apply);
+            }
             return valueToStore;
         });
     }, [key]);

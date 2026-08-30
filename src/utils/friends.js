@@ -66,7 +66,7 @@ export const ensureProfile = async ({ name, xp, level }) => {
 };
 
 /** Profilin XP/seviye/isim alanlarini gunceller (arkadaslarini etkiler). */
-export const publishProfile = async ({ name, xp, level }) => {
+export const publishProfile = async ({ name, xp, level, weekStats, duelTarget }) => {
     const uid = uidOrNull();
     if (!uid || !db) return;
     try {
@@ -76,14 +76,86 @@ export const publishProfile = async ({ name, xp, level }) => {
             await ensureProfile({ name, xp, level });
             return;
         }
+        const existing = snap.data() || {};
         const patch = {};
         if (typeof name === 'string' && name.trim()) patch.name = name.trim().slice(0, 30);
         if (Number.isFinite(Number(xp))) patch.xp = Number(xp) || 0;
         if (Number.isFinite(Number(level))) patch.level = Number(level) || 1;
+        // Haftalik duello alanlari (opsiyonel): bozuk deger yazilmasin
+        if (weekStats && typeof weekStats === 'object' && typeof weekStats.key === 'string') {
+            const clean = {
+                key: weekStats.key,
+                days: Number(weekStats.days) || 0,
+                volume: Number(weekStats.volume) || 0
+            };
+            // Hafta degmisse eski istatistigi arsivle (gecen hafta duellosu
+            // sonucu boylece ezilmez; prevWeekStats tek slotluk arsivdir).
+            const cur = existing.weekStats;
+            if (cur && typeof cur.key === 'string' && cur.key !== clean.key) {
+                patch.prevWeekStats = cur;
+            }
+            patch.weekStats = clean;
+        }
+        if (duelTarget && typeof duelTarget === 'object' && typeof duelTarget.uid === 'string' && typeof duelTarget.week === 'string') {
+            patch.duelTarget = { uid: duelTarget.uid, week: duelTarget.week };
+        }
         patch.updatedAt = serverTimestamp();
         await updateDoc(ref, patch);
     } catch (err) {
         logError('publishProfile:', err);
+    }
+};
+
+/**
+ * Duello hedefini isaretler/kaldirir (profil dokumanina yazar).
+ * Karsilikli onay modeli: her iki taraf da birbirini isaretleyince duel aktif.
+ */
+export const setDuelTarget = async (targetUid, week) => {
+    const uid = uidOrNull();
+    if (!uid || !db || !targetUid || !week) return { error: 'auth' };
+    try {
+        await updateDoc(doc(db, 'profiles', uid), {
+            duelTarget: { uid: targetUid, week },
+            updatedAt: serverTimestamp()
+        });
+        return { ok: true };
+    } catch (err) {
+        logError('setDuelTarget:', err);
+        return { error: 'network' };
+    }
+};
+
+/** Duello hedefini kaldirir (hafta iptali). */
+export const clearDuelTarget = async () => {
+    const uid = uidOrNull();
+    if (!uid || !db) return { error: 'auth' };
+    try {
+        await updateDoc(doc(db, 'profiles', uid), {
+            duelTarget: null,
+            updatedAt: serverTimestamp()
+        });
+        // Ayna da temizlenir; aksi halde Firestore ile drift olusur.
+        try { localStorage.removeItem('gym_app_duel_target'); } catch { /* kota */ }
+        return { ok: true };
+    } catch (err) {
+        logError('clearDuelTarget:', err);
+        return { error: 'network' };
+    }
+};
+
+/**
+ * Kendi profil kaydini bir kez okur (duelTarget aynasi icin).
+ * Yeni cihazda localStorage bosken Firestore'daki hedefi kurtarir.
+ */
+export const getMyProfile = async () => {
+    const uid = uidOrNull();
+    if (!uid || !db) return null;
+    try {
+        const snap = await getDoc(doc(db, 'profiles', uid));
+        return snap.exists() ? snap.data() : null;
+    } catch (err) {
+        logError('getMyProfile:', err);
+        return null;
     }
 };
 

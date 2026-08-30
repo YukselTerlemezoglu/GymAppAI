@@ -1,3 +1,4 @@
+import { localDayKey } from '../../utils/dateKey';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { ArrowLeft, Play, Pause, Square, Timer, Flame, Zap, Settings2 } from 'lucide-react';
@@ -54,10 +55,12 @@ function HiitTimerView({ onBack }) {
     useEffect(() => {
         if (phase !== 'done' || elapsed < totalSec) return;
         try {
-            const dayKey = new Date().toISOString().split('T')[0];
+            const dayKey = localDayKey();
             const raw = JSON.parse(localStorage.getItem('gym_app_activity_marks') || 'null');
             if (!raw || raw.day !== dayKey || !raw.marks?.hiit) {
                 localStorage.setItem('gym_app_activity_marks', JSON.stringify({ day: dayKey, marks: { ...(raw?.day === dayKey ? raw.marks : {}), hiit: true } }));
+                // Ayni sekmedeki useLocalStorage abonelerini haberdar et
+                window.dispatchEvent(new Event('gymapp-storage'));
             }
         } catch { /* yoksay */ }
     }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -373,3 +376,4 @@ function HiitTimerView({ onBack }) {
 }
 
 export default HiitTimerView;
+

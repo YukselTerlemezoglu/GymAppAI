@@ -1,9 +1,11 @@
+import { localDayKey } from '../../utils/dateKey';
 import React, { useMemo, useEffect, useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
 import { ListChecks, Target } from 'lucide-react';
 import { dailyTasks, taskContext, evaluateTasks } from '../../utils/dailyQuests';
 import { canStartChain, applyChainResult, donNet } from '../../utils/don';
+import { totalXpForLevel, levelFromTotalXp } from '../../utils/levelSystem';
 import DonModal from './DonModal';
 
 // GUNLUK GOREVLER KARTI v2 (DoN ekonomisi).
@@ -13,10 +15,10 @@ import DonModal from './DonModal';
 
 const TIER_COLOR = { easy: '#00ff88', medium: '#00c3ff', hard: '#ff6b81' };
 
-function DailyQuestsCard({ workoutHistory, userName, userCoins, setUserCoins, userXP, setUserXP, questsData, setQuestsData, donData, setDonData, marks }) {
+function DailyQuestsCard({ workoutHistory, userName, userCoins, setUserCoins, userXP, setUserXP, userLevel, setUserLevel, questsData, setQuestsData, donData, setDonData, marks }) {
     const { t } = useTranslation();
     const { toast, haptic } = useToast();
-    const todayKey = new Date().toISOString().split('T')[0];
+    const todayKey = localDayKey();
     const [donOpen, setDonOpen] = useState(null); // { baseCoins, rewardXp }
 
     const tasks = useMemo(() => dailyTasks({ userName, workoutHistory }), [userName, workoutHistory]);
@@ -46,7 +48,11 @@ function DailyQuestsCard({ workoutHistory, userName, userCoins, setUserCoins, us
     const claim = (task) => {
         if (claimed.includes(task.id) || selected !== task.id) return;
         haptic([15, 30, 15]);
-        setUserXP(userXP + task.reward.xp);
+        // Egrisel seviye sistemi: toplam XP uzerinden seviye de guncellenir
+        // (gorev XP'si eskiden seviye atlama tetiklemiyordu).
+        const after = levelFromTotalXp(totalXpForLevel(userLevel || 1) + (userXP || 0) + task.reward.xp);
+        if (setUserLevel && after.level !== userLevel) setUserLevel(after.level);
+        setUserXP(after.xp);
         setQuestsData({ day: todayKey, claimed: [task.id], selected: task.id });
         if (canStartChain(donData, todayKey)) {
             setDonOpen({ baseCoins: task.reward.coins });
@@ -193,3 +199,4 @@ function DailyQuestsCard({ workoutHistory, userName, userCoins, setUserCoins, us
 }
 
 export default DailyQuestsCard;
+

@@ -68,17 +68,10 @@ function RestTimer({
         }
     };
 
-    // Notification izni: ilk render'da sessizce talep et.
-    // 'default' ise (kullanıcı daha önce cevap vermemişse) bir kerelik sor.
-    useEffect(() => {
-        if (
-            typeof Notification !== 'undefined' &&
-            Notification.permission === 'default'
-        ) {
-            // Kullanıcıdan izin iste; reddederse sessizce devam et
-            Notification.requestPermission().catch(() => { /* yok say */ });
-        }
-    }, []);
+    // Bildirim izni burada ISTENMEZ: antrenman görünümü açılır açılmaz
+    // tarayıcı izin diyaloğu göstermek iyi bir deneyim değil. İzin yalnızca
+    // Profil > Hatırlatıcılar'dan kullanıcı isteğiyle talep edilir;
+    // burada sadece önceden verilmiş izin kullanılır.
 
     useEffect(() => {
         let interval = null;

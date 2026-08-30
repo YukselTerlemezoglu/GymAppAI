@@ -117,8 +117,8 @@ export async function generateProgram(ctx) {
 
   const userPrompt =
     lang === 'tr'
-      ? `Sen profesyonel bir fitness antrenörüsün. Hedef: ${goal}, Gün: ${days}, Süre: ${duration}, Ekipman: ${equipment}, Seviye: ${level}, Kardiyo: ${cardio}. JSON FORMATINDA CEVAP VER. TÜM İSİMLER TÜRKÇE OLMALI. Şema: { days: [ { dayName: string, exercises: [ { name: string, sets: number, weight: string, reps: string } ] } ] }`
-      : `You are a professional fitness coach. Goal: ${goal}, Days: ${days}, Duration: ${duration}, Equipment: ${equipment}, Level: ${level}, Cardio: ${cardio}. OUTPUT IN JSON FORMAT. ALL NAMES MUST BE IN ENGLISH. Schema: { days: [ { dayName: string, exercises: [ { name: string, sets: number, weight: string, reps: string } ] } ] }`;
+      ? `Sen profesyonel bir fitness antrenörüsün. Hedef: ${goal}, Gün: ${days}, Süre: ${duration}, Ekipman: ${equipment}, Seviye: ${level}, Kardiyo: ${cardio}. JSON FORMATINDA CEVAP VER. ÇOK ÖNEMLİ: "days" dizisinde TAM OLARAK ${days} AYRI GÜN olmalıdır (dayName: "Gün 1", "Gün 2", ... şeklinde). EGZERSİZ İSİMLERİ HER ZAMAN İNGİLİZCE OLMALI (örn "Bench Press", "Deadlift", "Lat Pulldown"; TÜRKÇEYE ÇEVİRME). "dayName" alanı Türkçe olabilir. KURALLAR: (1) "weight" HER ZAMAN dolu olmalı: egzersiz ekipmanla yapılıyorsa seviyeye uygun sayısal kg tahmini yaz (örn "40", "60"); sadece vücut ağırlığıyla yapılıyorsa "Vücut Ağırlığı" yaz. Asla boş bırakma. (2) "reps" tekrar aralığı (örn "8-12"). (3) Uygun yerlerde antagonist superset çifti ekle (göğüs+sırt, biceps+triceps): çiftin İKİNCİ egzersizine "supersetWithPrev": true koy, ilkine koyma. Şema: { days: [ { dayName: string, exercises: [ { name: string, sets: number, weight: string, reps: string, supersetWithPrev?: boolean } ] } ] }`
+      : `You are a professional fitness coach. Goal: ${goal}, Days: ${days}, Duration: ${duration}, Equipment: ${equipment}, Level: ${level}, Cardio: ${cardio}. OUTPUT IN JSON FORMAT. CRITICAL: the "days" array MUST contain EXACTLY ${days} SEPARATE days (dayName: "Day 1", "Day 2", ...). ALL EXERCISE NAMES MUST BE IN ENGLISH (e.g. "Bench Press", "Deadlift", "Lat Pulldown"); "dayName" may be in the user's language. RULES: (1) "weight" must ALWAYS be filled: if the exercise uses equipment, write a numeric kg estimate appropriate for the level (e.g. "40", "60"); if bodyweight-only, write "Bodyweight". Never leave it empty. (2) "reps" is a rep range (e.g. "8-12"). (3) Where appropriate add antagonist superset pairs (chest+back, biceps+triceps): put "supersetWithPrev": true on the SECOND exercise of a pair, never the first. Schema: { days: [ { dayName: string, exercises: [ { name: string, sets: number, weight: string, reps: string, supersetWithPrev?: boolean } ] } ] }`;
 
   const data = await callGroq({
     kind: 'program',
@@ -130,6 +130,26 @@ export async function generateProgram(ctx) {
   if (!data || !Array.isArray(data.days)) {
     throw new Error('AI geçerli bir program şeması üretmedi.');
   }
+
+  // Savunma: weight alanı bos/kayip geldiyse egzersiz turune gore
+  // makul baslangic tahmini yaz (AI arada bos donduruyor; UI bos kalmasin).
+  const guessWeight = (name) => {
+    const n = String(name || '').toLowerCase();
+    if (/(barbell|barfiks|çekiş|deadlift|squat|bench|bar)/.test(n)) return '40';
+    if (/(makine|machine|cable|kablo|lat |leg |chest )/.test(n)) return '30';
+    if (/(dumbbell|dambıl|dumbel|lateral|raise|curl|press)/.test(n)) return '12';
+    return '';
+  };
+
+  data.days.forEach((d) => {
+    (d.exercises || []).forEach((ex) => {
+      if (!ex) return;
+      const raw = ex.weight;
+      if (raw === null || raw === undefined || String(raw).trim() === '') {
+        ex.weight = guessWeight(ex.name);
+      }
+    });
+  });
 
   data.isAiGenerated = true;
   return data;

@@ -12,6 +12,8 @@ check('Bodyweight -> BW', normalizeAiWeight('Bodyweight')==='BW');
 check('2 x 15kg -> 2 (set sayisi onde, nadir vaka)', normalizeAiWeight('2 x 15kg')==='2');
 check('bos -> bos', normalizeAiWeight('')==='');
 check('null -> bos', normalizeAiWeight(null)==='');
+check('taninmayan metin -> bos (BW varsayimi kaldirildi)', normalizeAiWeight('makine ağırlığı')==='');
+check('undefined -> bos', normalizeAiWeight(undefined)==='');
 check('8-12 -> 8-12', normalizeAiReps('8-12')==='8-12');
 check('12 -> 12', normalizeAiReps('12')==='12');
 check('8 ila 12 -> 8-12', normalizeAiReps('8 ila 12')==='8-12');

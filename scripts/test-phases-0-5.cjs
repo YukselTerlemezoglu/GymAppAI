@@ -146,6 +146,18 @@ const rollover = se.rolloverSeason({ seasonNumber: 1, seasonSP: 1000, totalSP: 5
 ok(rollover.seasonNumber === 2 && rollover.seasonSP === 0, 'rollover: yeni sezon SP=0');
 ok(rollover.totalSP === 1500, 'rollover: totalSP birikir');
 ok(rollover.league === 'silver', 'rollover: lig korundu/yukseldi');
+// Sezon ici SP: sadece sezon penceresindeki kayitlar sayilir
+{
+    const epoch = new Date('2026-09-07T00:00:00Z').getTime();
+    const now = new Date('2026-09-20T12:00:00Z').getTime(); // sezon 1, hafta 2
+    const inside = { date: '2026-09-15T10:00:00.000Z', totalWeight: 5000, sets: 12 };
+    const before = { date: '2026-09-01T10:00:00.000Z', totalWeight: 5000, sets: 12 };
+    const inSeason = se.seasonSP([inside, before], null, epoch, now);
+    const empty = se.seasonSP([], null, epoch, now);
+    ok(inSeason.workouts === 1, 'sezonSP: sezon oncesi kayit sayilmaz');
+    ok(inSeason.sp === se.spFromWorkout(inside), 'sezonSP: ic kayit SP esleri');
+    ok(empty.sp === 0 && empty.workouts === 0, 'sezonSP: bos gecmis 0');
+}
 
 console.log('--- dailyQuests v2 ---');
 const dq = loadModule('src/utils/dailyQuests.js').exports;
@@ -183,6 +195,15 @@ const ev = dq.evaluateTasks(t1, ctx);
 ok(ev.every(e => typeof e.progress === 'number' && e.progress >= 0 && e.progress <= 1), 'progress 0..1 araliginda');
 ok(ev.some(e => e.done), 'en az bir gorev tamamlandi (veriye gore)');
 
+console.log('--- dateKey (yerel gun anahtari) ---');
+const dk = loadModule('src/utils/dateKey.js').exports;
+ok(dk.localDayKey(new Date(2026, 7, 30, 0, 5)) === '2026-08-30', 'yerel gece yarisi gecisi dogru gunu verir');
+ok(dk.localDayKey('2026-08-15') === '2026-08-15', 'ISO string kabul edilir');
+// UTC karsilastirma: toISOString UTC+3'te 00:00-03:00 arasi farkli gun verir
+const localMidnight = new Date(2026, 7, 30, 0, 30); // 30 Agu 00:30 yerel
+ok(localMidnight.toISOString().split('T')[0] === '2026-08-29' || true, '(bilgi) UTC anahtari: ' + localMidnight.toISOString().split('T')[0]);
+ok(dk.localDayKey(localMidnight) === '2026-08-30', 'localDayKey UTC kaymasina takilmaz');
+
 console.log('--- don (Double or Nothing) ---');
 const don = loadModule('src/utils/don.js').exports;
 ok(don.flip(() => 0.3) === 'heads' && don.flip(() => 0.7) === 'tails', 'flip deterministik random ile');
@@ -194,6 +215,9 @@ const dr1 = don.applyChainResult(null, { banked: 200, lost: 0, chainLen: 2, flip
 ok(dr1.stats.biggestBank === 200 && dr1.stats.longestChain === 2, 'bankalama istatistigi');
 const dr2 = don.applyChainResult(dr1, { banked: 0, lost: 400, chainLen: 2, flips: 3, wins: 2 }, '2026-08-28');
 ok(dr2.stats.totalLost === 400 && don.donNet(dr2.stats) === -200, 'kayip + net hesap dogru');
+const dr3 = don.applyChainResult(dr2, { banked: 100, lost: 0, chainLen: 1, flips: 1, wins: 1 }, '2026-08-29');
+ok(dr3.stats.totalWon === 300 && dr3.stats.totalLost === 400 && dr3.stats.flips === 6, 'gun degisse de istatistikler yasam boyu birikir');
+ok(dr3.day === '2026-08-29' && dr3.chainsUsed === 1, 'yeni gun anahtari + kullanilan hak');
 
 // EV nötrlük simülasyonu: riske girme, uzun vadede "güvenli alma" ile ayni getiri
 {

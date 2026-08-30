@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Play, Plus, ArrowLeft, Trash2, Check, Bot, Activity, Cloud, Wand2, Timer, PersonStanding } from 'lucide-react';
+import { Trophy, Play, Plus, ArrowLeft, Trash2, Check, Bot, Activity, Cloud, Wand2, Timer, PersonStanding, LayoutGrid } from 'lucide-react';
 import useLocalStorage from './hooks/useLocalStorage';
 import ErrorBoundary from './components/ErrorBoundary';
 import AICoachOnboarding from './components/aicoach/AICoachOnboarding';
@@ -14,7 +14,7 @@ import CheckInModal from './components/dashboard/CheckInModal';
 import ProgramWizard from './components/workout/ProgramWizard';
 import SeasonCard from './components/dashboard/SeasonCard';
 import DailyQuestsCard from './components/dashboard/DailyQuestsCard';
-import { seasonInfo, SEASON_EPOCH, leagueForSP } from './utils/season';
+import { seasonInfo, SEASON_EPOCH, leagueForSP, seasonSP } from './utils/season';
 import SavedProgramPreview from './components/dashboard/SavedProgramPreview';
 import WorkoutProgressCharts from './components/dashboard/WorkoutProgressCharts';
 import WorkoutHeatmap from './components/dashboard/WorkoutHeatmap';
@@ -53,6 +53,7 @@ import { getRank } from './utils/ranks';import { auth } from './services/firebas
 import { onAuthStateChanged } from 'firebase/auth';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import { error as logError, log as logInfo } from './utils/logger';
+import { localDayKey } from './utils/dateKey.js';
 
 function AppContent() {
   const { t, lang } = useLanguage();
@@ -145,6 +146,12 @@ function AppContent() {
   // Yazma islemi MobilityView/HiitTimerView dogrudan localStorage'a yapar;
   // burada sadece okunan deger gorevlere beslenir.
   const [activityMarks] = useLocalStorage('gym_app_activity_marks', null);
+
+  // E1: Bugun sekmesi kart gorunurlugu. Varsayilan: hepsi acik.
+  // null = dokunulmamis (tum kartlar acik); obje = {cardId: false} sekilli.
+  const [dashCardVisibility, setDashCardVisibility] = useLocalStorage('gym_app_dash_cards', null);
+  const [showDashCardEditor, setShowDashCardEditor] = useState(false);
+  const isCardVisible = (id) => dashCardVisibility?.[id] !== false;
   // FAZ 3: program sihirbazi
   const [showWizard, setShowWizard] = useState(false);
   const [showCheckIn, setShowCheckIn] = useState(false);
@@ -181,11 +188,11 @@ function AppContent() {
 
   // --- FAZ 1d yardimcilari: check-in veri yapisi ---
   // checkinData: { entries: [{ date, mood, pain }] } — en yeni ilk
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDayKey();
   const checkinToday = (data) => {
     const e = data?.entries?.[0];
     if (!e) return false;
-    return (new Date(e.date).toISOString().split('T')[0]) === todayStr;
+    return localDayKey(new Date(e.date)) === todayStr;
   };
   const checkinToPainData = (data) => {
     const e = data?.entries?.[0];
@@ -218,6 +225,21 @@ function AppContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [season.number]);
+
+  // SP kaliciligi: sezon ici SP workoutHistory'den turetilir ama rollover bu
+  // degeri seasonData.seasonSP'den okur. Kayit degistikce kalici yazilmazsa
+  // sezon sonunda tum SP kaybolur (totalSP hep 0 + 0 kalir). History ile
+  // senkron: sadece buyurse guncelle (kayit silinince SP geri gitmez —
+  // spam/silme istismarini da onler).
+  useEffect(() => {
+    if (!seasonData || seasonData.seasonNumber !== season.number) return;
+    const live = seasonSP(workoutHistory).sp;
+    const recorded = seasonData.seasonSP || 0;
+    if (live > recorded) {
+      setSeasonData({ ...seasonData, seasonSP: live });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- SP sadece kayit eklenince artar
+  }, [workoutHistory, season.number]);
 
   const [completedDays, setCompletedDays] = useLocalStorage('gym_app_completed_days', []);
   const [lastResetDate, setLastResetDate] = useLocalStorage('gym_app_last_reset_date', null);
@@ -263,6 +285,20 @@ function AppContent() {
     const unsub = subscribeFriendships((uids) => setFriendCountForBadges(uids.length));
     return () => unsub();
   }, [currentUser]);
+
+  // --- DUELLO ISTatISTIGI: ANTRENMAN BITINCE YAYINLA ---
+  // weekStats eskiden sadece Profil sekmesi acikken yayinlaniyordu; profil
+  // hic acmayan kullanicinin duello skoru hafta boyu donuk kaliyordu.
+  // Antrenman gecmisi degistiginde (antrenman tamamlama) girisliyse yayinla.
+  useEffect(() => {
+    if (!currentUser || !Array.isArray(workoutHistory)) return;
+    import('./utils/duel').then(({ computeWeekStats }) =>
+      import('./utils/friends').then(({ publishProfile }) =>
+        publishProfile({ name: userName, xp: userXP, level: userLevel, weekStats: computeWeekStats(workoutHistory) })
+      )
+    ).catch(() => { /* cevrimdisi: sessiz */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sadece kayit ekleme/degisimde
+  }, [currentUser, workoutHistory]);
 
   // --- PWA HATIRLATMA TICKER'I ---
   // Uygulama acikken antrenman/su hatirlatmalarini kontrol eder
@@ -436,9 +472,20 @@ function AppContent() {
   }, [currentView]);
 
   useEffect(() => {
+    // Mount temizligi: view'deyken yapilan yenileme, bayat gymView state'li
+    // history girdileri biriktirir. Uygulama her zaman dashboard ile acilir;
+    // mevcut girdinin bayat isareti silinir (aksi halde dashboard'a donuste
+    // popstate alttaki bayat girdiyi okuyup yanlis gorunume geri zipler).
+    if (window.history.state?.gymView) {
+      window.history.replaceState({}, '');
+    }
     const onPop = () => {
-      viewRef.current = 'dashboard';
-      if (currentViewRef.current !== 'dashboard') setCurrentView('dashboard');
+      // Geri: dashboard'a don. Ileri: gymView'li girdiye geri donuluyorsa
+      // ilgili gorunumu geri yukle (ileri gezinme kiran kosulsuz dashboard
+      // atamasinin yerine).
+      const target = window.history.state?.gymView || 'dashboard';
+      viewRef.current = target;
+      if (currentViewRef.current !== target) setCurrentView(target);
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
@@ -554,7 +601,7 @@ function AppContent() {
             inventory={inventory}
             setInventory={setInventory}
             onOpenShop={() => setCurrentView('shop')}
-       
+            setUserCoins={setUserCoins}
             onBuddyEvolved={(buddyId, newXp) => setBuddyEvolution({ buddyId, newXp })}   />
         );
       }
@@ -579,7 +626,9 @@ function AppContent() {
             wheelState={wheelState}
             setWheelState={setWheelState}
             setUserXP={setUserXP}
+            userXP={userXP}
             userLevel={userLevel}
+            setUserLevel={setUserLevel}
             unlockedThemes={unlockedThemes}
             setUnlockedThemes={setUnlockedThemes}
             activeTheme={activeTheme}
@@ -713,15 +762,26 @@ function AppContent() {
                 </div>
 
                 {/* Coin: profil kartının içinde, sağda. Ucretsiz cark varsa 🎡 isareti yanip soner */}
-                <div
-                  onClick={(e) => { e.stopPropagation(); setCurrentView('shop'); }}
-                  style={{ background: 'rgba(255, 215, 0, 0.1)', border: '1px solid #ffd700', borderRadius: '12px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#ffd700', fontWeight: 'bold', fontSize: '0.85rem', flexShrink: 0, marginLeft: '4px' }}
-                  title={t('app_shop_tooltip')}
-                >
-                  {getWheelState(wheelState).freeAvailable && (
-                    <span style={{ animation: 'wheelHint 1.2s ease-in-out infinite', fontSize: '0.95rem' }} title={t('shop_wheel_free_ready')}>🎡</span>
-                  )}
-                  <span>🪙</span> {userCoins}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                  <button
+                    onClick={() => { haptic(8); setShowDashCardEditor(true); }}
+                    className="icon-btn"
+                    style={{ background: 'rgba(0,195,255,0.1)', border: '1px solid rgba(0,195,255,0.3)', color: '#00c3ff' }}
+                    title={t('dash_edit_cards')}
+                    aria-label={t('dash_edit_cards')}
+                  >
+                    <LayoutGrid size={16} />
+                  </button>
+                  <div
+                    onClick={(e) => { e.stopPropagation(); setCurrentView('shop'); }}
+                    style={{ background: 'rgba(255, 215, 0, 0.1)', border: '1px solid #ffd700', borderRadius: '12px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#ffd700', fontWeight: 'bold', fontSize: '0.85rem', flexShrink: 0 }}
+                    title={t('app_shop_tooltip')}
+                  >
+                    {getWheelState(wheelState).freeAvailable && (
+                      <span style={{ animation: 'wheelHint 1.2s ease-in-out infinite', fontSize: '0.95rem' }} title={t('shop_wheel_free_ready')}>🎡</span>
+                    )}
+                    <span>🪙</span> {userCoins}
+                  </div>
                 </div>
               </div>
 
@@ -760,30 +820,7 @@ function AppContent() {
         {/* ============ BUGÜN ============ */}
         {dashboardTab === 'today' && (
           <div className="dash-grid">
-            {/* Sol kolon: skor + gunun oyunsal kartlari */}
-            <div className="dash-main" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <ScoreTracker
-                workoutHistory={workoutHistory}
-                streak={streak}
-                weeklyGoal={weeklyGoal}
-                weeksThisWeek={weeksThisWeek}
-                flameColor={getActive(activeCosmetics, ownedCosmetics, 'flame')?.color || '#ffa502'}
-              />
-              <DailyQuestsCard workoutHistory={workoutHistory} userName={userName} userCoins={userCoins} setUserCoins={setUserCoins} userXP={userXP} setUserXP={setUserXP} questsData={questsData} setQuestsData={setQuestsData} donData={donData} setDonData={setDonData} marks={activityMarks?.day === new Date().toISOString().split('T')[0] ? activityMarks.marks : {}} />
-              <SeasonCard seasonData={seasonData} workoutHistory={workoutHistory} userCoins={userCoins} setUserCoins={setUserCoins} setSeasonData={setSeasonData} />
-            </div>
-
-            {/* Sag kolon: gunluk bakim (beslenme/su/toparlanma/check-in) */}
-            <div className="dash-side" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <NutritionSummary
-                nutritionData={nutritionData}
-                onClick={() => setCurrentView('nutrition')}
-              />
-              <WaterTrackerWidget />
-              <RecoveryWidget workoutHistory={workoutHistory} />
-            </div>
-
-            {/* AI Koc + Check-in: yanyana 2 kolon (mobilde alt alta) */}
+            {/* AI Koc + Check-in: gunun ana giris noktalari — en ustte (mobilde alt alta) */}
             <div className="span-both" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.75rem' }}>
               <motion.button
                 onClick={() => setShowCheckIn(true)}
@@ -804,40 +841,99 @@ function AppContent() {
                 <Bot size={20} /> {t('btn_ai_coach')}
               </motion.button>
             </div>
+
+            {/* Sol kolon: skor + gunun oyunsal kartlari */}
+            <div className="dash-main" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {isCardVisible('score') && (
+              <ScoreTracker
+                workoutHistory={workoutHistory}
+                streak={streak}
+                weeklyGoal={weeklyGoal}
+                weeksThisWeek={weeksThisWeek}
+                flameColor={getActive(activeCosmetics, ownedCosmetics, 'flame')?.color || '#ffa502'}
+              />
+              )}
+              {isCardVisible('quests') && (
+              <DailyQuestsCard workoutHistory={workoutHistory} userName={userName} userCoins={userCoins} setUserCoins={setUserCoins} userXP={userXP} setUserXP={setUserXP} userLevel={userLevel} setUserLevel={setUserLevel} questsData={questsData} setQuestsData={setQuestsData} donData={donData} setDonData={setDonData} marks={activityMarks?.day === localDayKey() ? activityMarks.marks : {}} />
+              )}
+              {isCardVisible('season') && (
+              <SeasonCard seasonData={seasonData} workoutHistory={workoutHistory} userCoins={userCoins} setUserCoins={setUserCoins} setSeasonData={setSeasonData} />
+              )}
+            </div>
+
+            {/* Sag kolon: gunluk bakim (beslenme/su/toparlanma/check-in) */}
+            <div className="dash-side" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {isCardVisible('nutrition') && (
+              <NutritionSummary
+                nutritionData={nutritionData}
+                onClick={() => setCurrentView('nutrition')}
+              />
+              )}
+              {isCardVisible('water') && <WaterTrackerWidget />}
+              {isCardVisible('recovery') && <RecoveryWidget workoutHistory={workoutHistory} />}
+            </div>
+          </div>
+        )}
+
+        {/* E1: Kart duzenleme modali — Bugun sekmesi kartlarini gizle/goster */}
+        {showDashCardEditor && (
+          <div className="modal-overlay" onClick={() => setShowDashCardEditor(false)}>
+            <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px', width: '100%' }}>
+              <div className="card-header">
+                <h3 className="card-title"><LayoutGrid size={20} color="#00c3ff" /> {t('dash_edit_title')}</h3>
+                <button onClick={() => setShowDashCardEditor(false)} className="icon-btn" aria-label={t('bkp_cancel')}>
+                  ✕
+                </button>
+              </div>
+              <p style={{ color: 'var(--text-light)', fontSize: '0.82rem', margin: '0 0 12px 0' }}>{t('dash_edit_hint')}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[
+                  { id: 'score', label: t('dash_card_score') },
+                  { id: 'quests', label: t('dash_card_quests') },
+                  { id: 'season', label: t('dash_card_season') },
+                  { id: 'nutrition', label: t('dash_card_nutrition') },
+                  { id: 'water', label: t('dash_card_water') },
+                  { id: 'recovery', label: t('dash_card_recovery') }
+                ].map(card => {
+                  const visible = isCardVisible(card.id);
+                  return (
+                    <button
+                      key={card.id}
+                      onClick={() => {
+                        haptic(8);
+                        setDashCardVisibility({ ...(dashCardVisibility || {}), [card.id]: !visible });
+                      }}
+                      style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.8rem 1rem',
+                        background: visible ? 'rgba(0,195,255,0.08)' : 'rgba(255,255,255,0.03)',
+                        border: `1px solid ${visible ? 'rgba(0,195,255,0.35)' : 'rgba(255,255,255,0.1)'}`,
+                        borderRadius: '10px', cursor: 'pointer', color: '#fff', fontSize: '0.88rem', minHeight: '44px'
+                      }}
+                    >
+                      <span>{card.label}</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: visible ? '#00ff88' : 'var(--text-muted)' }}>
+                        {visible ? '👁 ' + t('dash_card_visible') : '🚫 ' + t('dash_card_hidden')}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {(dashCardVisibility && Object.values(dashCardVisibility).some(v => v === false)) && (
+                <button
+                  onClick={() => { setDashCardVisibility(null); haptic(8); }}
+                  className="neon-btn-secondary"
+                  style={{ width: '100%', marginTop: '12px', padding: '0.6rem', fontSize: '0.82rem' }}
+                >
+                  {t('dash_edit_reset')}
+                </button>
+              )}
+            </div>
           </div>
         )}
 
         {/* ============ ANTRENMAN ============ */}
         {dashboardTab === 'train' && (
           <div className="stack-grid">
-            {/* AI Saved Program — tam genislik; gunler iceride coklu kolon (grid) */}
-            <div className="span-both">
-            <SavedProgramPreview
-              savedAiProgram={savedAiProgram}
-              painData={checkinToPainData(checkinData)}
-              showCustomBuilder={showCustomBuilder}
-              completedDays={completedDays}
-              clearAiProgram={clearAiProgram}
-              startActiveAiWorkout={startActiveAiWorkout}
-              handleUpdateAiProgram={handleUpdateAiProgram}
-            />
-            </div>
-
-            {/* Custom Program Builder */}
-            {
-              showCustomBuilder && (
-                <div className="span-both">
-                <CustomProgramBuilder setSavedAiProgram={setSavedAiProgram} setShowCustomBuilder={setShowCustomBuilder} />
-                </div>
-              )
-            }
-
-            {/* Sablonlar: tam genislik; sablon kartlari iceride coklu kolon */}
-            <div className="span-both">
-            <WorkoutTemplates
-              onStartTemplate={(params) => startActiveAiWorkout(-1, params)}
-            />
-            </div>
 
             {/* Aksiyon butonlari: 2x2 grid (mobilde tek kolon) */}
             <div className="fade-in span-both" style={{ animationDelay: '0.15s', display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
@@ -885,26 +981,57 @@ function AppContent() {
                 <PersonStanding size={20} /> {t('btn_mobility')}
               </motion.button>
             </div>
+
+            {/* AI Saved Program — tam genislik; gunler iceride coklu kolon (grid) */}
+            <div className="span-both">
+            <SavedProgramPreview
+              savedAiProgram={savedAiProgram}
+              painData={checkinToPainData(checkinData)}
+              showCustomBuilder={showCustomBuilder}
+              completedDays={completedDays}
+              clearAiProgram={clearAiProgram}
+              startActiveAiWorkout={startActiveAiWorkout}
+              handleUpdateAiProgram={handleUpdateAiProgram}
+            />
+            </div>
+
+            {/* Custom Program Builder */}
+            {
+              showCustomBuilder && (
+                <div className="span-both">
+                <CustomProgramBuilder setSavedAiProgram={setSavedAiProgram} setShowCustomBuilder={setShowCustomBuilder} />
+                </div>
+              )
+            }
+
+            {/* Sablonlar: tam genislik; sablon kartlari iceride coklu kolon */}
+            <div className="span-both">
+            <WorkoutTemplates
+              onStartTemplate={(params) => startActiveAiWorkout(-1, params)}
+            />
+            </div>
           </div>
         )}
 
         {/* ============ GELİŞİM ============ */}
-        {/* Masaustunde 2 kolon; grafikler span-both ile tam genislik */}
+        {/* Masaustunde 2 kolon; grafikler span-both ile tam genislik.
+            Sira: once ana gelişim grafikleri + takvim (sik bakilan), sonra
+            analizler (standartlar, egiriler, rapor), en sonda isi haritasi. */}
         {dashboardTab === 'progress' && (
           <div className="stack-grid">
-            <WorkoutHeatmap workoutHistory={workoutHistory} />
-
-            <StrengthStandards workoutHistory={workoutHistory} />
-
-            <WeeklyAiReport workoutHistory={workoutHistory} />
-
             {workoutHistory && workoutHistory.length > 0 && (
               <WorkoutProgressCharts workoutHistory={workoutHistory} onOpenPrHistory={() => setCurrentView('prhistory')} />
             )}
 
+            <WorkoutCalendar workoutHistory={workoutHistory} />
+
+            <WorkoutHeatmap workoutHistory={workoutHistory} />
+
+            <StrengthStandards workoutHistory={workoutHistory} />
+
             <StrengthCurves workoutHistory={workoutHistory} />
 
-            <WorkoutCalendar workoutHistory={workoutHistory} />
+            <WeeklyAiReport workoutHistory={workoutHistory} />
 
             <CoachInsightFeed workoutHistory={workoutHistory} weeklyGoal={weeklyGoal} activeBuddyId={activeBuddyId} painData={checkinToPainData(checkinData)} />
           </div>

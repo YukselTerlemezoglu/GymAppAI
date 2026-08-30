@@ -90,7 +90,14 @@ function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
 
                     if (pulled) {
                         setSyncStatusText(t('auth_data_synced'));
-                        window.location.reload(); // Değişikliklerin yansıması için sayfayı yenile
+                        // BURADA ASLA window.location.reload() YAPILMAMALI:
+                        // Firebase oturumu IndexedDB'ye asenkron yazilir; reload
+                        // erken gelirse oturum kaliclasmadan dusar ve kullanici
+                        // her seferinde yeniden giris yapmak zorunda kalir.
+                        // Veriler zaten localStorage'a yazildi; gymapp-storage
+                        // eventi tum useLocalStorage state'lerini canli tazeler.
+                        window.dispatchEvent(new Event('gymapp-storage'));
+                        onLoginSuccess();
                         return;
                     } else {
                         setSyncStatusText(t('auth_backing_up'));

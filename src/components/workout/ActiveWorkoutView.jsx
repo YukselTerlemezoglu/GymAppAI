@@ -1,3 +1,4 @@
+import { localDayKey } from '../../utils/dateKey';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
@@ -14,6 +15,7 @@ import { calcWeeklyStreak, weeklyMultiplier } from '../../utils/consistency';
 import { buddyGainFromWorkout, addBuddyXp, findBuddy } from '../../utils/buddy';
 import { normalizeAiWeight, normalizeAiReps } from '../../utils/aiNormalizer';
 import { getGhostSets, compareSetToGhost, ghostScore } from '../../utils/ghostRival';
+import { getSupersetChain } from '../../utils/superset';
 
 function ActiveWorkoutView({
     onBuddyEvolved,
@@ -191,6 +193,10 @@ function ActiveWorkoutView({
 
     const handleCheckSet = (eIdx, sIdx, ex) => {
         haptic(10);
+        // Updater saf tutulur: set-check'ten tureyen yan etkiler (rest sayaci,
+        // geribildirim modali) asamadan SONRA calisir. React 18 StrictMode
+        // updater'lari iki kez cagirabilir; updater ici setState cagrilarinin
+        // buradan kaldirilmasi cift tetiklenmeyi onler.
         setActiveAiWorkoutLogs(prev => {
             const updated = { ...prev };
             if (!updated[eIdx]) {
@@ -199,41 +205,53 @@ function ActiveWorkoutView({
             updated[eIdx] = [...updated[eIdx]];
             const isNowChecked = !updated[eIdx][sIdx].completed;
             updated[eIdx][sIdx] = { ...updated[eIdx][sIdx], completed: isNowChecked };
-
-            if (isNowChecked && isTrackingMode && isRestTimerEnabled) {
-                let allComplete = true;
-                (activeAiWorkoutDayParams?.exercises || []).forEach((loopEx, i) => {
-                    const logs = updated[i] || getSetsForExercise(i, loopEx);
-                    if (logs.some(set => !set.completed)) {
-                        allComplete = false;
-                    }
-                });
-
-                if (!allComplete) {
-                    setRestTimeRemaining(60);
-                    setIsRestTimerActive(true);
-                } else {
-                    setIsRestTimerActive(false);
-                    setRestTimeRemaining(0);
-                }
-            }
-
-            if (isTrackingMode) checkIfAllSetsCompleted(updated);
             return updated;
         });
-    };
 
-    const checkIfAllSetsCompleted = (currentLogs) => {
-        if (!activeAiWorkoutDayParams) return;
-        let allComplete = true;
-        (activeAiWorkoutDayParams?.exercises || []).forEach((ex, i) => {
-            const logs = currentLogs[i] || getSetsForExercise(i, ex);
-            if (logs.some(set => !set.completed)) {
-                allComplete = false;
+        const willBeChecked = !((activeAiWorkoutLogs[eIdx] || getSetsForExercise(eIdx, ex))[sIdx]?.completed);
+        if (willBeChecked && isTrackingMode && isRestTimerEnabled) {
+            // Superset zinciri: bagli egzersizler arka arkaya dinlenmesiz yapilir.
+            // Zincirde hala tamamlanmamis set varsa sayac baslamaz; zincir
+            // bittiginde normal dinlenme verilir.
+            const chain = getSupersetChain(activeAiWorkoutDayParams, eIdx);
+            const chainStillOpen = chain.some((i) => {
+                const loopEx = activeAiWorkoutDayParams.exercises[i];
+                const logs = i === eIdx
+                    ? (activeAiWorkoutLogs[i] || getSetsForExercise(i, loopEx)).map((s, j) => (j === sIdx ? { ...s, completed: true } : s))
+                    : (activeAiWorkoutLogs[i] || getSetsForExercise(i, loopEx));
+                return logs.some(set => !set.completed);
+            });
+
+            let allComplete = true;
+            (activeAiWorkoutDayParams?.exercises || []).forEach((loopEx, i) => {
+                const logs = i === eIdx
+                    ? (activeAiWorkoutLogs[i] || getSetsForExercise(i, loopEx)).map((s, j) => (j === sIdx ? { ...s, completed: true } : s))
+                    : (activeAiWorkoutLogs[i] || getSetsForExercise(i, loopEx));
+                if (logs.some(set => !set.completed)) {
+                    allComplete = false;
+                }
+            });
+
+            if (allComplete) {
+                setIsRestTimerActive(false);
+                setRestTimeRemaining(0);
+            } else if (!chainStillOpen) {
+                setRestTimeRemaining(60);
+                setIsRestTimerActive(true);
             }
-        });
-        if (allComplete && activeAiWorkoutDayParams.exercises.length > 0) {
-            setShowAiFeedbackModal(true);
+            // zincir devam ediyorsa: sayac zaten kapali kalir
+
+            if (isTrackingMode) {
+                // Tamamlanma kontrolu guncel (checkbox sonrasi) loglarla yapilir
+                const after = (activeAiWorkoutLogs[eIdx] || getSetsForExercise(eIdx, ex)).map((s, j) => (j === sIdx ? { ...s, completed: true } : s));
+                const allDone = (activeAiWorkoutDayParams?.exercises || []).every((loopEx, i) => {
+                    const logs = i === eIdx ? after : (activeAiWorkoutLogs[i] || getSetsForExercise(i, loopEx));
+                    return !logs.some(set => !set.completed);
+                });
+                if (allDone && activeAiWorkoutDayParams.exercises.length > 0) {
+                    setShowAiFeedbackModal(true);
+                }
+            }
         }
     };
 
@@ -244,7 +262,7 @@ function ActiveWorkoutView({
         }
         setFeedbackValErr('');
 
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = localDayKey();
 
         let extraXpFromDifficulty = 0;
 
@@ -284,7 +302,19 @@ function ActiveWorkoutView({
             // girmesin; hic gecerli set yoksa setLogs bos kalir (fallback devreye girer).
             const setLogs = logs
                 .filter(s => (isTrackingMode ? s.completed : true) && (parseFloat(s.weight) || 0) > 0 && (parseInt(s.reps) || 0) > 0)
-                .map(s => ({ weight: parseFloat(s.weight) || 0, reps: parseInt(s.reps) || 0, mode: s.mode || 'Normal' }));
+                .map(s => ({
+                    weight: parseFloat(s.weight) || 0,
+                    reps: parseInt(s.reps) || 0,
+                    mode: s.mode || 'Normal',
+                    // Set bazli RPE (opsiyonel alan): bos birakilmissa kayda girmez
+                    ...(s.rpe ? { rpe: parseFloat(s.rpe) || null } : {})
+                }));
+
+            // Set bazli RPE girildiyse antrenman ortalamasini zenginlestir:
+            // seans RPE'si (feedback) yoksa set ortalamasi kullanilir.
+            const setRpes = setLogs.map(s => s.rpe).filter(r => r > 0);
+            const avgSetRpe = setRpes.length ? setRpes.reduce((a, b) => a + b, 0) / setRpes.length : 0;
+            const sessionRpe = parseFloat(aiFeedbackRpe) || (Math.round(avgSetRpe * 10) / 10) || 0;
 
             newWorkouts.push({
                 id: Date.now() + index,
@@ -296,7 +326,7 @@ function ActiveWorkoutView({
                 setLogs,
                 totalWeight: exTotalWeight > 0 ? exTotalWeight : (parsedWeight * parsedReps * parseInt(ex.sets || 1)),
                 totalReps: exTotalReps > 0 ? exTotalReps : (parsedReps * parseInt(ex.sets || 1)),
-                avgRpe: parseFloat(aiFeedbackRpe) || 0,
+                avgRpe: sessionRpe,
                 isAiGenerated: !!savedAiProgram?.isAiGenerated
             });
         });
@@ -316,17 +346,20 @@ function ActiveWorkoutView({
         setLastWorkoutDate(todayStr);
 
         // Mark current day as completed
-        if (!completedDays.includes(activeAiWorkoutDayIdx)) {
+        // (Sadece gecerli bir program gunu icin; sablon antrenmanlari
+        // dayIdx=-1 ile calisir ve listeyi kirletmemeli.)
+        if (activeAiWorkoutDayIdx >= 0 && !completedDays.includes(activeAiWorkoutDayIdx)) {
             setCompletedDays([...completedDays, activeAiWorkoutDayIdx]);
         }
 
         // --- SMART FATIGUE OPTIMIZATION ENGINE ---
+        // Not: optimizationMessage kosul disinda tanimlanir; XP/odul blogu
+        // sablon antrenmanlarinda (dayIdx=-1) da calismalidir.
+        let optimizationMessage = "";
         if (savedAiProgram && savedAiProgram.days && savedAiProgram.days[activeAiWorkoutDayIdx]) {
             const rpeVal = parseFloat(aiFeedbackRpe) || 0;
             const updatedProgram = JSON.parse(JSON.stringify(savedAiProgram)); // Deep copy
             const currentDayExs = updatedProgram.days[activeAiWorkoutDayIdx].exercises;
-
-            let optimizationMessage = "";
 
             // Yardımcı Fonksiyon: 2.5'un katlarına yuvarla (Örn: 59 -> 60, 56 -> 55)
             const roundToNearest2_5 = (num) => Math.round(num / 2.5) * 2.5;
@@ -387,102 +420,102 @@ function ActiveWorkoutView({
 
             // Programı güncelle
             setSavedAiProgram(updatedProgram);
+        }
 
-            // --- DYNAMIC XP & LEVEL LOGIC (v2) ---
-            // Bilesenler: taban + set + tekrar + dakika + HACIM + PR bonusu,
-            // uzerine RPE ve seri (streak) carpanlari.
-            const totalSets = newWorkouts.reduce((sum, w) => sum + (w.sets || 0), 0);
-            const totalReps = newWorkouts.reduce((sum, w) => sum + (w.totalReps || 0), 0);
-            const totalVolume = newWorkouts.reduce((sum, w) => sum + (parseFloat(w.totalWeight) || 0), 0);
-            const timeInMinutes = Math.floor(activeAiWorkoutTimer / 60);
-            const rpe = parseFloat(aiFeedbackRpe) || 5;
+        // --- DYNAMIC XP & LEVEL LOGIC (v2) ---
+        // Bilesenler: taban + set + tekrar + dakika + HACIM + PR bonusu,
+        // uzerine RPE ve seri (streak) carpanlari.
+        const totalSets = newWorkouts.reduce((sum, w) => sum + (w.sets || 0), 0);
+        const totalReps = newWorkouts.reduce((sum, w) => sum + (w.totalReps || 0), 0);
+        const totalVolume = newWorkouts.reduce((sum, w) => sum + (parseFloat(w.totalWeight) || 0), 0);
+        const timeInMinutes = Math.floor(activeAiWorkoutTimer / 60);
+        const rpe = parseFloat(aiFeedbackRpe) || 5;
 
-            // CIFT XP IKSIRI: stokta varsa ve kullanici kabul ettiyse bu
-            // antrenmanin XP + coin kazancini 2x yapar ve iksir tuketilir.
-            // Onay ActiveWorkoutView montajinda (xp2PendingRef) alinir.
-            const potionActive = xp2ActiveRef.current === true;
-            if (potionActive) {
-                setInventory((prev) => {
-                    const cur = (prev && prev.xp2) || 0;
-                    if (cur <= 0) return prev; // stok bu arada bittiyse etkisiz
-                    const next = { ...prev };
-                    if (cur - 1 <= 0) delete next.xp2; else next.xp2 = cur - 1;
-                    return next;
-                });
-            }
+        // CIFT XP IKSIRI: stokta varsa ve kullanici kabul ettiyse bu
+        // antrenmanin XP + coin kazancini 2x yapar ve iksir tuketilir.
+        // Onay ActiveWorkoutView montajinda (xp2PendingRef) alinir.
+        const potionActive = xp2ActiveRef.current === true;
+        if (potionActive) {
+            setInventory((prev) => {
+                const cur = (prev && prev.xp2) || 0;
+                if (cur <= 0) return prev; // stok bu arada bittiyse etkisiz
+                const next = { ...prev };
+                if (cur - 1 <= 0) delete next.xp2; else next.xp2 = cur - 1;
+                return next;
+            });
+        }
 
-            let calculatedXP = 50; // Temel idman bitirme XP'si
-            calculatedXP += totalSets * 5; // Her set için 5 XP
-            calculatedXP += totalReps * 0.5; // Her kaldırılan tekrar için 0.5 XP
-            calculatedXP += timeInMinutes * 2; // Antrenmanda geçen her dakika için 2 XP
-            calculatedXP += Math.round(totalVolume / 1000) * 10; // Her tam ton (1000 kg) hacim için 10 XP
+        let calculatedXP = 50; // Temel idman bitirme XP'si
+        calculatedXP += totalSets * 5; // Her set için 5 XP
+        calculatedXP += totalReps * 0.5; // Her kaldırılan tekrar için 0.5 XP
+        calculatedXP += timeInMinutes * 2; // Antrenmanda geçen her dakika için 2 XP
+        calculatedXP += Math.round(totalVolume / 1000) * 10; // Her tam ton (1000 kg) hacim için 10 XP
 
-            // PR BONUSU: bu idmanda kirilan her kisisel rekor 25 XP
-            calculatedXP += (prs.length || 0) * 25;
+        // PR BONUSU: bu idmanda kirilan her kisisel rekor 25 XP
+        calculatedXP += (prs.length || 0) * 25;
 
-            // Zorluk Derecesine (RPE) göre çarpan (RPE 10 = %25 bonus, RPE 5 = bonus yok)
-            const rpeMultiplier = 1 + ((rpe - 5) * 0.05);
-            calculatedXP = Math.round(calculatedXP * rpeMultiplier);
+        // Zorluk Derecesine (RPE) göre çarpan (RPE 10 = %25 bonus, RPE 5 = bonus yok)
+        const rpeMultiplier = 1 + ((rpe - 5) * 0.05);
+        calculatedXP = Math.round(calculatedXP * rpeMultiplier);
 
-            // HAFTALIK TUTARLILIK CARPANI (weekly streak multiplier)
-            // Dinlenme gunleri seriyi bozmaz; ust uste hedefe ulasilan haftalar sayilir.
-            const historyWithToday = [...newWorkouts, ...(Array.isArray(workoutHistory) ? workoutHistory : [])];
-            const { streak: weeklyStreak } = calcWeeklyStreak(historyWithToday, weeklyGoal || 3);
-            const streakMultiplier = weeklyMultiplier(weeklyStreak);
+        // HAFTALIK TUTARLILIK CARPANI (weekly streak multiplier)
+        // Dinlenme gunleri seriyi bozmaz; ust uste hedefe ulasilan haftalar sayilir.
+        const historyWithToday = [...newWorkouts, ...(Array.isArray(workoutHistory) ? workoutHistory : [])];
+        const { streak: weeklyStreak } = calcWeeklyStreak(historyWithToday, weeklyGoal || 3);
+        const streakMultiplier = weeklyMultiplier(weeklyStreak);
 
-            calculatedXP = Math.round(calculatedXP * streakMultiplier);
+        calculatedXP = Math.round(calculatedXP * streakMultiplier);
 
-            // Add extra gamification XP for AMRAP/Drop Sets
-            calculatedXP += extraXpFromDifficulty;
+        // Add extra gamification XP for AMRAP/Drop Sets
+        calculatedXP += extraXpFromDifficulty;
 
-            // Iksir carpani en son uygulanir (tum odullerin uzerine 2x)
-            if (potionActive) calculatedXP = calculatedXP * 2;
+        // Iksir carpani en son uygulanir (tum odullerin uzerine 2x)
+        if (potionActive) calculatedXP = calculatedXP * 2;
 
-            const gainedXP = Math.max(10, Math.min(4000, calculatedXP)); // Minimum 10, maksimum 4000 XP (iksr ile)
+        const gainedXP = Math.max(10, Math.min(4000, calculatedXP)); // Minimum 10, maksimum 4000 XP (iksr ile)
 
-            // --- EGRISEL SEVIYE SISTEMI (levelSystem.js) ---
-            // Toplam XP uzerinden hesap; birden fazla seviye atlanabilir.
-            const prevTotal = totalXpForLevel(userLevel) + userXP;
-            const after = levelFromTotalXp(prevTotal + gainedXP);
-            const leveledUp = after.level > userLevel;
+        // --- EGRISEL SEVIYE SISTEMI (levelSystem.js) ---
+        // Toplam XP uzerinden hesap; birden fazla seviye atlanabilir.
+        const prevTotal = totalXpForLevel(userLevel) + userXP;
+        const after = levelFromTotalXp(prevTotal + gainedXP);
+        const leveledUp = after.level > userLevel;
 
-            setUserLevel(after.level);
-            setUserXP(after.xp);
+        setUserLevel(after.level);
+        setUserXP(after.xp);
 
-            // Jeton (Coin) Ekleme: Kazanılan XP'nin %10'u kadar Jeton verilir (Ödül Sistemi)
-            // Iksir aktifse coin de 2x.
-            const earnedCoins = Math.max(1, Math.round(gainedXP * 0.1));
-            setUserCoins((prev) => (prev || 0) + earnedCoins);
+        // Jeton (Coin) Ekleme: Kazanılan XP'nin %10'u kadar Jeton verilir (Ödül Sistemi)
+        // Iksir aktifse coin de 2x.
+        const earnedCoins = Math.max(1, Math.round(gainedXP * 0.1));
+        setUserCoins((prev) => (prev || 0) + earnedCoins);
 
-            // DOST (BUDDY) XP: antrenman XP'sinin %30 KOPYASI - kullanici
-            // XP'sinden dusmez; aktif dostun nadirlik carpani uygulanir.
-            if (buddyStateRef.current?.activeId && buddyStateRef.current.collection) {
-                const gain = buddyGainFromWorkout(gainedXP, buddyStateRef.current.rarity);
-                const res = addBuddyXp(buddyStateRef.current.collection, buddyStateRef.current.activeId, gain);
-                setBuddyCollection(res.collection);
-                if (res.evolved) {
+        // DOST (BUDDY) XP: antrenman XP'sinin %30 KOPYASI - kullanici
+        // XP'sinden dusmez; aktif dostun nadirlik carpani uygulanir.
+        if (buddyStateRef.current?.activeId && buddyStateRef.current.collection) {
+            const gain = buddyGainFromWorkout(gainedXP, buddyStateRef.current.rarity);
+            const res = addBuddyXp(buddyStateRef.current.collection, buddyStateRef.current.activeId, gain);
+            setBuddyCollection(res.collection);
+            if (res.evolved) {
     // Tam ekran evrim kutlamasi App seviyesinde gosterilir
     onBuddyEvolved?.(buddyStateRef.current.activeId, res.xp);
 }
-                baseBuddyMsgRef.current = `${buddyStateRef.current.icon} ${lang === 'tr' ? 'dost' : 'buddy'} +${gain} XP`;
-            }
+            baseBuddyMsgRef.current = `${buddyStateRef.current.icon} ${lang === 'tr' ? 'dost' : 'buddy'} +${gain} XP`;
+        }
 
-            let baseMsg = `${lang === 'tr' ? `+${gainedXP} XP` : `+${gainedXP} XP`}`;
-            if (streakMultiplier > 1.0) {
-                baseMsg += ` · 🔥 ${streakMultiplier}x (${weeklyStreak}${lang === 'tr' ? ' hafta' : 'w'})`;
-            }
-            if (potionActive) baseMsg += ` · ⚡ 2x`;
-            baseMsg += ` · 🪙 +${earnedCoins}`;
-            if (baseBuddyMsgRef.current) baseMsg += ` · ${baseBuddyMsgRef.current}`;
+        let baseMsg = `${lang === 'tr' ? `+${gainedXP} XP` : `+${gainedXP} XP`}`;
+        if (streakMultiplier > 1.0) {
+            baseMsg += ` · 🔥 ${streakMultiplier}x (${weeklyStreak}${lang === 'tr' ? ' hafta' : 'w'})`;
+        }
+        if (potionActive) baseMsg += ` · ⚡ 2x`;
+        baseMsg += ` · 🪙 +${earnedCoins}`;
+        if (baseBuddyMsgRef.current) baseMsg += ` · ${baseBuddyMsgRef.current}`;
 
-            // Seviye atlama ve optimizasyon mesaji toast'larla gosterilir
-            if (leveledUp) {
-                toast.success(`🎉 ${lang === 'tr' ? `Seviye atladın! Yeni seviye: ${after.level}` : `Level up! New level: ${after.level}`}`, { duration: 4200 });
-            }
-            toast.success(`${baseMsg} ${lang === 'tr' ? 'kazandın!' : 'earned!'}`, { duration: 3200 });
-            if (optimizationMessage && optimizationMessage.trim()) {
-                toast.info(`🤖 ${optimizationMessage.slice(0, 120)}`, { duration: 4600 });
-            }
+        // Seviye atlama ve optimizasyon mesaji toast'larla gosterilir
+        if (leveledUp) {
+            toast.success(`🎉 ${lang === 'tr' ? `Seviye atladın! Yeni seviye: ${after.level}` : `Level up! New level: ${after.level}`}`, { duration: 4200 });
+        }
+        toast.success(`${baseMsg} ${lang === 'tr' ? 'kazandın!' : 'earned!'}`, { duration: 3200 });
+        if (optimizationMessage && optimizationMessage.trim()) {
+            toast.info(`🤖 ${optimizationMessage.slice(0, 120)}`, { duration: 4600 });
         }
         // ----------------------------------------
 
@@ -691,6 +724,24 @@ function ActiveWorkoutView({
                                                             />
                                                             <span style={{ color: 'var(--text-light)', fontSize: '0.8rem', marginLeft: '4px' }}>reps</span>
                                                         </div>
+
+                                                        {/* RPE mini secici (opsiyonel): bos birak = kayit yok */}
+                                                        <select
+                                                            value={setLog.rpe || ''}
+                                                            onChange={(e) => updateSetData(eIdx, sIdx, 'rpe', e.target.value)}
+                                                            title={lang === 'tr' ? 'Bu set ne kadar zordu? (RPE 1-10)' : 'How hard was this set? (RPE 1-10)'}
+                                                            style={{
+                                                                background: setLog.rpe ? 'rgba(255,171,0,0.15)' : 'rgba(255,255,255,0.05)',
+                                                                color: setLog.rpe ? '#ffab00' : 'var(--text-light)',
+                                                                border: `1px solid ${setLog.rpe ? 'rgba(255,171,0,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                                                                borderRadius: '6px', padding: '4px 6px', fontSize: '0.78rem', outline: 'none', cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            <option value="">{t('set_rpe_placeholder')}</option>
+                                                            {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map(r => (
+                                                                <option key={r} value={r}>{r}</option>
+                                                            ))}
+                                                        </select>
                                                     </div>
                                                 </div>
                                                 {isTrackingMode && (

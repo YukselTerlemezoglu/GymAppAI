@@ -9,6 +9,7 @@ import { BUDDIES, getBuddyStageInfo, findBuddy, addBuddyXp } from '../../utils/b
 import { openChest, updateChestPity, openEgg, updateEggPity, spinWheel, getWheelState, updateWheelState, WHEEL_SEGMENTS, WHEEL_PRICE, CHEST_PITY_EPIC, EGG_PITY_EPIC, EGG_PITY_LEGENDARY } from '../../utils/gacha';
 import GachaRevealModal from './GachaRevealModal';
 import { playSound } from '../../utils/sounds';
+import { totalXpForLevel, levelFromTotalXp } from '../../utils/levelSystem';
 import BuddyCapsule from './BuddyCapsule';
 import EvolutionModal from './EvolutionModal';
 
@@ -42,6 +43,9 @@ function ShopPage({
     wheelState, setWheelState,
     // XP (oduller icin)
     setUserXP,
+    userXP,
+    userLevel,
+    setUserLevel,
     // temalar
     unlockedThemes, setUnlockedThemes,
     activeTheme, setActiveTheme,
@@ -87,7 +91,7 @@ function ShopPage({
         });
         if (!ok) return;
         haptic(12);
-        setUserCoins(userCoins - total); playSound('buy');
+        setUserCoins((prev) => (prev || 0) - total); playSound('buy');
         setInventory({ ...(inventory || {}), [boost.id]: (inventory?.[boost.id] || 0) + buyN });
         toast.success(t('shop_bought', { name: `${lang === 'tr' ? boost.title_tr : boost.title_en} x${buyN}` }));
     };
@@ -148,20 +152,24 @@ function ShopPage({
         if (count === 1) {
             const result = openChest(gachaPity, ownedCosmetics);
             applyGachaResult({ ...result, source: 'chest' });
-            setUserCoins(userCoins - total); playSound('buy');
+            setUserCoins((prev) => (prev || 0) - total); playSound('buy');
             setGachaPity(updateChestPity(gachaPity, result));
             return;
         }
 
-        // Coklu kutu: sonuclar sirali kart animasyonuyla tek modale gider
+        // Coklu kutu: sonuclar sirali kart animasyonuyla tek modale gider.
+        // Dusan kozmetik aninda sahip olunan listesine eklenir; ayni paket
+        // icinde ayni kozmetik ikinci kez dusmez (dupe deger kaybi olmaz).
         let pity = gachaPity;
+        let owned = [...(ownedCosmetics || [])];
         const results = [];
         for (let i = 0; i < count; i++) {
-            const result = openChest(pity, ownedCosmetics);
+            const result = openChest(pity, owned);
             pity = updateChestPity(pity, result);
+            if (result.type === 'cosmetic') owned = [...owned, result.cosmeticId];
             results.push(result);
         }
-        setUserCoins(userCoins - total); playSound('buy');
+        setUserCoins((prev) => (prev || 0) - total); playSound('buy');
         setGachaPity(pity);
         applyGachaResult({ type: 'multiChest', source: 'chest', results, rarity: results.reduce((acc, r) => (r.rarity === 'legendary' || acc === 'legendary') ? 'legendary' : (r.rarity === 'epic' || acc === 'epic') ? 'epic' : 'common', 'common') });
     };
@@ -200,7 +208,7 @@ function ShopPage({
             }
             results.push({ ...result, dupe });
         }
-        setUserCoins(userCoins - total); playSound('buy');
+        setUserCoins((prev) => (prev || 0) - total); playSound('buy');
         setGachaPity(pity);
         setBuddyCollection(collection);
         if (!activeBuddyId && newBuddyIds.length > 0) setActiveBuddyId(newBuddyIds[0]);
@@ -228,7 +236,7 @@ function ShopPage({
                 cancelLabel: t('shop_buy_no')
             });
             if (!ok) return;
-            setUserCoins(userCoins - WHEEL_PRICE); playSound('buy');
+            setUserCoins((prev) => (prev || 0) - WHEEL_PRICE); playSound('buy');
         }
 
         const result = spinWheel();
@@ -260,10 +268,16 @@ function ShopPage({
     };
 
     // ---------- GACHA SONUCU UYGULA ----------
+    // XP kazançları eğrisel seviye sisteminden geçirilir; seviye atlanabilir.
+    const grantXp = (amount) => {
+        const after = levelFromTotalXp(totalXpForLevel(userLevel || 1) + (userXP || 0) + amount);
+        if (setUserLevel && after.level !== userLevel) setUserLevel(after.level);
+        setUserXP(after.xp);
+    };
     const applySingleResult = (r) => {
         switch (r.type) {
             case 'xp':
-                setUserXP((prev) => (prev || 0) + r.amount);
+                grantXp(r.amount);
                 break;
             case 'coins':
                 setUserCoins((prev) => (prev || 0) + r.amount);
@@ -283,13 +297,13 @@ function ShopPage({
                 setInventory((prev) => ({ ...(prev || {}), snack: (prev?.snack || 0) + r.amount }));
                 break;
             case 'cosmetic': {
-                const next = [...(ownedCosmetics || [])];
-                if (!next.includes(r.cosmeticId)) next.push(r.cosmeticId);
-                setOwnedCosmetics(next);
+                // Fonksiyonel updater: ayni pakette birden fazla kozmetik
+                // duserse oncekinin uzerine eklenir (statik spread ezmez).
+                setOwnedCosmetics((prev) => (prev.includes(r.cosmeticId) ? prev : [...prev, r.cosmeticId]));
                 break;
             }
             case 'jackpot':
-                setUserXP((prev) => (prev || 0) + r.amount);
+                grantXp(r.amount);
                 setUserCoins((prev) => (prev || 0) + (r.coins || 0));
                 break;
             default:
@@ -681,7 +695,7 @@ setBuddyCollection((prev) => {
                                                 cancelLabel: t('shop_buy_no')
                                             });
                                             if (!ok) return;
-                                            setUserCoins(userCoins - theme.price); playSound('buy');
+                                            setUserCoins((prev) => (prev || 0) - theme.price); playSound('buy');
                                             setUnlockedThemes([...unlockedThemes, theme.id]);
                                             setActiveTheme(theme.id);
                                             if (applyThemeFn) applyThemeFn(theme.id);

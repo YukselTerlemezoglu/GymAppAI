@@ -42,7 +42,20 @@ function AICoachOnboarding({ setSavedAiProgram, setCurrentView }) {
                 lang,
             });
 
-            setAiResponseJson(normalizeAiProgram(parsedData));
+            const normalized = normalizeAiProgram(parsedData);
+            // AI arada istenen gun sayisindan az dondurebilir (tek-gun yanit).
+            // Program yine kullanilabilir ama kullaniciyi uyarmak dogru olur;
+            // istemezse yeniden uretebilir.
+            const istenen = parseInt(aiDays, 10) || 0;
+            const gelen = Array.isArray(normalized?.days) ? normalized.days.length : 0;
+            if (istenen > 0 && gelen > 0 && gelen < istenen) {
+                toast.warning(
+                    lang === 'tr'
+                        ? `AI ${istenen} gün yerine ${gelen} gün üretti. İstersen tekrar dene.`
+                        : `AI generated ${gelen} day(s) instead of ${istenen}. You can try again.`
+                );
+            }
+            setAiResponseJson(normalized);
         } catch (err) {
             logError('AI Coach generate error:', err);
 

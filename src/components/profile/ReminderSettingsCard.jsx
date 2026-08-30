@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Bell, BellOff } from 'lucide-react';
+import { Bell, BellOff, CalendarPlus } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { useToast } from '../ui/ToastProvider';
+import { useToast, haptic } from '../ui/ToastProvider';
+import { downloadIcs } from '../../utils/icsExport';
 import {
     getReminderSettings,
     saveReminderSettings,
@@ -9,8 +10,9 @@ import {
     notificationsSupported
 } from '../../utils/notificationScheduler';
 
-const DAYS_TR = ['Pzr', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
-const DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+// Takvim sirasi (Pzt'den baslar); dayIdx = JS getDay() degeri (0=Pazar)
+const DAYS_TR = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Pzr'];
+const DAYS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 /**
  * Bildirim/hatirlatma ayarlari karti (profil sayfasi).
@@ -54,6 +56,22 @@ function ReminderSettingsCard() {
         }
     };
 
+    const exportToCalendar = async () => {
+        if (!settings.workoutDays?.length) {
+            toast.warning(t('rem_ics_no_days'));
+            return;
+        }
+        haptic(10);
+        const result = await downloadIcs({
+            workoutDays: settings.workoutDays,
+            time: settings.time,
+            weeks: 8,
+            title: lang === 'tr' ? 'Antrenman' : 'Workout'
+        });
+        if (result === 'shared' || result === 'downloaded') toast.success(t('rem_ics_ok'));
+        else if (result === 'failed') toast.error(t('rem_ics_fail'));
+    };
+
     return (
         <div className="glass-card slide-in" style={{ border: '1px solid rgba(0,195,255,0.2)', background: 'linear-gradient(145deg, rgba(0,0,0,0.6) 0%, rgba(0,195,255,0.05) 100%)', marginTop: '1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '0.7rem' }}>
@@ -85,8 +103,8 @@ function ReminderSettingsCard() {
                         </div>
                         <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                             {days.map((d, i) => {
-                                // Takvim sirasiyla goster (Pzt'den basla)
-                                const dayIdx = (i + 6) % 7;
+                                // Takvim sirasi (i=0 Pazartesi) -> getDay() degeri
+                                const dayIdx = (i + 1) % 7;
                                 const active = settings.workoutDays.includes(dayIdx);
                                 return (
                                     <button
@@ -198,6 +216,18 @@ function ReminderSettingsCard() {
                     </button>
                 </>
             )}
+
+            {/* Takvime aktar (.ics) — iPhone Takvim + Google Calendar uyumlu; bildirim izni gerekmez */}
+            <button
+                onClick={exportToCalendar}
+                className="neon-btn"
+                style={{ width: '100%', padding: '0.7rem', fontSize: '0.85rem', marginTop: '10px', borderColor: '#00ff88', color: '#00ff88', background: 'rgba(0,255,136,0.08)' }}
+            >
+                <CalendarPlus size={16} /> {t('rem_ics_btn')}
+            </button>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.7rem', margin: '6px 0 0 0', textAlign: 'center' }}>
+                {t('rem_ics_hint')}
+            </p>
         </div>
     );
 }

@@ -36,8 +36,9 @@ export const normalizeAiWeight = (raw) => {
   const single = s.match(/(\d+(?:[.,]\d+)?)/);
   if (single) return single[1].replace(',', '.');
 
-  // Sayi yok, taninmayan metin -> BW varsay (guvenli) veya bos
-  return 'BW';
+  // Sayi yok, taninmayan metin -> bos (UI kullanici girer; BW varsayimi
+  // makine/kablo egzersizlerinde yanlis gorunume yol aciyordu)
+  return '';
 };
 
 /**
@@ -72,10 +73,17 @@ export const normalizeAiProgram = (program) => {
   if (!program || !Array.isArray(program.days)) return program;
   const cleaned = JSON.parse(JSON.stringify(program));
   cleaned.days.forEach(d => {
-    (d.exercises || []).forEach(ex => {
+    (d.exercises || []).forEach((ex, i) => {
       if (!ex) return;
       ex.weight = normalizeAiWeight(ex.weight);
       ex.reps = normalizeAiReps(ex.reps);
+      // Superset bayragi: sadece dogru turden ve zincirin ilk elemani olmayan
+      // satirlarda yasasin; baska turleri temizle
+      if (ex.supersetWithPrev === true && i > 0) {
+        ex.supersetWithPrev = true;
+      } else {
+        delete ex.supersetWithPrev;
+      }
     });
   });
   return cleaned;

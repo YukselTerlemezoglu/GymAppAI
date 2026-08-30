@@ -1,13 +1,27 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { Users, UserPlus, Crown, X, Check, Trash2, Copy, RefreshCcw } from 'lucide-react';
+import { Users, UserPlus, Crown, X, Check, Trash2, Copy, RefreshCcw, Swords } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast, haptic } from '../ui/ToastProvider';
 import { totalXpForLevel } from '../../utils/levelSystem';
 import {
     sendRequest, subscribeRequests, acceptRequest, declineRequest,
-    subscribeFriendships, getFriendProfiles, removeFriend
+    subscribeFriendships, getFriendProfiles, removeFriend, setDuelTarget, getMyProfile
 } from '../../utils/friends';
 import { findBuddy } from '../../utils/buddy';
+import { duelState, pastDuelResult, duelReward, duelClaimKey, lastWeekKey, computeWeekStats } from '../../utils/duel';
+import { getWeekKey } from '../../utils/consistency';
+
+// Benim duel hedefimin localStorage aynasi ("gym_app_duel_target")
+const DUEL_TARGET_LS = 'gym_app_duel_target';
+function readMyDuelTarget() {
+    try {
+        const raw = localStorage.getItem(DUEL_TARGET_LS);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed.uid === 'string' && typeof parsed.week === 'string') return parsed;
+        return null;
+    } catch { return null; }
+}
 
 /*
  * Arkadaslar karti: kendi kodun, kodla arkadas ekleme, gelen istekler ve
@@ -15,7 +29,7 @@ import { findBuddy } from '../../utils/buddy';
  * Giris yoksa bilgi karti gosterir (giris yaptiktan sonra acilir).
  * myCode prop'u BodyTracker'daki ensureProfile cagrisindan gelir.
  */
-function FriendsCard({ currentUser, myCode, userName, userXP, userLevel, activeBuddyId, nameStyle }) {
+function FriendsCard({ currentUser, myCode, userName, userXP, userLevel, activeBuddyId, nameStyle, workoutHistory, setUserCoins }) {
     const { t } = useTranslation();
     const { toast, confirmDialog } = useToast();
     const [codeInput, setCodeInput] = useState('');
@@ -24,8 +38,38 @@ function FriendsCard({ currentUser, myCode, userName, userXP, userLevel, activeB
     const [friendUids, setFriendUids] = useState([]);
     const [friendProfiles, setFriendProfiles] = useState([]);
     const [loadingBoard, setLoadingBoard] = useState(false);
+    const [claimingDuel, setClaimingDuel] = useState(false);
+
+    // Benim duel hedefim: Firestore profilinde yazar; ayna olarak localStorage
+    // tutulur (hizli okuma; setDuelTarget her ikisine de yazar). Ref degil state:
+    // davet gonderilince UI aninda guncellensin.
+    const [myDuelTarget, setMyDuelTarget] = useState(readMyDuelTarget);
 
     const isLoggedIn = Boolean(currentUser);
+    const currentWeek = useMemo(() => getWeekKey(new Date()) || '', []);
+    const prevWeek = useMemo(() => lastWeekKey(new Date()), []);
+
+    // Ayna senkronizasyonu: yeni cihazda / depolama temizlendiginde ayna bos
+    // kalirken Firestore'da hedef durabilir — aktif duel "bekleyen davet"
+    // olarak yanlis gosterilir ve gecmis duel odulleri talil edilemez hale
+    // gelir. Giris yapildiginda tek seferlik kendi profilinden duelTarget
+    // okunup ayna onarilir.
+    useEffect(() => {
+        if (!isLoggedIn) return;
+        let alive = true;
+        getMyProfile().then((p) => {
+            if (!alive) return;
+            const remote = p?.duelTarget || null;
+            if (remote && typeof remote.uid === 'string' && typeof remote.week === 'string') {
+                setMyDuelTarget((prev) => {
+                    if (prev?.uid === remote.uid && prev?.week === remote.week) return prev;
+                    try { localStorage.setItem(DUEL_TARGET_LS, JSON.stringify(remote)); } catch { /* kota */ }
+                    return remote;
+                });
+            }
+        });
+        return () => { alive = false; };
+    }, [isLoggedIn]);
 
     // Gelen istekleri canli dinle
     useEffect(() => {
@@ -70,6 +114,61 @@ function FriendsCard({ currentUser, myCode, userName, userXP, userLevel, activeB
         rows.sort((a, b) => b.totalXp - a.totalXp);
         return rows;
     }, [userName, userXP, userLevel, friendProfiles, friendUids, activeBuddyId]);
+
+    // ---- HAFTALIK DUELLO ----
+    // Benim profilim: weekStats'i workoutHistory'den yerel hesaplariz (tek kaynak),
+    // duelTarget'i FriendsCard kendi profilinde tutmak icin publish edilir.
+    // prevWeekStats: gecen haftanin arsivi (odul tahsiti dogru hesaplanir).
+    const myProfile = useMemo(() => ({
+        uid: currentUser?.uid || 'me',
+        weekStats: computeWeekStats(workoutHistory),
+        prevWeekStats: computeWeekStats(workoutHistory, new Date(), prevWeek),
+        duelTarget: myDuelTarget
+    }), [currentUser, workoutHistory, myDuelTarget, prevWeek]);
+
+    // Dost profillerinden aktif duel cikarimi (ucuz dongu; compiler memoize eder)
+    let duelInfo = null;
+    for (const p of friendProfiles) {
+        const st = duelState(myProfile, p, currentWeek);
+        if (st.invited) { duelInfo = { profile: p, state: st }; break; }
+    }
+
+    // Gecmis hafta karsilikli duel sonuclari (odul tahsiti; localstorage'da kilitli)
+    const pastResults = friendProfiles.flatMap((p) => {
+        const res = pastDuelResult(myProfile, p, prevWeek);
+        if (!res) return [];
+        const claim = duelClaimKey(prevWeek, [currentUser?.uid, p.uid].sort().join('_'));
+        const already = localStorage.getItem(`gym_app_${claim}`);
+        if (already) return [];
+        return [{ profile: p, result: res, claimKey: claim }];
+    });
+
+    const inviteDuel = async (friendUid, friendName) => {
+        haptic(15);
+        const res = await setDuelTarget(friendUid, currentWeek);
+        if (res.ok) {
+            const target = { uid: friendUid, week: currentWeek };
+            setMyDuelTarget(target);
+            try { localStorage.setItem(DUEL_TARGET_LS, JSON.stringify(target)); } catch { /* kota */ }
+            toast.success(t('fr_duel_invited', { name: friendName }));
+        } else {
+            toast.error(t('fr_net_error'));
+        }
+    };
+
+    const claimDuelReward = async (entry) => {
+        if (claimingDuel) return;
+        setClaimingDuel(true);
+        haptic([20, 40, 20]);
+        try {
+            const finalAmount = duelReward(entry.result.winner);
+            setUserCoins?.((prev) => (Number(prev) || 0) + finalAmount);
+            localStorage.setItem(`gym_app_${entry.claimKey}`, '1');
+            toast.success(t('fr_duel_claimed', { amount: finalAmount }));
+        } finally {
+            setClaimingDuel(false);
+        }
+    };
 
     const copyCode = async () => {
         haptic(8);
@@ -254,6 +353,66 @@ function FriendsCard({ currentUser, myCode, userName, userXP, userLevel, activeB
                 </div>
             )}
 
+            {/* HAFTALIK DUELLO */}
+            {duelInfo && (
+                <div style={{
+                    marginBottom: '1rem', borderRadius: '12px', padding: '12px',
+                    background: duelInfo.state.active ? 'rgba(255,0,136,0.08)' : 'rgba(255,171,0,0.06)',
+                    border: `1px solid ${duelInfo.state.active ? 'rgba(255,0,136,0.4)' : 'rgba(255,171,0,0.35)'}`
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <Swords size={16} color={duelInfo.state.active ? '#ff0088' : '#ffab00'} />
+                        <strong style={{ color: '#fff', fontSize: '0.88rem' }}>
+                            {duelInfo.state.active ? t('fr_duel_active_title', { name: duelInfo.profile.name }) : t('fr_duel_pending_title', { name: duelInfo.profile.name })}
+                        </strong>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                        <div style={{ flex: 1, textAlign: 'center' }}>
+                            <div style={{ color: 'var(--text-light)', fontSize: '0.7rem' }}>{t('fr_you')}</div>
+                            <div style={{ color: '#00ff88', fontWeight: 'bold', fontSize: '1.15rem' }}>{duelInfo.state.myScore}</div>
+                        </div>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 'bold' }}>VS</span>
+                        <div style={{ flex: 1, textAlign: 'center' }}>
+                            <div style={{ color: 'var(--text-light)', fontSize: '0.7rem' }}>{duelInfo.profile.name}</div>
+                            <div style={{ color: '#ff6b81', fontWeight: 'bold', fontSize: '1.15rem' }}>{duelInfo.state.otherScore}</div>
+                        </div>
+                    </div>
+                    <p style={{ color: 'var(--text-light)', fontSize: '0.72rem', margin: '8px 0 0 0', textAlign: 'center' }}>
+                        {duelInfo.state.active ? t('fr_duel_active_hint') : t('fr_duel_pending_hint', { name: duelInfo.profile.name })}
+                    </p>
+                </div>
+            )}
+
+            {/* GECMIS HAFTA DUELLO ODULU */}
+            {pastResults.map((entry) => (
+                <div key={entry.claimKey} style={{
+                    marginBottom: '1rem', borderRadius: '12px', padding: '12px',
+                    background: 'rgba(255,215,0,0.07)', border: '1px solid rgba(255,215,0,0.4)'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                        <Crown size={15} color="#ffd700" />
+                        <strong style={{ color: '#fff', fontSize: '0.85rem' }}>
+                            {entry.result.winner === 'me'
+                                ? t('fr_duel_won_title', { name: entry.profile.name })
+                                : entry.result.winner === 'other'
+                                    ? t('fr_duel_lost_title', { name: entry.profile.name })
+                                    : t('fr_duel_tie_title', { name: entry.profile.name })}
+                        </strong>
+                    </div>
+                    <div style={{ color: 'var(--text-light)', fontSize: '0.78rem', marginBottom: '10px' }}>
+                        {entry.result.myScore} - {entry.result.otherScore}
+                    </div>
+                    <button
+                        onClick={() => claimDuelReward(entry)}
+                        disabled={claimingDuel}
+                        className="neon-btn"
+                        style={{ width: '100%', padding: '0.6rem', fontSize: '0.85rem', borderColor: '#ffd700', color: '#ffd700', background: 'rgba(255,215,0,0.1)' }}
+                    >
+                        {t('fr_duel_claim_btn', { amount: duelReward(entry.result.winner) })}
+                    </button>
+                </div>
+            ))}
+
             {/* Lider tablosu */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <div style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -312,6 +471,19 @@ function FriendsCard({ currentUser, myCode, userName, userXP, userLevel, activeB
                         <span style={{ color: '#adff2f', fontWeight: 'bold', fontSize: '0.85rem', flexShrink: 0 }}>
                             {Number(row.totalXp || 0).toLocaleString()} XP
                         </span>
+                        {!row.isMe && !(duelInfo?.state.active) && (
+                            <button
+                                onClick={() => inviteDuel(row.uid, row.name)}
+                                title={t('fr_duel_invite')}
+                                style={{
+                                    background: 'rgba(255,0,136,0.12)', border: '1px solid rgba(255,0,136,0.35)',
+                                    color: '#ff0088', cursor: 'pointer', padding: '4px', borderRadius: '6px',
+                                    display: 'flex', flexShrink: 0
+                                }}
+                            >
+                                <Swords size={13} />
+                            </button>
+                        )}
                         {!row.isMe && (
                             <button
                                 onClick={() => handleRemove(row.uid, row.name)}

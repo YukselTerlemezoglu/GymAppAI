@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { warn, error } from "../utils/logger";
 
@@ -17,15 +17,23 @@ let auth = null;
 let db = null;
 
 try {
-  if (firebaseConfig.apiKey) {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
-  } else {
-    warn("Firebase API Key eksik. Auth ve Cloud Sync devre dışı bırakıldı.");
-  }
+    if (firebaseConfig.apiKey) {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        // Oturum kalicliligi acikca belirtilir: giris yapan kullanici,
+        // kendisi cikis yapmadigi surece uygulama yeniden acildiginda da
+        // oturumlu kalmali. (getAuth varsayilani zaten browserLocalPersistence
+        // ama birden fazla sekme/pencere ortaminda auth sonrasi bu ayari
+        // uygulayarak durumlar kistiklanir.)
+        setPersistence(auth, browserLocalPersistence).catch((err) => {
+            warn("Oturum kaliciligi ayarlanamadi (kisitli ortam?):", err?.code || err);
+        });
+        db = getFirestore(app);
+    } else {
+        warn("Firebase API Key eksik. Auth ve Cloud Sync devre dışı bırakıldı.");
+    }
 } catch (err) {
-  error("Firebase başlatılamadı:", err);
+    error("Firebase başlatılamadı:", err);
 }
 
 export { auth, db };

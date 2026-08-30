@@ -16,15 +16,18 @@ import { savePhoto, getPhoto, deletePhoto } from '../../utils/db';
 import { compressImage } from '../../utils/imageCompressor';
 import PhotoGalleryModal from './PhotoGalleryModal';
 import CloudSyncCard from '../dashboard/CloudSyncCard';
+import BackupCard from './BackupCard';
 import ShareCard from './ShareCard';
 import InviteFriends from './InviteFriends';
 import FriendsCard from './FriendsCard';
 import InventoryCard from './InventoryCard';
 import CosmeticCard from './CosmeticCard';
 import { ensureProfile, publishProfile } from '../../utils/friends';
+import { computeWeekStats } from '../../utils/duel';
+import { localDayKey } from '../../utils/dateKey';
 import { error as logError } from '../../utils/logger';
 
-function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, weeklyGoal = 3, setWeeklyGoal, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName, activeBuddyId = null, buddyCollection = {}, setBuddyCollection, activeCosmetics = {}, setActiveCosmetics, ownedCosmetics = [], inventory = {}, setInventory, onOpenShop, onBuddyEvolved }) {
+function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, weeklyGoal = 3, setWeeklyGoal, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName, activeBuddyId = null, buddyCollection = {}, setBuddyCollection, activeCosmetics = {}, setActiveCosmetics, ownedCosmetics = [], inventory = {}, setInventory, onOpenShop, onBuddyEvolved, setUserCoins }) {
     const { t, lang, setLang } = useTranslation();
     const { toast, confirmDialog, haptic } = useToast();
     const [nameDraft, setNameDraft] = useState(userName);
@@ -56,8 +59,10 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
 
     useEffect(() => {
         if (!currentUser) return;
-        publishProfile({ name: userName, xp: userXP, level: userLevel });
-    }, [currentUser, userName, userXP, userLevel]);
+        // Haftalik duello istatistigi de profille birlikte yayinlanir.
+        const weekStats = computeWeekStats(workoutHistory);
+        publishProfile({ name: userName, xp: userXP, level: userLevel, weekStats });
+    }, [currentUser, userName, userXP, userLevel, workoutHistory]);
 
     const saveName = () => {
         const trimmed = nameDraft.trim();
@@ -74,7 +79,7 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
     };
     const [bodyMetrics, setBodyMetrics] = useLocalStorage('gym_app_body_metrics', []);
     const [formData, setFormData] = useState({
-        date: new Date().toISOString().split('T')[0],
+        date: localDayKey(),
         weight: '',
         bodyFat: '',
         chest: '',
@@ -275,194 +280,6 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
 
             <div className="workout-tracker-list fade-in" style={{ animationDelay: '0.1s', display: 'flex', flexDirection: 'column', gap: '2rem', paddingTop: '1.5rem', paddingBottom: '3rem' }}>
 
-                {/* 0a. DOST VITRINI: aktif dost kapsulu + evre (Steam profili tarzi) */}
-                <div className="glass-card slide-in" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <BuddyCapsule
-                        buddyId={activeBuddyId}
-                        xp={buddyCollection?.[activeBuddyId]?.xp || 0}
-                        size={72}
-                        frameCosmeticId={getActive(activeCosmetics, ownedCosmetics, 'frame')?.id}
-                        onClick={onOpenShop}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        {activeBuddyId && buddyCollection?.[activeBuddyId] ? (
-                            (() => {
-                                const def = findBuddy(activeBuddyId);
-                                const info = getBuddyStageInfo(buddyCollection[activeBuddyId].xp || 0);
-                                const rarity = RARITY[def?.rarity] || RARITY.common;
-                                return (
-                                    <>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                            <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.05rem' }}>{lang === 'tr' ? def.title_tr : def.title_en}</span>
-                                            <span style={{ fontSize: '0.7rem', color: rarity.color, border: `1px solid ${rarity.color}`, borderRadius: '10px', padding: '1px 8px' }}>{t(`rarity_${def.rarity}`)}</span>
-                                        </div>
-                                        <div style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginTop: '2px', marginBottom: '4px' }}>
-                                            {lang === 'tr' ? info.stage.title_tr : info.stage.title_en}
-                                            {info.next ? ` · ${(info.currentXp).toLocaleString()}/${(info.next.threshold).toLocaleString()} XP` : ` · ${t('shop_buddy_max_stage')}`}
-                                        </div>
-                                        <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
-                                            <div style={{ width: `${info.percent}%`, height: '100%', background: rarity.color, borderRadius: '4px', transition: 'width 0.6s ease' }} />
-                                        </div>
-                                    </>
-                                );
-                            })()
-                        ) : (
-                            <div style={{ color: 'var(--text-light)', fontSize: '0.85rem' }}>
-                                {t('profile_no_buddy')} <button onClick={onOpenShop} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: '0.85rem' }}>{t('profile_open_shop')}</button>
-                            </div>
-                        )}
-                    </div>
-                    <button onClick={onOpenShop} className="neon-btn-secondary" style={{ padding: '8px 12px', fontSize: '0.8rem', flexShrink: 0 }}>
-                        🥚 {t('shop_tab_buddy')}
-                    </button>
-                </div>
-
-                {/* 0b. ENVANTER: satin alinan boostlar + kullanim */}
-                <InventoryCard
-                    inventory={inventory}
-                    activeBuddyId={activeBuddyId}
-                    onFeedSnack={() => {
-                        setInventory((prev) => ({ ...prev, snack: Math.max(0, (prev?.snack || 1) - 1) }));
-                        setBuddyCollection((prev) => {
-                            // addBuddyXp evrimi tespit eder; evrim varsa App'teki kutlama acilir
-                            const res = addBuddyXp(prev, activeBuddyId, 150);
-                            if (res.evolved) onBuddyEvolved?.(activeBuddyId, res.xp);
-                            return res.collection;
-                        });
-                    }}
-                    onOpenShop={onOpenShop}
-                />
-
-                {/* 0c. PROFIL OZELLESTIRME: kozmetikleri kusan/cikar */}
-                <CosmeticCard
-                    ownedCosmetics={ownedCosmetics}
-                    activeCosmetics={activeCosmetics}
-                    setActiveCosmetics={setActiveCosmetics}
-                    onOpenShop={onOpenShop}
-                />
-
-                {/* 0. AYARLAR: isim + dil */}
-                <div className="glass-card slide-in">
-                    <h3 style={{ color: '#fff', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Settings size={20} color="var(--accent-primary)" /> {t('set_title')}
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        {/* Isim */}
-                        <div>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '6px' }}>
-                                <Type size={14} /> {t('set_name_label')}
-                            </label>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <input
-                                    type="text"
-                                    className="neon-input"
-                                    style={{ flex: 1 }}
-                                    value={nameDraft}
-                                    onChange={(e) => setNameDraft(e.target.value)}
-                                    maxLength={24}
-                                    placeholder={t('auth_name_placeholder')}
-                                />
-                                <button
-                                    className="neon-btn"
-                                    onClick={saveName}
-                                    style={{ padding: '0.6rem 1.1rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                >
-                                    <Save size={16} /> {t('set_save')}
-                                </button>
-                            </div>
-                        </div>
-                        {/* Dil */}
-                        <div>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '6px' }}>
-                                <Globe size={14} /> {t('set_lang_label')}
-                            </label>
-                            <div style={{ display: 'flex', gap: '5px', background: 'rgba(0,0,0,0.3)', padding: '5px', borderRadius: '10px', border: '1px solid var(--glass-border)', width: 'fit-content' }}>
-                                <button
-                                    onClick={() => setLang('tr')}
-                                    style={{
-                                        padding: '6px 14px',
-                                        borderRadius: '8px',
-                                        border: 'none',
-                                        background: lang === 'tr' ? 'var(--accent-primary)' : 'transparent',
-                                        color: lang === 'tr' ? '#000' : '#fff',
-                                        cursor: 'pointer',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 'bold'
-                                    }}
-                                >🇹🇷 TR</button>
-                                <button
-                                    onClick={() => setLang('en')}
-                                    style={{
-                                        padding: '6px 14px',
-                                        borderRadius: '8px',
-                                        border: 'none',
-                                        background: lang === 'en' ? 'var(--accent-primary)' : 'transparent',
-                                        color: lang === 'en' ? '#000' : '#fff',
-                                        cursor: 'pointer',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 'bold'
-                                    }}
-                                >🇬🇧 EN</button>
-                            </div>
-                        </div>
-
-                        {/* Haftalik hedef: kac gun antrenman (dinlenme gunleri serbest) */}
-                        <div>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '6px' }}>
-                                <CalendarCheck size={14} /> {t('set_weekly_goal_label')}
-                            </label>
-                            <div style={{ display: 'flex', gap: '5px', background: 'rgba(0,0,0,0.3)', padding: '5px', borderRadius: '10px', border: '1px solid var(--glass-border)', width: 'fit-content', flexWrap: 'wrap' }}>
-                                {[1, 2, 3, 4, 5, 6].map((n) => (
-                                    <button
-                                        key={n}
-                                        onClick={() => { haptic(8); setWeeklyGoal(n); }}
-                                        style={{
-                                            padding: '6px 14px',
-                                            borderRadius: '8px',
-                                            border: 'none',
-                                            background: weeklyGoal === n ? 'var(--accent-primary)' : 'transparent',
-                                            color: weeklyGoal === n ? '#000' : '#fff',
-                                            cursor: 'pointer',
-                                            fontSize: '0.85rem',
-                                            fontWeight: 'bold'
-                                        }}
-                                    >{n}</button>
-                                ))}
-                            </div>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem', margin: '6px 0 0 0' }}>{t('set_weekly_goal_hint')}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Bulut Eşitleme Kartı */}
-                <CloudSyncCard currentUser={currentUser} onLoginClick={onLoginClick} />
-
-                {/* Arkadaslar + Lider Tablosu (gercek kisiler) */}
-                <FriendsCard
-                    currentUser={currentUser}
-                    myCode={myFriendCode}
-                    userName={userName}
-                    userXP={userXP}
-                    userLevel={userLevel}
-                    activeBuddyId={activeBuddyId}
-                    nameStyle={getActive(activeCosmetics, ownedCosmetics, 'nameStyle')}
-                />
-
-                {/* Arkadas Davet Karti */}
-                <InviteFriends userName={userName} myCode={myFriendCode} />
-
-                {/* Paylaşım Kartı */}
-                <ShareCard
-                    userName={userName}
-                    userLevel={userLevel}
-                    userXP={userXP}
-                    streak={streak}
-                    workoutHistory={workoutHistory}
-                    activeBuddyId={activeBuddyId}
-                    activeCosmetics={activeCosmetics}
-                    ownedCosmetics={ownedCosmetics}
-                />
-
                 {/* 1. SEVİYE VE XP BARI (Gamification v2) */}
                 <div className="glass-card slide-in" style={{ border: '1px solid rgba(0, 195, 255, 0.2)', background: 'linear-gradient(145deg, rgba(0,0,0,0.6) 0%, rgba(0, 195, 255, 0.05) 100%)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -522,109 +339,46 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                     </p>
                 </div>
 
-                {/* 2. ROZETLER (Badges) VİTRİNİ */}
-                <div className="glass-card slide-in" style={{ animationDelay: '0.15s' }}>
-                    <div
-                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                        onClick={() => setIsBadgesExpanded(!isBadgesExpanded)}
-                    >
-                        <h3 style={{ color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Award color="#ffa502" /> {t('body_badges_title')}
-                        </h3>
-                        <span style={{ color: 'var(--accent-primary)', fontSize: '0.9rem' }}>
-                            {isBadgesExpanded ? `${t('body_badges_collapse')} 🔼` : `${t('body_badges_expand')} 🔽`}
-                        </span>
-                    </div>
-
-                    {isBadgesExpanded && (
-                        <div style={{ marginTop: '1.5rem' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(70px, 1fr))', gap: '1rem' }}>
-                                {[...BADGE_LIBRARY].sort((a, b) => {
-                                    const aUn = unlockedBadges.includes(a.id);
-                                    const bUn = unlockedBadges.includes(b.id);
-                                    if (aUn && !bUn) return -1;
-                                    if (!aUn && bUn) return 1;
-                                    if (!aUn && !bUn) {
-                                        if (a.isSecret && !b.isSecret) return 1;
-                                        if (!a.isSecret && b.isSecret) return -1;
-                                    }
-                                    return 0;
-                                }).map(badge => {
-                                    const isUnlocked = unlockedBadges.includes(badge.id);
-                                    const badgeTitle = lang === 'tr' ? (badge.isSecret && !isUnlocked ? t('body_badges_secret') : badge.title) : (badge.isSecret && !isUnlocked ? t('body_badges_secret') : badge.title_en);
-                                    return (
-                                        <div
-                                            key={badge.id}
-                                            onClick={() => setSelectedBadge(badge)}
-                                            style={{
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                gap: '0.5rem',
-                                                padding: '1rem 0.5rem',
-                                                background: isUnlocked ? 'rgba(0, 195, 255, 0.1)' : 'rgba(255,255,255,0.02)',
-                                                border: isUnlocked ? '1px solid rgba(0, 195, 255, 0.3)' : '1px solid rgba(255,255,255,0.05)',
-                                                borderRadius: '12px',
-                                                cursor: 'pointer',
-                                                opacity: isUnlocked ? 1 : 0.5,
-                                                filter: isUnlocked ? 'none' : 'grayscale(100%)',
-                                                transition: 'all 0.2s ease',
-                                                transform: selectedBadge?.id === badge.id ? 'scale(1.05)' : 'scale(1)'
-                                            }}
-                                        >
-                                            <div style={{ fontSize: '2rem' }}>{badge.isSecret && !isUnlocked ? "🔒" : badge.icon}</div>
-                                            <span style={{ fontSize: '0.75rem', color: isUnlocked ? 'var(--accent-primary)' : 'var(--text-light)', textAlign: 'center', fontWeight: 'bold' }}>
-                                                {badgeTitle}
-                                            </span>
-                                            {!isUnlocked && badge.progress && !badge.isSecret && (
-                                                <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
-                                                    {badge.progress(stats)}
-                                                </span>
-                                            )}
+                {/* 0a. DOST VITRINI: aktif dost kapsulu + evre (Steam profili tarzi) */}
+                <div className="glass-card slide-in" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <BuddyCapsule
+                        buddyId={activeBuddyId}
+                        xp={buddyCollection?.[activeBuddyId]?.xp || 0}
+                        size={72}
+                        frameCosmeticId={getActive(activeCosmetics, ownedCosmetics, 'frame')?.id}
+                        onClick={onOpenShop}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        {activeBuddyId && buddyCollection?.[activeBuddyId] ? (
+                            (() => {
+                                const def = findBuddy(activeBuddyId);
+                                const info = getBuddyStageInfo(buddyCollection[activeBuddyId].xp || 0);
+                                const rarity = RARITY[def?.rarity] || RARITY.common;
+                                return (
+                                    <>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                            <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.05rem' }}>{lang === 'tr' ? def.title_tr : def.title_en}</span>
+                                            <span style={{ fontSize: '0.7rem', color: rarity.color, border: `1px solid ${rarity.color}`, borderRadius: '10px', padding: '1px 8px' }}>{t(`rarity_${def.rarity}`)}</span>
                                         </div>
-                                    );
-                                })}
+                                        <div style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginTop: '2px', marginBottom: '4px' }}>
+                                            {lang === 'tr' ? info.stage.title_tr : info.stage.title_en}
+                                            {info.next ? ` · ${(info.currentXp).toLocaleString()}/${(info.next.threshold).toLocaleString()} XP` : ` · ${t('shop_buddy_max_stage')}`}
+                                        </div>
+                                        <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
+                                            <div style={{ width: `${info.percent}%`, height: '100%', background: rarity.color, borderRadius: '4px', transition: 'width 0.6s ease' }} />
+                                        </div>
+                                    </>
+                                );
+                            })()
+                        ) : (
+                            <div style={{ color: 'var(--text-light)', fontSize: '0.85rem' }}>
+                                {t('profile_no_buddy')} <button onClick={onOpenShop} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: '0.85rem' }}>{t('profile_open_shop')}</button>
                             </div>
-
-                            {/* Seçili Rozet Detayı */}
-                            {selectedBadge && (
-                                <div className="fade-in" style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', borderLeft: '4px solid #ffa502' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '0.5rem' }}>
-                                        <span style={{ fontSize: '1.5rem' }}>
-                                            {selectedBadge.isSecret && !unlockedBadges.includes(selectedBadge.id) ? "🔒" : selectedBadge.icon}
-                                        </span>
-                                        <h4 style={{ color: '#fff', margin: 0 }}>
-                                            {selectedBadge.isSecret && !unlockedBadges.includes(selectedBadge.id) ? t('body_badges_secret') : (lang === 'tr' ? selectedBadge.title : selectedBadge.title_en)} 
-                                            {unlockedBadges.includes(selectedBadge.id) ? ' ✅' : ''}
-                                        </h4>
-                                    </div>
-                                    <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', margin: '0 0 1rem 0', lineHeight: '1.4' }}>
-                                        {selectedBadge.isSecret && !unlockedBadges.includes(selectedBadge.id) 
-                                            ? t('body_badges_secret_desc')
-                                            : (lang === 'tr' ? selectedBadge.description : selectedBadge.description_en)}
-                                    </p>
-
-                                    {unlockedBadges.includes(selectedBadge.id) && (
-                                        <button
-                                            onClick={() => handlePinToggle(selectedBadge.id)}
-                                            className="neon-btn"
-                                            style={{
-                                                padding: '0.5rem 1rem',
-                                                fontSize: '0.8rem',
-                                                width: 'auto',
-                                                background: pinnedBadges.includes(selectedBadge.id) ? 'rgba(255, 71, 87, 0.1)' : 'rgba(0, 195, 255, 0.1)',
-                                                borderColor: pinnedBadges.includes(selectedBadge.id) ? '#ff4757' : '#00c3ff',
-                                                color: pinnedBadges.includes(selectedBadge.id) ? '#ff4757' : '#00c3ff',
-                                                boxShadow: 'none'
-                                            }}
-                                        >
-                                            {pinnedBadges.includes(selectedBadge.id) ? t('body_badges_unpin') : t('body_badges_pin')}
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                        )}
+                    </div>
+                    <button onClick={onOpenShop} className="neon-btn-secondary" style={{ padding: '8px 12px', fontSize: '0.8rem', flexShrink: 0 }}>
+                        🥚 {t('shop_tab_buddy')}
+                    </button>
                 </div>
 
                 {/* 3. Form Section */}
@@ -858,6 +612,262 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                         </div>
                     </div>
                 )}
+
+                {/* 2. ROZETLER (Badges) VİTRİNİ */}
+                <div className="glass-card slide-in" style={{ animationDelay: '0.15s' }}>
+                    <div
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                        onClick={() => setIsBadgesExpanded(!isBadgesExpanded)}
+                    >
+                        <h3 style={{ color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Award color="#ffa502" /> {t('body_badges_title')}
+                        </h3>
+                        <span style={{ color: 'var(--accent-primary)', fontSize: '0.9rem' }}>
+                            {isBadgesExpanded ? `${t('body_badges_collapse')} 🔼` : `${t('body_badges_expand')} 🔽`}
+                        </span>
+                    </div>
+
+                    {isBadgesExpanded && (
+                        <div style={{ marginTop: '1.5rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(70px, 1fr))', gap: '1rem' }}>
+                                {[...BADGE_LIBRARY].sort((a, b) => {
+                                    const aUn = unlockedBadges.includes(a.id);
+                                    const bUn = unlockedBadges.includes(b.id);
+                                    if (aUn && !bUn) return -1;
+                                    if (!aUn && bUn) return 1;
+                                    if (!aUn && !bUn) {
+                                        if (a.isSecret && !b.isSecret) return 1;
+                                        if (!a.isSecret && b.isSecret) return -1;
+                                    }
+                                    return 0;
+                                }).map(badge => {
+                                    const isUnlocked = unlockedBadges.includes(badge.id);
+                                    const badgeTitle = lang === 'tr' ? (badge.isSecret && !isUnlocked ? t('body_badges_secret') : badge.title) : (badge.isSecret && !isUnlocked ? t('body_badges_secret') : badge.title_en);
+                                    return (
+                                        <div
+                                            key={badge.id}
+                                            onClick={() => setSelectedBadge(badge)}
+                                            style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '0.5rem',
+                                                padding: '1rem 0.5rem',
+                                                background: isUnlocked ? 'rgba(0, 195, 255, 0.1)' : 'rgba(255,255,255,0.02)',
+                                                border: isUnlocked ? '1px solid rgba(0, 195, 255, 0.3)' : '1px solid rgba(255,255,255,0.05)',
+                                                borderRadius: '12px',
+                                                cursor: 'pointer',
+                                                opacity: isUnlocked ? 1 : 0.5,
+                                                filter: isUnlocked ? 'none' : 'grayscale(100%)',
+                                                transition: 'all 0.2s ease',
+                                                transform: selectedBadge?.id === badge.id ? 'scale(1.05)' : 'scale(1)'
+                                            }}
+                                        >
+                                            <div style={{ fontSize: '2rem' }}>{badge.isSecret && !isUnlocked ? "🔒" : badge.icon}</div>
+                                            <span style={{ fontSize: '0.75rem', color: isUnlocked ? 'var(--accent-primary)' : 'var(--text-light)', textAlign: 'center', fontWeight: 'bold' }}>
+                                                {badgeTitle}
+                                            </span>
+                                            {!isUnlocked && badge.progress && !badge.isSecret && (
+                                                <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
+                                                    {badge.progress(stats)}
+                                                </span>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Seçili Rozet Detayı */}
+                            {selectedBadge && (
+                                <div className="fade-in" style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', borderLeft: '4px solid #ffa502' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '0.5rem' }}>
+                                        <span style={{ fontSize: '1.5rem' }}>
+                                            {selectedBadge.isSecret && !unlockedBadges.includes(selectedBadge.id) ? "🔒" : selectedBadge.icon}
+                                        </span>
+                                        <h4 style={{ color: '#fff', margin: 0 }}>
+                                            {selectedBadge.isSecret && !unlockedBadges.includes(selectedBadge.id) ? t('body_badges_secret') : (lang === 'tr' ? selectedBadge.title : selectedBadge.title_en)} 
+                                            {unlockedBadges.includes(selectedBadge.id) ? ' ✅' : ''}
+                                        </h4>
+                                    </div>
+                                    <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', margin: '0 0 1rem 0', lineHeight: '1.4' }}>
+                                        {selectedBadge.isSecret && !unlockedBadges.includes(selectedBadge.id) 
+                                            ? t('body_badges_secret_desc')
+                                            : (lang === 'tr' ? selectedBadge.description : selectedBadge.description_en)}
+                                    </p>
+
+                                    {unlockedBadges.includes(selectedBadge.id) && (
+                                        <button
+                                            onClick={() => handlePinToggle(selectedBadge.id)}
+                                            className="neon-btn"
+                                            style={{
+                                                padding: '0.5rem 1rem',
+                                                fontSize: '0.8rem',
+                                                width: 'auto',
+                                                background: pinnedBadges.includes(selectedBadge.id) ? 'rgba(255, 71, 87, 0.1)' : 'rgba(0, 195, 255, 0.1)',
+                                                borderColor: pinnedBadges.includes(selectedBadge.id) ? '#ff4757' : '#00c3ff',
+                                                color: pinnedBadges.includes(selectedBadge.id) ? '#ff4757' : '#00c3ff',
+                                                boxShadow: 'none'
+                                            }}
+                                        >
+                                            {pinnedBadges.includes(selectedBadge.id) ? t('body_badges_unpin') : t('body_badges_pin')}
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Arkadaslar + Lider Tablosu (gercek kisiler) */}
+                <FriendsCard
+                    currentUser={currentUser}
+                    myCode={myFriendCode}
+                    userName={userName}
+                    userXP={userXP}
+                    userLevel={userLevel}
+                    activeBuddyId={activeBuddyId}
+                    nameStyle={getActive(activeCosmetics, ownedCosmetics, 'nameStyle')}
+                    workoutHistory={workoutHistory}
+                    setUserCoins={setUserCoins}
+                />
+
+                {/* Arkadas Davet Karti */}
+                <InviteFriends userName={userName} myCode={myFriendCode} />
+
+                {/* Paylaşım Kartı */}
+                <ShareCard
+                    userName={userName}
+                    userLevel={userLevel}
+                    userXP={userXP}
+                    streak={streak}
+                    workoutHistory={workoutHistory}
+                    activeBuddyId={activeBuddyId}
+                    activeCosmetics={activeCosmetics}
+                    ownedCosmetics={ownedCosmetics}
+                />
+
+                {/* 0. AYARLAR: isim + dil */}
+                <div className="glass-card slide-in">
+                    <h3 style={{ color: '#fff', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Settings size={20} color="var(--accent-primary)" /> {t('set_title')}
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {/* Isim */}
+                        <div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '6px' }}>
+                                <Type size={14} /> {t('set_name_label')}
+                            </label>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <input
+                                    type="text"
+                                    className="neon-input"
+                                    style={{ flex: 1 }}
+                                    value={nameDraft}
+                                    onChange={(e) => setNameDraft(e.target.value)}
+                                    maxLength={24}
+                                    placeholder={t('auth_name_placeholder')}
+                                />
+                                <button
+                                    className="neon-btn"
+                                    onClick={saveName}
+                                    style={{ padding: '0.6rem 1.1rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                >
+                                    <Save size={16} /> {t('set_save')}
+                                </button>
+                            </div>
+                        </div>
+                        {/* Dil */}
+                        <div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '6px' }}>
+                                <Globe size={14} /> {t('set_lang_label')}
+                            </label>
+                            <div style={{ display: 'flex', gap: '5px', background: 'rgba(0,0,0,0.3)', padding: '5px', borderRadius: '10px', border: '1px solid var(--glass-border)', width: 'fit-content' }}>
+                                <button
+                                    onClick={() => setLang('tr')}
+                                    style={{
+                                        padding: '6px 14px',
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        background: lang === 'tr' ? 'var(--accent-primary)' : 'transparent',
+                                        color: lang === 'tr' ? '#000' : '#fff',
+                                        cursor: 'pointer',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 'bold'
+                                    }}
+                                >🇹🇷 TR</button>
+                                <button
+                                    onClick={() => setLang('en')}
+                                    style={{
+                                        padding: '6px 14px',
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        background: lang === 'en' ? 'var(--accent-primary)' : 'transparent',
+                                        color: lang === 'en' ? '#000' : '#fff',
+                                        cursor: 'pointer',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 'bold'
+                                    }}
+                                >🇬🇧 EN</button>
+                            </div>
+                        </div>
+
+                        {/* Haftalik hedef: kac gun antrenman (dinlenme gunleri serbest) */}
+                        <div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '6px' }}>
+                                <CalendarCheck size={14} /> {t('set_weekly_goal_label')}
+                            </label>
+                            <div style={{ display: 'flex', gap: '5px', background: 'rgba(0,0,0,0.3)', padding: '5px', borderRadius: '10px', border: '1px solid var(--glass-border)', width: 'fit-content', flexWrap: 'wrap' }}>
+                                {[1, 2, 3, 4, 5, 6].map((n) => (
+                                    <button
+                                        key={n}
+                                        onClick={() => { haptic(8); setWeeklyGoal(n); }}
+                                        style={{
+                                            padding: '6px 14px',
+                                            borderRadius: '8px',
+                                            border: 'none',
+                                            background: weeklyGoal === n ? 'var(--accent-primary)' : 'transparent',
+                                            color: weeklyGoal === n ? '#000' : '#fff',
+                                            cursor: 'pointer',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >{n}</button>
+                                ))}
+                            </div>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem', margin: '6px 0 0 0' }}>{t('set_weekly_goal_hint')}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 0b. ENVANTER: satin alinan boostlar + kullanim */}
+                <InventoryCard
+                    inventory={inventory}
+                    activeBuddyId={activeBuddyId}
+                    onFeedSnack={() => {
+                        setInventory((prev) => ({ ...prev, snack: Math.max(0, (prev?.snack || 1) - 1) }));
+                        setBuddyCollection((prev) => {
+                            // addBuddyXp evrimi tespit eder; evrim varsa App'teki kutlama acilir
+                            const res = addBuddyXp(prev, activeBuddyId, 150);
+                            if (res.evolved) onBuddyEvolved?.(activeBuddyId, res.xp);
+                            return res.collection;
+                        });
+                    }}
+                    onOpenShop={onOpenShop}
+                />
+
+                {/* 0c. PROFIL OZELLESTIRME: kozmetikleri kusan/cikar */}
+                <CosmeticCard
+                    ownedCosmetics={ownedCosmetics}
+                    activeCosmetics={activeCosmetics}
+                    setActiveCosmetics={setActiveCosmetics}
+                    onOpenShop={onOpenShop}
+                />
+
+                {/* Bulut Eşitleme Kartı */}
+                <CloudSyncCard currentUser={currentUser} onLoginClick={onLoginClick} />
+
+                {/* Yedekleme: indir / geri yukle */}
+                <BackupCard />
 
             </div>
 

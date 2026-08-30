@@ -258,6 +258,14 @@ const en = {
     tpl_manual_label: "Exercises",
     tpl_manual_placeholder: "Squat | 4 | 8 | 80\nLeg Press | 3 | 12 | 120\nLeg Curl | 3 | 12 | 40",
     tpl_manual_hint: "One exercise per line: Name | sets | reps | weight (kg)",
+    tpl_mode_picker: "Pick from Database",
+    tpl_mode_manual: "Quick Type",
+    tpl_search_ph: "Search exercise…",
+    tpl_picker_hint: "Search an exercise above, enter sets/reps/weight and tap + to add.",
+    tpl_add_row: "Add row",
+    tpl_sets: "Sets",
+    tpl_reps: "Reps",
+    tpl_weight: "Weight (kg)",
     tpl_save_btn: "Save Template",
     tpl_name_error: "Template name cannot be empty.",
     tpl_empty_error: "Add at least one exercise.",
@@ -311,6 +319,23 @@ const en = {
     sup_link_hint: "Superset with previous exercise (A1/A2)",
     sup_badge_hint: "Superset: perform these exercises back-to-back without rest",
 
+    // Set RPE
+    set_rpe_placeholder: "RPE",
+
+    // Card editing (Today)
+    dash_edit_cards: "Edit cards",
+    dash_edit_title: "Edit Cards",
+    dash_edit_hint: "Choose which cards appear on the Today tab.",
+    dash_edit_reset: "Show all",
+    dash_card_visible: "Visible",
+    dash_card_hidden: "Hidden",
+    dash_card_score: "Weekly Score",
+    dash_card_quests: "Daily Quests",
+    dash_card_season: "Season League",
+    dash_card_nutrition: "Nutrition Summary",
+    dash_card_water: "Water Tracker",
+    dash_card_recovery: "Recovery",
+
     // Share Card & Leaderboard
     shc_title: "Share Your Card",
     shc_hint: "Generate a stylish card of your stats and share it with friends.",
@@ -361,6 +386,19 @@ const en = {
     fr_remove_confirm: "Remove",
     fr_removed: "Friend removed.",
     fr_empty_board: "No friends yet. Share the invite link above or add by code!",
+
+    // Weekly friend duel
+    fr_duel_invite: "Invite to weekly duel",
+    fr_duel_invited: "{{name}} has been invited to this week's duel! It starts when they mark you back.",
+    fr_duel_active_title: "⚔️ Duel: {{name}}",
+    fr_duel_pending_title: "⏳ Awaiting: {{name}}",
+    fr_duel_active_hint: "Earn points all week: workout days (+100) and volume (+10/1000kg). Ends Monday 00:00.",
+    fr_duel_pending_hint: "The duel starts when {{name}} marks you back. Let them know!",
+    fr_duel_won_title: "🏆 You beat {{name}} last week!",
+    fr_duel_lost_title: "💪 You lost to {{name}} last week",
+    fr_duel_tie_title: "🤝 You tied with {{name}} last week",
+    fr_duel_claim_btn: "Claim {{amount}} 🪙 reward",
+    fr_duel_claimed: "+{{amount}} 🪙 duel reward claimed!",
 
     // Rank system v2
     rank_next: "Next rank",
@@ -755,6 +793,38 @@ const en = {
     rem_time: "Reminder time",
     rem_water: "Water reminder",
     rem_disable: "Disable reminders",
+
+    // Calendar export
+    rem_ics_btn: "Add to Calendar (iPhone / Android)",
+    rem_ics_hint: "Adds your workout days as 8 weeks of events to your phone calendar; no notification permission needed.",
+    rem_ics_ok: "Calendar file ready! Pick your calendar app from the opened menu.",
+    rem_ics_fail: "Could not create the calendar file.",
+    rem_ics_no_days: "Select workout days first.",
+
+    // --- Backup ---
+    bkp_title: "Backup",
+    bkp_subtitle: "Save all your data in one file: restore when switching phones or after data loss.",
+    bkp_export_btn: "Download My Data",
+    bkp_import_btn: "Restore from Backup",
+    bkp_hint: "Current data is automatically snapshotted before any restore.",
+    bkp_download_ok: "Backup file downloaded.",
+    bkp_shared_ok: "Backup file shared.",
+    bkp_download_cancel: "Download cancelled.",
+    bkp_invalid_format: "File is corrupted or unrecognized.",
+    bkp_invalid_app: "This file is not a GymAppAI backup.",
+    bkp_invalid_version: "This backup is from a newer version; update the app first.",
+    bkp_invalid_sections: "Backup file structure is missing or corrupted.",
+    bkp_invalid_empty: "No data found in the backup file.",
+    bkp_preview_title: "Backup preview",
+    bkp_preview_stats: "{{workouts}} workouts · Level {{level}} · {{coins}} 🪙 found",
+    bkp_merge_btn: "Merge",
+    bkp_replace_btn: "Replace",
+    bkp_replace_title: "Replace all data?",
+    bkp_replace_msg: "All current data will be deleted and replaced with the backup. An automatic snapshot is taken first.",
+    bkp_replace_yes: "Yes, replace",
+    bkp_cancel: "Cancel",
+    bkp_restore_ok: "{{count}} items restored. Reloading…",
+    bkp_restore_fail: "Restore failed.",
     cloud_logout_toast: "Signed out.",
 
 

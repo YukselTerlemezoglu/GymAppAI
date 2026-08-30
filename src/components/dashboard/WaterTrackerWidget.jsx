@@ -1,3 +1,4 @@
+import { localDayKey } from '../../utils/dateKey';
 import React, { useState, useEffect } from 'react';
 import { Droplets, Plus, Minus, Check, Settings2 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -9,7 +10,7 @@ const FALLBACK_GOAL_ML = 2500;
 const ML_PER_KG = 33; // 30-35ml/kg ortalamasi
 
 function getTodayKey() {
-    return new Date().toISOString().split('T')[0];
+    return localDayKey();
 }
 
 /**
@@ -212,3 +213,4 @@ function WaterTrackerWidget() {
 }
 
 export default WaterTrackerWidget;
+

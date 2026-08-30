@@ -53,7 +53,9 @@ export function nextMult(currentMult) {
  * @returns {Object} yeni donData (immutable)
  */
 export function applyChainResult(donData, res, dayKey) {
-    const prevStats = (donData && donData.day === dayKey ? donData.stats : null) || {
+    // Istatistikler YASAM BOYU birikir; gun degisse de tasınır.
+    // Sadece chainsUsed gunluk hak gun degisince sifirlanir.
+    const prevStats = (donData && donData.stats) || {
         longestChain: 0, biggestBank: 0, totalWon: 0, totalLost: 0, flips: 0, wins: 0
     };
 

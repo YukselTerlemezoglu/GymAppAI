@@ -1,3 +1,4 @@
+import { localDayKey } from '../../utils/dateKey';
 import React, { useState } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
@@ -12,7 +13,7 @@ function NutritionTracker({ onBack }) {
     const { toast } = useToast();
     // Veri yapısı: { "2023-10-25": { meals: [{id, name, kcal, protein, carbs, fat}], goals: {kcal, protein, carbs, fat} } }
     const [nutritionData, setNutritionData] = useLocalStorage('gym_app_nutrition_v2', {});
-    const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
+    const [currentDate, setCurrentDate] = useState(localDayKey());
 
     const [showAddMeal, setShowAddMeal] = useState(false);
     const [mealForm, setMealForm] = useState({ name: '', kcal: '', protein: '', carbs: '', fat: '' });
@@ -287,3 +288,4 @@ function NutritionTracker({ onBack }) {
 }
 
 export default NutritionTracker;
+
