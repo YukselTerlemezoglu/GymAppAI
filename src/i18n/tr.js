@@ -531,6 +531,9 @@ const tr = {
     set_save: "Kaydet",
     set_name_error: "İsim boş olamaz.",
     set_name_saved: "Merhaba {{name}}! İsmin güncellendi.",
+    set_name_needs_token: "İsim değiştirmek için İsim Değiştirme Hakkı gerekli (Dükkan → Takviyeler). İlk isim koyma ücretsizdir!",
+    set_name_saved_token: "Merhaba {{name}}! İsim güncellendi. Kalan hak: {{left}}.",
+    set_name_tokens: "Değiştirme hakkı: {{count}}",
     set_lang_label: "Dil",
 
     // Shop
@@ -759,9 +762,16 @@ const tr = {
     onb_step3_text: "Gelişim sekmesinde grafikler, rekorların ve kas dengen. İlerledikçe burası dolacak!",
     onb_step4_title: "Profilin ve ödüllerin",
     onb_step4_text: "Profil sekmesinden ölçümlerini kaydet, rozetlerini topla, temalarını aç. Hazırsan başlayalım!",
+    onb_step5_title: "Hesabını oluştur",
+    onb_step5_text: "Ücretsiz hesapla verilerin bulutta güvende olur: cihaz değiştirsen de kaybolmaz, arkadaşlarınla düello yapar, AI koç sana özel program kurar. Kayıt sırasında sana seslenen ismini de yazarsın.",
+    onb_step5_cta: "Hesap Oluştur",
+    onb_step5_later: "Şimdi değil",
     onb_skip: "Atla",
     onb_next: "İleri",
     onb_start: "Başla!",
+    banner_signup_text: "Verilerin şu anda sadece bu cihazda. Ücretsiz hesap açarsan bulutta güvende olur, arkadaşlarınla düello yapabilirsin.",
+    banner_signup_cta: "Hesap Oluştur",
+    banner_signup_dismiss: "Banner'ı kapat",
 
     // --- UX: Temalı onay kutuları ---
     aw_exit_title: "Antrenmandan çık",

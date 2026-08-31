@@ -149,6 +149,7 @@ function AppContent() {
 
   // E1: Bugun sekmesi kart gorunurlugu. Varsayilan: hepsi acik.
   // null = dokunulmamis (tum kartlar acik); obje = {cardId: false} sekilli.
+  const [signupBannerDismissed, setSignupBannerDismissed] = useLocalStorage('gym_app_signup_banner_dismissed', false);
   const [dashCardVisibility, setDashCardVisibility] = useLocalStorage('gym_app_dash_cards', null);
   const [showDashCardEditor, setShowDashCardEditor] = useState(false);
   const isCardVisible = (id) => dashCardVisibility?.[id] !== false;
@@ -820,6 +821,36 @@ function AppContent() {
         {/* ============ BUGÜN ============ */}
         {dashboardTab === 'today' && (
           <div className="dash-grid">
+            {/* Kayit nudgesi: girissiz kullaniciya verilerinin cihaza bagli oldugunu
+                hatirlatan, kapatilabilir ince banner. Kapatilinca bir daha gosterilmez. */}
+            {!currentUser && !signupBannerDismissed && (
+              <div className="span-both" style={{
+                display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
+                padding: '0.8rem 1rem', borderRadius: '12px',
+                background: 'linear-gradient(135deg, rgba(0,255,136,0.08), rgba(0,195,255,0.08))',
+                border: '1px solid rgba(0,255,136,0.3)'
+              }}>
+                <span style={{ fontSize: '1.3rem' }}>☁️</span>
+                <span style={{ flex: 1, minWidth: '200px', color: 'var(--text-light)', fontSize: '0.85rem', lineHeight: 1.4 }}>
+                    {t('banner_signup_text')}
+                </span>
+                <button
+                    onClick={() => setCurrentView('auth')}
+                    className="neon-btn"
+                    style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', borderColor: '#00ff88', color: '#00ff88', background: 'rgba(0,255,136,0.1)', whiteSpace: 'nowrap' }}
+                >
+                    {t('banner_signup_cta')}
+                </button>
+                <button
+                    onClick={() => setSignupBannerDismissed(true)}
+                    aria-label={t('banner_signup_dismiss')}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '6px', fontSize: '1.1rem', lineHeight: 1 }}
+                >
+                    ✕
+                </button>
+              </div>
+            )}
+
             {/* AI Koc + Check-in: gunun ana giris noktalari — en ustte (mobilde alt alta) */}
             <div className="span-both" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.75rem' }}>
               <motion.button
@@ -1077,10 +1108,13 @@ function AppContent() {
           </ErrorBoundary>
         </div>
 
-        {/* Ilk acilis rehberi */}
+        {/* Ilk acilis rehberi: 5. adimdaki CTA dogrudan auth ekranina gider */}
         <AnimatePresence>
           {!hasOnboarded && (
-            <OnboardingOverlay onFinish={() => setHasOnboarded(true)} />
+            <OnboardingOverlay
+              onFinish={() => setHasOnboarded(true)}
+              onCreateAccount={() => setCurrentView('auth')}
+            />
           )}
         </AnimatePresence>
       </motion.div>

@@ -70,12 +70,28 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
             toast.warning(t('set_name_error'));
             return;
         }
+        // Isim ekonomisi: ilk isim koyma ucretsiz; sonraki her degisim
+        // dukkandaki "Isim Degistirme Hakki" (rename token) tuketir.
+        // Kullanici hicbir zaman tokensiz kilcalir degil — yeni hesapta
+        // ilk kez anlamli bir isim yazmasi engellenmemeli.
+        const isFirstNaming = !userName || userName === 'Athlete' || userName === 'Sporcu';
+        const hasToken = (inventory?.rename || 0) > 0;
+        if (!isFirstNaming && trimmed !== userName && !hasToken) {
+            toast.warning(t('set_name_needs_token'));
+            return;
+        }
+        const consumeToken = !isFirstNaming && trimmed !== userName && hasToken;
+        if (consumeToken) {
+            setInventory((prev) => ({ ...prev, rename: Math.max(0, (prev?.rename || 1) - 1) }));
+        }
         setUserName(trimmed);
         // Firebase profilini de guncelle (girisliyse); hata olsa da yerel isim guncellenmis olur
         if (currentUser && typeof currentUser.updateProfile === 'function') {
             currentUser.updateProfile({ displayName: trimmed }).catch(() => {});
         }
-        toast.success(t('set_name_saved', { name: trimmed }));
+        toast.success(consumeToken
+            ? t('set_name_saved_token', { name: trimmed, left: (inventory?.rename || 1) - 1 })
+            : t('set_name_saved', { name: trimmed }));
     };
     const [bodyMetrics, setBodyMetrics] = useLocalStorage('gym_app_body_metrics', []);
     const [formData, setFormData] = useState({
@@ -279,6 +295,13 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
             </header>
 
             <div className="workout-tracker-list fade-in" style={{ animationDelay: '0.1s', display: 'flex', flexDirection: 'column', gap: '2rem', paddingTop: '1.5rem', paddingBottom: '3rem' }}>
+
+                {/* 0. GIRIS YOKSA: Bulut/Kayit CTA'si EN USTE — yeni kullanici
+                    hesap olusturmayi gormezse verilerini kaybetme riskini
+                    anlamaz; girisliyken bu kart alta (yedekleme yanina) iner. */}
+                {!currentUser && (
+                    <CloudSyncCard currentUser={currentUser} onLoginClick={onLoginClick} />
+                )}
 
                 {/* 1. SEVİYE VE XP BARI (Gamification v2) */}
                 <div className="glass-card slide-in" style={{ border: '1px solid rgba(0, 195, 255, 0.2)', background: 'linear-gradient(145deg, rgba(0,0,0,0.6) 0%, rgba(0, 195, 255, 0.05) 100%)' }}>
@@ -756,6 +779,11 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                         <div>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '6px' }}>
                                 <Type size={14} /> {t('set_name_label')}
+                                {(inventory?.rename || 0) > 0 && (
+                                    <span style={{ fontSize: '0.7rem', color: '#ffd700', background: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.3)', borderRadius: '99px', padding: '2px 8px' }}>
+                                        🏷️ {t('set_name_tokens', { count: inventory.rename })}
+                                    </span>
+                                )}
                             </label>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <input
@@ -863,8 +891,11 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                     onOpenShop={onOpenShop}
                 />
 
-                {/* Bulut Eşitleme Kartı */}
-                <CloudSyncCard currentUser={currentUser} onLoginClick={onLoginClick} />
+                {/* Bulut Eşitleme Kartı (girisliyken: yardimci arac olarak altta;
+                    girissizken en ustteki kopyasi render edilir) */}
+                {currentUser && (
+                    <CloudSyncCard currentUser={currentUser} onLoginClick={onLoginClick} />
+                )}
 
                 {/* Yedekleme: indir / geri yukle */}
                 <BackupCard />

@@ -49,6 +49,16 @@ export const BOOSTS = [
         title_en: 'Buddy Snack',
         desc_tr: 'Aktif dostuna +150 buddy XP verir.',
         desc_en: 'Gives your active buddy +150 buddy XP.'
+    },
+    {
+        id: 'rename',
+        icon: '🏷️',
+        price: 200,
+        maxStock: 3,
+        title_tr: 'İsim Değiştirme Hakkı',
+        title_en: 'Name Change Token',
+        desc_tr: 'Profilindeki adını değiştirme hakkı kazandırır. Profil → Ayarlar\'dan kullanılır.',
+        desc_en: 'Grants one name change. Use it from Profile → Settings.'
     }
 ];
 

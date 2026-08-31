@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Dumbbell, TrendingUp, User } from 'lucide-react';
+import { Zap, Dumbbell, TrendingUp, User, Cloud } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import useLocalStorage from '../../hooks/useLocalStorage';
 
 /**
  * Ilk acilis rehberi (onboarding turu).
- * 4 adim: Bugun / Antrenman / Gelim / Profil + alt menuler.
+ * 5 adim: Bugun / Antrenman / Gelim / Profil + hesap olusturma CTA'si.
  * "gym_app_onboarded" bayragi ile bir kez gosterilir.
+ * 5. adimda "Hesap Olustur" auth ekranina yonlendirir; tur tamamlanmis sayilir.
  */
-function OnboardingOverlay({ onFinish }) {
+function OnboardingOverlay({ onFinish, onCreateAccount }) {
     const { t } = useLanguage();
     const [, setOnboarded] = useLocalStorage('gym_app_onboarded', false);
     const [step, setStep] = useState(0);
@@ -35,15 +36,26 @@ function OnboardingOverlay({ onFinish }) {
             icon: <User size={42} color="#ffd700" />,
             title: t('onb_step4_title'),
             text: t('onb_step4_text')
+        },
+        {
+            icon: <Cloud size={42} color="#00c3ff" />,
+            title: t('onb_step5_title'),
+            text: t('onb_step5_text')
         }
     ];
 
     const current = steps[step];
-    const isLast = step === steps.length - 1;
+    const isAccountStep = step === steps.length - 1;
 
     const finish = () => {
         setOnboarded(true);
         onFinish && onFinish();
+    };
+
+    const createAccount = () => {
+        setOnboarded(true);
+        onFinish && onFinish();
+        onCreateAccount && onCreateAccount();
     };
 
     return createPortal(
@@ -70,7 +82,7 @@ function OnboardingOverlay({ onFinish }) {
                 style={{
                     width: 'min(92vw, 380px)',
                     background: 'linear-gradient(160deg, rgba(20,26,38,0.98), rgba(10,14,22,0.98))',
-                    border: '1px solid rgba(0,195,255,0.35)',
+                    border: `1px solid ${isAccountStep ? 'rgba(0,255,136,0.4)' : 'rgba(0,195,255,0.35)'}`,
                     borderRadius: '20px',
                     padding: '1.8rem 1.5rem',
                     textAlign: 'center',
@@ -81,8 +93,8 @@ function OnboardingOverlay({ onFinish }) {
                     width: '76px', height: '76px', borderRadius: '20px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     margin: '0 auto 1rem auto',
-                    background: 'rgba(0,195,255,0.08)',
-                    border: '1px solid rgba(0,195,255,0.25)'
+                    background: isAccountStep ? 'rgba(0,255,136,0.08)' : 'rgba(0,195,255,0.08)',
+                    border: isAccountStep ? '1px solid rgba(0,255,136,0.25)' : '1px solid rgba(0,195,255,0.25)'
                 }}>
                     {current.icon}
                 </div>
@@ -99,49 +111,88 @@ function OnboardingOverlay({ onFinish }) {
                             width: i === step ? '22px' : '7px',
                             height: '7px',
                             borderRadius: '4px',
-                            background: i === step ? '#00c3ff' : 'rgba(255,255,255,0.18)',
+                            background: i === step ? (isAccountStep ? '#00ff88' : '#00c3ff') : 'rgba(255,255,255,0.18)',
                             transition: 'all 0.25s',
-                            boxShadow: i === step ? '0 0 8px rgba(0,195,255,0.6)' : 'none'
+                            boxShadow: i === step ? `0 0 8px ${isAccountStep ? 'rgba(0,255,136,0.6)' : 'rgba(0,195,255,0.6)'}` : 'none'
                         }} />
                     ))}
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <button
-                        onClick={finish}
-                        style={{
-                            flex: step === 0 ? 0 : 1,
-                            display: step === 0 ? 'none' : 'block',
-                            padding: '11px 0',
-                            borderRadius: '10px',
-                            border: '1px solid rgba(255,255,255,0.14)',
-                            background: 'rgba(255,255,255,0.06)',
-                            color: 'var(--text-light)',
-                            fontWeight: 600,
-                            fontSize: '0.9rem',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        {t('onb_skip')}
-                    </button>
-                    <button
-                        onClick={() => { if (isLast) finish(); else setStep(step + 1); }}
-                        style={{
-                            flex: 2,
-                            padding: '11px 0',
-                            borderRadius: '10px',
-                            border: 'none',
-                            background: 'linear-gradient(135deg, #00c3ff, #ff0088)',
-                            color: '#fff',
-                            fontWeight: 700,
-                            fontSize: '0.95rem',
-                            cursor: 'pointer',
-                            boxShadow: '0 4px 20px rgba(0,195,255,0.35)'
-                        }}
-                    >
-                        {isLast ? t('onb_start') : t('onb_next')}
-                    </button>
-                </div>
+                {isAccountStep ? (
+                    // Hesap adimi: guclu yesil CTA + nazik "simdi degil"
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <button
+                            onClick={createAccount}
+                            style={{
+                                width: '100%',
+                                padding: '13px 0',
+                                borderRadius: '10px',
+                                border: 'none',
+                                background: 'linear-gradient(135deg, #00ff88, #00c3ff)',
+                                color: '#04121c',
+                                fontWeight: 800,
+                                fontSize: '1rem',
+                                cursor: 'pointer',
+                                boxShadow: '0 6px 24px rgba(0,255,136,0.35)'
+                            }}
+                        >
+                            {t('onb_step5_cta')}
+                        </button>
+                        <button
+                            onClick={finish}
+                            style={{
+                                width: '100%',
+                                padding: '10px 0',
+                                borderRadius: '10px',
+                                border: '1px solid rgba(255,255,255,0.14)',
+                                background: 'rgba(255,255,255,0.04)',
+                                color: 'var(--text-light)',
+                                fontWeight: 600,
+                                fontSize: '0.9rem',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            {t('onb_step5_later')}
+                        </button>
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                            onClick={finish}
+                            style={{
+                                flex: step === 0 ? 0 : 1,
+                                display: step === 0 ? 'none' : 'block',
+                                padding: '11px 0',
+                                borderRadius: '10px',
+                                border: '1px solid rgba(255,255,255,0.14)',
+                                background: 'rgba(255,255,255,0.06)',
+                                color: 'var(--text-light)',
+                                fontWeight: 600,
+                                fontSize: '0.9rem',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            {t('onb_skip')}
+                        </button>
+                        <button
+                            onClick={() => setStep(step + 1)}
+                            style={{
+                                flex: 2,
+                                padding: '11px 0',
+                                borderRadius: '10px',
+                                border: 'none',
+                                background: 'linear-gradient(135deg, #00c3ff, #ff0088)',
+                                color: '#fff',
+                                fontWeight: 700,
+                                fontSize: '0.95rem',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 20px rgba(0,195,255,0.35)'
+                            }}
+                        >
+                            {t('onb_next')}
+                        </button>
+                    </div>
+                )}
             </motion.div>
         </motion.div>,
         document.body

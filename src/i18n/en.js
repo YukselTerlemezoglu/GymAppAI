@@ -514,6 +514,9 @@ const en = {
     set_save: "Save",
     set_name_error: "Name cannot be empty.",
     set_name_saved: "Hello {{name}}! Your name has been updated.",
+    set_name_needs_token: "Name changes need a Name Change Token (Shop → Boosts). Your first name is free!",
+    set_name_saved_token: "Hello {{name}}! Name updated. Tokens left: {{left}}.",
+    set_name_tokens: "Change tokens: {{count}}",
     set_lang_label: "Language",
 
     // Shop
@@ -758,9 +761,16 @@ const en = {
     onb_step3_text: "The Progress tab holds your charts, records and muscle balance. It fills up as you go!",
     onb_step4_title: "Profile & rewards",
     onb_step4_text: "Log measurements, collect badges and unlock themes in the Profile tab. Ready? Let's go!",
+    onb_step5_title: "Create your account",
+    onb_step5_text: "With a free account your data is safe in the cloud: it survives device changes, unlocks friend duels and a personal AI coach program. You'll pick your display name during signup.",
+    onb_step5_cta: "Create Account",
+    onb_step5_later: "Not now",
     onb_skip: "Skip",
     onb_next: "Next",
     onb_start: "Start!",
+    banner_signup_text: "Your data currently lives only on this device. Create a free account to keep it safe in the cloud and duel friends.",
+    banner_signup_cta: "Create Account",
+    banner_signup_dismiss: "Dismiss banner",
 
     // --- UX: Themed confirm dialogs ---
     aw_exit_title: "Leave workout",
