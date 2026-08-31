@@ -136,7 +136,7 @@ const en = {
     auth_email: "Email",
     auth_password: "Password",
     auth_name: "App Name",
-    auth_name_placeholder: "Nickname is fine — e.g. Iron Heart",
+    auth_name_placeholder: "Nickname is fine",
     auth_switch_to_register: "Don't have an account yet?",
     auth_switch_to_login: "Already have an account?",
     auth_processing: "Processing...",

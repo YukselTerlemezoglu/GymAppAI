@@ -154,7 +154,7 @@ const tr = {
     auth_email: "E-Posta",
     auth_password: "Şifre",
     auth_name: "Uygulama Adın",
-    auth_name_placeholder: "Takma ad olabilir — örn: Demir Yürek",
+    auth_name_placeholder: "Takma ad olabilir",
     auth_switch_to_register: "Henüz hesabınız yok mu?",
     auth_switch_to_login: "Zaten hesabınız var mı?",
     auth_processing: "İşlem Yapılıyor...",
