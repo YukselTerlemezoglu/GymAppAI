@@ -135,8 +135,8 @@ const en = {
     auth_title_register: "Register",
     auth_email: "Email",
     auth_password: "Password",
-    auth_name: "App Name (nickname is fine)",
-    auth_name_placeholder: "What should we call you? (e.g. Iron Heart)",
+    auth_name: "App Name",
+    auth_name_placeholder: "Nickname is fine — e.g. Iron Heart",
     auth_switch_to_register: "Don't have an account yet?",
     auth_switch_to_login: "Already have an account?",
     auth_processing: "Processing...",
@@ -510,7 +510,7 @@ const en = {
 
     // Settings (Profile > Settings)
     set_title: "Settings",
-    set_name_label: "App Name (nickname is fine)",
+    set_name_label: "App Name",
     set_save: "Save",
     set_name_error: "Name cannot be empty.",
     set_name_saved: "Hello {{name}}! Your name has been updated.",

@@ -153,8 +153,8 @@ const tr = {
     auth_title_register: "Kayıt Ol",
     auth_email: "E-Posta",
     auth_password: "Şifre",
-    auth_name: "Uygulama Adın (takma ad olabilir)",
-    auth_name_placeholder: "Sana nasıl seslenelim? (örn: Demir Yürek)",
+    auth_name: "Uygulama Adın",
+    auth_name_placeholder: "Takma ad olabilir — örn: Demir Yürek",
     auth_switch_to_register: "Henüz hesabınız yok mu?",
     auth_switch_to_login: "Zaten hesabınız var mı?",
     auth_processing: "İşlem Yapılıyor...",
@@ -527,7 +527,7 @@ const tr = {
 
     // Settings (Profil > Ayarlar)
     set_title: "Ayarlar",
-    set_name_label: "Uygulama Adın (takma ad olabilir)",
+    set_name_label: "Uygulama Adın",
     set_save: "Kaydet",
     set_name_error: "İsim boş olamaz.",
     set_name_saved: "Merhaba {{name}}! İsmin güncellendi.",
