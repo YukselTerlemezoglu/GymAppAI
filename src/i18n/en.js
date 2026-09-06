@@ -148,6 +148,14 @@ const en = {
     auth_error_wrong_password: "Incorrect password.",
     auth_error_email_in_use: "This email address is already in use.",
     auth_error_weak_password: "Password is too weak (min 6 characters).",
+    auth_error_invalid_email: "Invalid email format.",
+    auth_error_missing_password: "Password is required.",
+    auth_error_operation_not_allowed: "Email/Password sign-in is disabled in Firebase Console. (Authentication → Sign-in method → enable Email/Password)",
+    auth_error_too_many_requests: "Too many attempts. Please try again later.",
+    auth_error_network: "Network error. Check your internet connection.",
+    auth_error_api_key: "Invalid API key. Check the .env file.",
+    auth_error_configuration: "Firebase configuration not found. Check the .env values.",
+    auth_error_generic_msg: "Unknown error",
     auth_error_generic: "An error occurred: ",
     auth_forgot_password: "Forgot password",
     auth_reset_password_title: "Reset Password",
@@ -835,6 +843,7 @@ const en = {
     bkp_cancel: "Cancel",
     bkp_restore_ok: "{{count}} items restored. Reloading…",
     bkp_restore_fail: "Restore failed.",
+    bkp_restore_idb_fail: "Could not write to the local database; page will not reload. Please try again or keep the tab open.",
     cloud_logout_toast: "Signed out.",
 
 

@@ -7,6 +7,8 @@
 // Chrome icin calisir. navigator.share varsa (iOS) once paylasim sayfasi
 // denenir — dosyalar uygulamasina kaydetmek daha kolaydir.
 
+import { warn } from './logger.js';
+
 const GYM_APP_KEY_PREFIX = 'gym_app_';
 export const BACKUP_VERSION = 1;
 const DB_NAME = 'gymapp_storage';
@@ -214,20 +216,37 @@ export async function restoreBackup(backup, mode = 'merge') {
     }
 
     // localStorage bolumu (restore_bak asla uzerine yazilmaz)
+    // ONEK FILTRESI: yalniz gym_app_* anahtarlari geri yazilir. Dogrulanmis
+    // gorunen bir yedek dosyasi ayni origin'deki baska uygulamalarin
+    // anahtarlarini tasiyorsa uzerine yazilamaz (IDB bolumuyle tutarli).
     let restored = 0;
+    let lsFailed = 0;
     Object.entries(backup.ls || {}).forEach(([key, value]) => {
         if (key === 'gym_app_restore_bak') return;
+        if (!key.startsWith(GYM_APP_KEY_PREFIX)) return;
         try {
             window.localStorage.setItem(key, JSON.stringify(value));
             restored++;
-        } catch { /* kota / bozuk deger atlanir */ }
+        } catch { lsFailed++; /* kota / bozuk deger atlanir */ }
     });
 
     // IndexedDB bolumu
     const idbEntries = Object.entries(backup.idb || {})
         .filter(([key]) => key.startsWith(GYM_APP_KEY_PREFIX) && key !== 'gym_app_restore_bak');
-    if (idbEntries.length) await idbSetMany(idbEntries);
+    let idbOk = true;
+    if (idbEntries.length) idbOk = await idbSetMany(idbEntries);
     restored += idbEntries.length;
+
+    // IDB YAZMA BASARISIZSA bildir: hidrasyon IDB'yi tercih ettiginden reload
+    // sonrasi veriler sessizce restore-oncesi haline donerdi ("veri kaybi"
+    // gorunumu). Cagiran taraf bu durumda reload'u atlayip kullaniciyi
+    // uyarmali.
+    if (!idbOk) {
+        throw new Error('IDB_RESTORE_FAILED');
+    }
+    if (lsFailed > 0) {
+        warn(`restoreBackup: ${lsFailed} localStorage anahtari yazilamadi (kota?)`);
+    }
 
     const history = (backup.idb?.['gym_app_history'] ?? backup.ls?.['gym_app_history']) || [];
     return { restored, workouts: Array.isArray(history) ? history.length : 0 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Play, Plus, ArrowLeft, Trash2, Check, Bot, Activity, Cloud, Wand2, Timer, PersonStanding, LayoutGrid } from 'lucide-react';
-import useLocalStorage from './hooks/useLocalStorage';
+import { Trophy, Bot, Activity, Wand2, Timer, PersonStanding, LayoutGrid } from 'lucide-react';
+import useLocalStorage, { useAllStorageHydrated } from './hooks/useLocalStorage';
 import ErrorBoundary from './components/ErrorBoundary';
 import AICoachOnboarding from './components/aicoach/AICoachOnboarding';
 import CustomProgramBuilder from './components/dashboard/CustomProgramBuilder';
@@ -36,6 +36,7 @@ import MobilityView from './components/workout/MobilityView';
 import LevelUpModal from './components/ui/LevelUpModal';
 import ShopPage from './components/shop/ShopPage';
 import EvolutionModal from './components/shop/EvolutionModal';
+import PrCelebrationModal from './components/ui/PrCelebrationModal';
 import BadgeUnlockModal from './components/ui/BadgeUnlockModal';
 import AdminPanel from './components/admin/AdminPanel';
 import AnatomyLibrary from './components/anatomy/AnatomyLibrary';
@@ -61,6 +62,10 @@ function AppContent() {
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'workout' | 'aicoach' | 'activeAiWorkout' | 'auth'
   const [currentUser, setCurrentUser] = useState(null);
   const [hasOnboarded, setHasOnboarded] = useLocalStorage('gym_app_onboarded', false);
+  // Tum useLocalStorage ornekleri IDB'den hidrasyonu bitirince true olur.
+  // Tek seferlik yazi etkileri (migrasyon, sezon rollover) bunu bekler:
+  // aksi halde stale localStorage degerleri IDB'deki guncel degerleri ezerdi.
+  const storageHydrated = useAllStorageHydrated();
 
   useEffect(() => {
     if (!auth) return;
@@ -158,6 +163,8 @@ function AppContent() {
   const [showCheckIn, setShowCheckIn] = useState(false);
   // Evrim kutlamasi: { buddyId, newXp } / null (antrenman + dukkan ortak)
   const [buddyEvolution, setBuddyEvolution] = useState(null);
+  // PR kutlamasi: ActiveWorkoutView'tan App seviyesine tasindi (unmount sorunu)
+  const [pendingPRs, setPendingPRs] = useState(null);
 
   // STREAK ARTIK TURETILMIS DEGER: workoutHistory'den haftalik seri hesaplanir.
   // Eskiden gunluk Duolingo serisi saklaniyordu; artik ayri depolama yok.
@@ -209,8 +216,11 @@ function AppContent() {
   };
 
   // FAZ 5a: sezon baslatma + sezon degistiyse rollover. Ilk acilista sezon 1'e kayit.
+  // HIDRASYON KILIDI: IDB degerleri gelmeden yazilirsa stale LS degeriyle
+  // yanlis rollover yapilabilir (SP kaybi). Once hidrasyonu bekle.
   const season = seasonInfo(SEASON_EPOCH);
   useEffect(() => {
+    if (!storageHydrated) return;
     if (!seasonData) {
       setSeasonData({ seasonNumber: season.number, seasonSP: 0, totalSP: 0, league: 'bronze', history: [] });
     } else if (seasonData.seasonNumber !== season.number) {
@@ -225,7 +235,7 @@ function AppContent() {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [season.number]);
+  }, [season.number, storageHydrated]);
 
   // SP kaliciligi: sezon ici SP workoutHistory'den turetilir ama rollover bu
   // degeri seasonData.seasonSP'den okur. Kayit degistikce kalici yazilmazsa
@@ -264,8 +274,11 @@ function AppContent() {
   // --- SEVIYE SISTEMI MIGRASYONU (v1 dogrusal -> v2 egrisel) ---
   // Tek seferlik: eski (level, xp) ikilisini toplam XP'ye cevirip yeni
   // egriden seviye bulur. Kullanici XP kaybetmez, seviye ancak yukselir.
+  // HIDRASYON KILIDI: IDB'deki guncel degerler gelmeden calisirsa stale LS
+  // degerleri uzerine yazilir ve XP/level kalici olarak geri giderdi.
   const [levelSysVersion, setLevelSysVersion] = useLocalStorage('gym_app_level_sys_version', 0);
   useEffect(() => {
+    if (!storageHydrated) return;
     if (levelSysVersion >= 2) return;
     const migrated = migrateLevelData(userLevel, userXP, levelSysVersion);
     if (migrated) {
@@ -274,7 +287,7 @@ function AppContent() {
     }
     setLevelSysVersion(2);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tek seferlik migrasyon
-  }, [levelSysVersion]);
+  }, [levelSysVersion, storageHydrated]);
 
   // --- ARKADAS SAYISI (rozet: Ekip Ruhu) ---
   // FriendsCard kendi aboneligini tuttugu icin burada hafif bir dinleyici
@@ -291,15 +304,22 @@ function AppContent() {
   // weekStats eskiden sadece Profil sekmesi acikken yayinlaniyordu; profil
   // hic acmayan kullanicinin duello skoru hafta boyu donuk kaliyordu.
   // Antrenman gecmisi degistiginde (antrenman tamamlama) girisliyse yayinla.
+  // Ref'lerden taze deger okunur: isim degisikligi/level-up sonrasi eski
+  // deger stale closure ile yayina verilmesin.
+  // Ref'ler render sirasinda degil efektte guncellenir (React Compiler kurali)
+  const publishRefs = useRef({});
   useEffect(() => {
-    if (!currentUser || !Array.isArray(workoutHistory)) return;
+    publishRefs.current = { userName, userXP, userLevel };
+  }, [userName, userXP, userLevel]);
+  useEffect(() => {
+    if (!currentUser || !Array.isArray(workoutHistory) || !storageHydrated) return;
+    const { userName: name, userXP: xp, userLevel: level } = publishRefs.current;
     import('./utils/duel').then(({ computeWeekStats }) =>
       import('./utils/friends').then(({ publishProfile }) =>
-        publishProfile({ name: userName, xp: userXP, level: userLevel, weekStats: computeWeekStats(workoutHistory) })
+        publishProfile({ name, xp, level, weekStats: computeWeekStats(workoutHistory) })
       )
     ).catch(() => { /* cevrimdisi: sessiz */ });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sadece kayit ekleme/degisimde
-  }, [currentUser, workoutHistory]);
+  }, [currentUser, workoutHistory, storageHydrated]);
 
   // --- PWA HATIRLATMA TICKER'I ---
   // Uygulama acikken antrenman/su hatirlatmalarini kontrol eder
@@ -407,10 +427,11 @@ function AppContent() {
   // eski kod new Date() çağrısını her effect çalıştığında yineliyordu,
   // bu da gece yarısı çift reset riski taşıyordu. Şimdi bir kez memoize.
   useEffect(() => {
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    // YEREL gun anahtari: toISOString() UTC uretir; UTC+3'te Pazartesi
+    // 00:00-03:00 arasi "Pazar" yazdirip ayni haftada cift reset yapabilirdi.
+    const todayStr = localDayKey();
     // Monday is 1
-    if (today.getDay() === 1 && lastResetDate !== todayStr) {
+    if (new Date().getDay() === 1 && lastResetDate !== todayStr) {
       setCompletedDays([]);
       setLastResetDate(todayStr);
     }
@@ -516,6 +537,18 @@ function AppContent() {
     />
   );
 
+  // PR KUTLAMASI App seviyesinde: antrenman kaydedilip gorunum dashboard'a
+  // dondugunde ActiveWorkoutView unmount olur; modal onun icinde kalsaydi
+  // kullanicinin gozune hic gorunmezdi. State App'te yasar, modal App'te
+  // render edilir, kapaninca temizlenir.
+  const prCelebrationEl = pendingPRs && pendingPRs.length > 0 && (
+    <PrCelebrationModal
+      prs={pendingPRs}
+      onClose={() => setPendingPRs(null)}
+      activePrEffect={getActive(activeCosmetics, ownedCosmetics, 'prEffect')?.id}
+    />
+  );
+
   // Active name-style cosmetic (dashboard top bar)
   const activeNameStyle = getActive(activeCosmetics, ownedCosmetics, 'nameStyle');
 
@@ -564,10 +597,11 @@ function AppContent() {
             buddyCollection={buddyCollection}
             setBuddyCollection={setBuddyCollection}
             activeBuddyId={activeBuddyId}
-            activePrEffect={getActive(activeCosmetics, ownedCosmetics, 'prEffect')?.id}
             onBuddyEvolved={(buddyId, newXp) => setBuddyEvolution({ buddyId, newXp })}
             userCoins={userCoins}
             setUserCoins={setUserCoins}
+            pendingPRs={pendingPRs}
+            setPendingPRs={setPendingPRs}
           />
         );
       }
@@ -696,6 +730,7 @@ function AppContent() {
             </motion.div>
           </AnimatePresence>
           {evolutionModalEl}
+          {prCelebrationEl}
       {bottomNavEl}
         </>
       );
@@ -888,7 +923,7 @@ function AppContent() {
               <DailyQuestsCard workoutHistory={workoutHistory} userName={userName} userCoins={userCoins} setUserCoins={setUserCoins} userXP={userXP} setUserXP={setUserXP} userLevel={userLevel} setUserLevel={setUserLevel} questsData={questsData} setQuestsData={setQuestsData} donData={donData} setDonData={setDonData} marks={activityMarks?.day === localDayKey() ? activityMarks.marks : {}} />
               )}
               {isCardVisible('season') && (
-              <SeasonCard seasonData={seasonData} workoutHistory={workoutHistory} userCoins={userCoins} setUserCoins={setUserCoins} setSeasonData={setSeasonData} />
+              <SeasonCard seasonData={seasonData} workoutHistory={workoutHistory} />
               )}
             </div>
 
@@ -1120,6 +1155,7 @@ function AppContent() {
       </motion.div>
       </AnimatePresence>
       {evolutionModalEl}
+      {prCelebrationEl}
       {bottomNavEl}
     </>
   );

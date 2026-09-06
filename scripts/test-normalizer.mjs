@@ -9,7 +9,7 @@ check('8-12 kg -> 8-12', normalizeAiWeight('8-12 kg')==='8-12');
 check('Vucut Agirligi -> BW', normalizeAiWeight('Vücut Ağırlığı')==='BW');
 check('vücut ağırlığıyla -> BW', normalizeAiWeight('vücut ağırlığıyla')==='BW');
 check('Bodyweight -> BW', normalizeAiWeight('Bodyweight')==='BW');
-check('2 x 15kg -> 2 (set sayisi onde, nadir vaka)', normalizeAiWeight('2 x 15kg')==='2');
+check('2 x 15kg -> 15 (x sonrasi kg degeri; "2 set x 15kg" guvenli okuma)', normalizeAiWeight('2 x 15kg')==='15');
 check('bos -> bos', normalizeAiWeight('')==='');
 check('null -> bos', normalizeAiWeight(null)==='');
 check('taninmayan metin -> bos (BW varsayimi kaldirildi)', normalizeAiWeight('makine ağırlığı')==='');

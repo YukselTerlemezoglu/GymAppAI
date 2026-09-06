@@ -1,5 +1,5 @@
 import { localDayKey } from '../../utils/dateKey';
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
 import { ListChecks, Target } from 'lucide-react';
@@ -15,11 +15,16 @@ import DonModal from './DonModal';
 
 const TIER_COLOR = { easy: '#00ff88', medium: '#00c3ff', hard: '#ff6b81' };
 
-function DailyQuestsCard({ workoutHistory, userName, userCoins, setUserCoins, userXP, setUserXP, userLevel, setUserLevel, questsData, setQuestsData, donData, setDonData, marks }) {
+function DailyQuestsCard({ workoutHistory, userName, setUserCoins, userXP, setUserXP, userLevel, setUserLevel, questsData, setQuestsData, donData, setDonData, marks }) {
     const { t } = useTranslation();
     const { toast, haptic } = useToast();
     const todayKey = localDayKey();
-    const [donOpen, setDonOpen] = useState(null); // { baseCoins, rewardXp }
+    // ESCROW KALICILIGI: escrow donData'da (kalici) tutulur; modal aciligi
+    // bundan TURETILIR. Bilesen unmount olsa (sekme degisikligi) mount
+    // oldugunda modal geri yuklenir; tahsil-edilmis-ama-sonuclanmamis odul
+    // kaybolmaz. Modalin kapanis yolu yalnizca zincirin sonucudur (finish).
+    const escrow = donData?.escrow && donData.escrow.day === todayKey ? donData.escrow : null;
+    const donOpen = escrow ? { baseCoins: escrow.baseCoins } : null;
 
     const tasks = useMemo(() => dailyTasks({ userName, workoutHistory }), [userName, workoutHistory]);
     const ctx = useMemo(() => taskContext(workoutHistory, marks || {}), [workoutHistory, marks]);
@@ -30,7 +35,8 @@ function DailyQuestsCard({ workoutHistory, userName, userCoins, setUserCoins, us
     const selected = sameDay ? (questsData.selected || null) : null;
     const allClaimed = claimed.length > 0;
 
-    // Gun degisince kaydi sifirla
+    // Gun degisince kaydi sifirla; bir onceki gunden kalan cozulmemis
+    // escrow'u da temizle (dunku odul bugun tazelenmez)
     useEffect(() => {
         if (!questsData || questsData.day !== todayKey) {
             setQuestsData({ day: todayKey, claimed: [], selected: null });
@@ -55,10 +61,12 @@ function DailyQuestsCard({ workoutHistory, userName, userCoins, setUserCoins, us
         setUserXP(after.xp);
         setQuestsData({ day: todayKey, claimed: [task.id], selected: task.id });
         if (canStartChain(donData, todayKey)) {
-            setDonOpen({ baseCoins: task.reward.coins });
+            // Escrow donData icinde kalici: unmount olsa bile odul kaybolmaz.
+            // donOpen bu kayittan turetilir; ayri state yazmaya gerek yok.
+            setDonData({ ...(donData || {}), day: todayKey, escrow: { day: todayKey, baseCoins: task.reward.coins } });
         } else {
             // Gunluk DoN hakki yoksa dogrudan guvenli odule don
-            setUserCoins(userCoins + task.reward.coins);
+            setUserCoins((prev) => (prev || 0) + task.reward.coins);
             toast.success(`🎁 ${t('quest_claimed', { coins: task.reward.coins, xp: task.reward.xp })}`);
         }
     };
@@ -66,16 +74,15 @@ function DailyQuestsCard({ workoutHistory, userName, userCoins, setUserCoins, us
     // DoN sonucu: banked coin cuzdana, kayip notr mesaj
     const handleDonFinish = (res) => {
         const next = applyChainResult(donData, res, todayKey);
-        setDonData(next);
+        // Escrow cozuldu: kalici kayittan dus (donOpen turetimi otomatik kapanir)
+        const { escrow: _done, ...rest } = next;
+        setDonData(rest);
         if (res.banked > 0) {
-            setUserCoins(userCoins + res.banked);
+            setUserCoins((prev) => (prev || 0) + res.banked);
             toast.success(`💰 ${t('don_banked_toast', { coins: res.banked })}`);
         } else if (res.lost > 0) {
             toast.info(`🎲 ${t('don_lost_toast')}`);
-        } else {
-            setUserCoins(userCoins + res.banked);
         }
-        setDonOpen(null);
     };
 
     const taskLabel = (id) => {
@@ -191,7 +198,6 @@ function DailyQuestsCard({ workoutHistory, userName, userCoins, setUserCoins, us
                     donData={donData}
                     dayKey={todayKey}
                     onFinish={handleDonFinish}
-                    onClose={() => setDonOpen(null)}
                 />
             )}
         </div>

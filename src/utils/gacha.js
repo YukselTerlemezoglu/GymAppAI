@@ -203,11 +203,10 @@ export const spinWheel = (random = defaultRandom) => {
     };
 };
 
-// Gunluk anahtar (YYYY-MM-DD, yerel saat)
-export const todayKey = () => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
+// Gunluk anahtar (YYYY-MM-DD, yerel saat) — tek dogru kaynak dateKey.js;
+// baska yerlerde todayKey kullaniliyorsa ayni davranis (yer tutucu re-export).
+import { localDayKey } from './dateKey.js';
+export const todayKey = localDayKey;
 
 /*
  * Cark durumu: { lastFreeSpin, extraSpins }

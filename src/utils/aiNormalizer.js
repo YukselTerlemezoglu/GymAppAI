@@ -25,8 +25,8 @@ export const normalizeAiWeight = (raw) => {
     return 'BW';
   }
 
-  // "2 x 15kg" gibi tekrar ifadeleri -> sadece kg degeri
-  const mult = s.match(/(\d+(?:[.,]\d+)?)\s*[x×]\s*\d+/i);
+  // "2 x 15kg" gibi tekrar ifadeleri -> sadece kg degeri (x'ten SONRAKI sayi)
+  const mult = s.match(/\d+(?:[.,]\d+)?\s*[x×]\s*(\d+(?:[.,]\d+)?)/i);
   if (mult) s = mult[1];
 
   // Sayilari yakala (aralik destekli): "8-12 kg", "50-60kg", "12,5kg"

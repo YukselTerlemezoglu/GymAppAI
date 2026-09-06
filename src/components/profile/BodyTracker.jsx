@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
 import ReminderSettingsCard from './ReminderSettingsCard';
-import { Save, Trash2, LineChart as LineChartIcon, TrendingUp, Award, Zap, RefreshCcw, Camera, X, Image as ImageIcon, Settings, Type, Globe, CalendarCheck } from 'lucide-react';
+import { Save, Trash2, LineChart as LineChartIcon, TrendingUp, Award, Camera, X, Image as ImageIcon, Settings, Type, Globe, CalendarCheck } from 'lucide-react';
 import BuddyCapsule from '../shop/BuddyCapsule';
 import { findBuddy, getBuddyStageInfo, addBuddyXp } from '../../utils/buddy';
 import { RARITY } from '../../data/shopItems';
@@ -39,6 +39,9 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
     // bir kez yapilir (set-state-in-effect kaskadini onler).
     const friendCodeRef = useRef(null);
     const profileInitedRef = useRef(false);
+    // Envanter senkron aynasi: feed handler'i prop stale degeri degil gunceli okur
+    const inventoryRef = useRef(inventory);
+    useEffect(() => { inventoryRef.current = inventory; }, [inventory]);
 
     useEffect(() => {
         if (!currentUser) {
@@ -186,11 +189,26 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
         }));
     };
 
+    // Object URL temizligi: olusturulan blob URL'leri revoke edilmezse
+    // dosya tanimlayicilari sayfa omru boyunca bellekte kalir (leak).
+    const revokePreview = () => {
+        setPhotoPreview((old) => {
+            if (old) URL.revokeObjectURL(old);
+            return null;
+        });
+    };
+    const previewUrlRef = useRef(null);
+    const setPreviewUrl = (url) => {
+        if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = url;
+        setPhotoPreview(url);
+    };
+
     const handlePhotoChange = (e) => {
         const file = e.target.files[0];
         if (file) {
             setSelectedPhoto(file);
-            setPhotoPreview(URL.createObjectURL(file));
+            setPreviewUrl(URL.createObjectURL(file));
         }
     };
 
@@ -235,7 +253,7 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
         });
 
         setSelectedPhoto(null);
-        setPhotoPreview(null);
+        revokePreview();
         toast.success(t('saved_success'));
     };
 
@@ -492,7 +510,7 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                                     <img src={photoPreview} alt="Önizleme" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '2px solid #00c3ff' }} />
                                     <button 
                                         type="button" 
-                                        onClick={() => { setSelectedPhoto(null); setPhotoPreview(null); }}
+                                        onClick={() => { setSelectedPhoto(null); revokePreview(); }}
                                         style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ff4757', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer' }}
                                     >
                                         <X size={14} />
@@ -872,13 +890,16 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                     inventory={inventory}
                     activeBuddyId={activeBuddyId}
                     onFeedSnack={() => {
-                        setInventory((prev) => ({ ...prev, snack: Math.max(0, (prev?.snack || 1) - 1) }));
-                        setBuddyCollection((prev) => {
-                            // addBuddyXp evrimi tespit eder; evrim varsa App'teki kutlama acilir
-                            const res = addBuddyXp(prev, activeBuddyId, 150);
-                            if (res.evolved) onBuddyEvolved?.(activeBuddyId, res.xp);
-                            return res.collection;
-                        });
+                        // ATOMIK BESLEME: stok prop'tan stale okunmaz; ref senkron
+                        // aynadir. Ayni karede spam tik -> ikincisi stok 0 gorur.
+                        if ((inventoryRef.current?.snack || 0) <= 0) return;
+                        const nextInv = { ...inventoryRef.current, snack: inventoryRef.current.snack - 1 };
+                        inventoryRef.current = nextInv;
+                        setInventory(nextInv);
+                        // addBuddyXp evrimi tespit eder; evrim varsa App'teki kutlama acilir
+                        const res = addBuddyXp(buddyCollection, activeBuddyId, 150);
+                        setBuddyCollection(res.collection);
+                        if (res.evolved) onBuddyEvolved?.(activeBuddyId, res.xp);
                     }}
                     onOpenShop={onOpenShop}
                 />

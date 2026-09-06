@@ -51,6 +51,33 @@ const idbSet = async (key, value) => {
     } catch { /* sessiz hata */ }
 };
 
+// --- GLOBAL HIDRASYON SINYALI ---
+// Tum useLocalStorage ornekleri IDB okumalarini bitirince bir kez ateşlenir
+// ve bir daha sönilmez (latch). App.jsx'teki tek seferlik migrasyon/sezon
+// efektleri bu sinyali bekleyerek hidrasyon oncesi eski deger yazmayı önler.
+const pendingHydrations = new Set();
+const hydrationSubs = new Set();
+let allHydrated = false;
+
+function notifyHydration() {
+    if (!allHydrated && pendingHydrations.size === 0) {
+        allHydrated = true;
+        hydrationSubs.forEach((fn) => fn());
+    }
+}
+
+export function useAllStorageHydrated() {
+    const [hydrated, setHydrated] = useState(allHydrated);
+    useEffect(() => {
+        const fn = () => setHydrated(true);
+        hydrationSubs.add(fn);
+        // Latch zaten atmissa initializer yakalamistir; abonelik yine de
+        // kayitli (bu noktada tekrar atmasi soz konusu degil — latch'tir).
+        return () => hydrationSubs.delete(fn);
+    }, []);
+    return hydrated;
+}
+
 function useLocalStorage(key, initialValue) {
     // İlk render: LocalStorage'dan senkron oku (ekranın hemen dolması için)
     const [storedValue, setStoredValue] = useState(() => {
@@ -74,6 +101,7 @@ function useLocalStorage(key, initialValue) {
     // Uygulama açıldığında IndexedDB'den oku ve varsa state'i güncelle
     useEffect(() => {
         let cancelled = false;
+        pendingHydrations.add(key);
         idbGet(key).then((idbValue) => {
             if (cancelled) return;
             let base = idbValue;
@@ -92,6 +120,8 @@ function useLocalStorage(key, initialValue) {
             }
             pendingWrites.current = [];
             hydratedRef.current = true;
+            pendingHydrations.delete(key);
+            notifyHydration();
         });
         return () => { cancelled = true; };
     }, [key]);
@@ -106,6 +136,13 @@ function useLocalStorage(key, initialValue) {
             try {
                 const item = window.localStorage.getItem(key);
                 const next = item === null ? initialRef.current : JSON.parse(item);
+                if (!hydratedRef.current) {
+                    // Hidrasyon henuz bitmedi: dogrudan yazarsak sırada bekleyen
+                    // idbGet bu degeri eski IDB verisiyle geri ezer. Sabit
+                    // deger olarak kuyruga al, hidrasyon uzerinden uygula.
+                    pendingWrites.current.push(() => next);
+                    return;
+                }
                 setStoredValue(next);
                 // IDB'yi de esitle (tek dogru kaynak olmaya devam etsin)
                 idbSet(key, next);
@@ -115,35 +152,42 @@ function useLocalStorage(key, initialValue) {
         return () => window.removeEventListener('gymapp-storage', onExternal);
     }, [key]);
 
+    // En son yazilan degeri ref'te tut: setter artik saf (yan etkisiz) ve
+    // yan etkiler callback govdesinde calisir. React updater'lari (StrictMode
+    // dahil) birden fazla calistirilabilir; safligini korumak cift yazma /
+    // cift kuyruk eklemeyi onler.
+    const latestRef = useRef(storedValue);
+    useEffect(() => { latestRef.current = storedValue; }, [storedValue]);
+
     // Setter: hem IndexedDB hem LocalStorage'a yaz
     const setValue = useCallback((value) => {
-        setStoredValue(prev => {
-            const apply = (base) => {
-                try {
-                    return value instanceof Function ? value(base) : value;
-                } catch (error) {
-                    logWarn(`Error computing value for key "${key}":`, error);
-                    return base;
-                }
-            };
-            const valueToStore = apply(prev);
-            // LocalStorage'a senkron yaz (hızlı okuma için cache)
+        //Updater SAFTIR: sadece yeni degeri hesaplar, yan etkisi yoktur.
+        const valueToStore = (() => {
             try {
-                if (typeof window !== 'undefined') {
-                    window.localStorage.setItem(key, JSON.stringify(valueToStore));
-                }
+                return value instanceof Function ? value(latestRef.current) : value;
             } catch (error) {
-                logWarn(`Error setting localStorage key "${key}":`, error);
+                logWarn(`Error computing value for key "${key}":`, error);
+                return latestRef.current;
             }
-            if (hydratedRef.current) {
-                // IndexedDB'ye asenkron yaz (ana depolama)
-                idbSet(key, valueToStore);
-            } else {
-                // Hidrasyon bekleniyor: fonksiyon/elde edilen deger kuyruga
-                pendingWrites.current.push(apply);
+        })();
+        latestRef.current = valueToStore;
+        setStoredValue(valueToStore);
+        // --- Yan etkiler (updater disinda, call basina tam bir kez) ---
+        // LocalStorage'a senkron yaz (hızlı okuma için cache)
+        try {
+            if (typeof window !== 'undefined') {
+                window.localStorage.setItem(key, JSON.stringify(valueToStore));
             }
-            return valueToStore;
-        });
+        } catch (error) {
+            logWarn(`Error setting localStorage key "${key}":`, error);
+        }
+        if (hydratedRef.current) {
+            // IndexedDB'ye asenkron yaz (ana depolama)
+            idbSet(key, valueToStore);
+        } else {
+            // Hidrasyon bekleniyor: uygulanabilir fonksiyon kuyruga alinir
+            pendingWrites.current.push((base) => valueToStore === undefined ? base : valueToStore);
+        }
     }, [key]);
 
     return [storedValue, setValue];

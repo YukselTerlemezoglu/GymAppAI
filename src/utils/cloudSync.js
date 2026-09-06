@@ -11,6 +11,10 @@ const withTimeout = (promise, ms) => {
 };
 
 // Senkronize edilecek tüm LocalStorage anahtarları
+// EKONOMI BUTUNLUGU: coin dahil tum oyun ekonomisi (envanter, kozmetik,
+// dostlar, pity, cark, DoN, gorevler) birlikte sync olur. Eksik anahtar
+// ikinci cihazda "coin geldi ama satin alinanlar yok" durumu yaratirdi
+// (coin duplikasyonu / item kaybi).
 const LOCAL_STORAGE_KEYS = [
   'gym_app_body_metrics',
   'gym_app_history',
@@ -28,7 +32,17 @@ const LOCAL_STORAGE_KEYS = [
   'gym_app_theme',
   'gym_app_user_name',
   'gym_app_nutrition_v2',
-  'gym_app_prev_level'
+  'gym_app_prev_level',
+  // --- ekonomi / envanter butunlugu ---
+  'gym_app_inventory',
+  'gym_app_cosmetics',
+  'gym_app_cosmetics_active',
+  'gym_app_buddies',
+  'gym_app_buddy_active',
+  'gym_app_gacha_pity',
+  'gym_app_wheel',
+  'gym_app_don',
+  'gym_app_quests'
 ];
 
 /**

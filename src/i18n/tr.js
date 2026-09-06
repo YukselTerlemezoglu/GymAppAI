@@ -166,6 +166,14 @@ const tr = {
     auth_error_wrong_password: "Hatalı şifre.",
     auth_error_email_in_use: "Bu e-posta adresi zaten kullanımda.",
     auth_error_weak_password: "Şifre çok zayıf (en az 6 karakter).",
+    auth_error_invalid_email: "Geçersiz email formatı.",
+    auth_error_missing_password: "Şifre gerekli.",
+    auth_error_operation_not_allowed: "Email/Password girişi Firebase Console'da kapalı. (Authentication → Sign-in method → Email/Password'u açın)",
+    auth_error_too_many_requests: "Çok fazla deneme. Daha sonra tekrar deneyin.",
+    auth_error_network: "Ağ hatası. İnternet bağlantınızı kontrol edin.",
+    auth_error_api_key: "API anahtarı geçersiz. .env dosyasını kontrol edin.",
+    auth_error_configuration: "Firebase yapılandırması bulunamadı. .env değerlerini kontrol edin.",
+    auth_error_generic_msg: "Bilinmeyen hata",
     auth_error_generic: "Bir hata oluştu: ",
     auth_forgot_password: "Şifremi unuttum",
     auth_reset_password_title: "Şifre Sıfırla",
@@ -836,6 +844,7 @@ const tr = {
     bkp_cancel: "Vazgeç",
     bkp_restore_ok: "{{count}} veri geri yüklendi. Sayfa yenileniyor…",
     bkp_restore_fail: "Geri yükleme başarısız oldu.",
+    bkp_restore_idb_fail: "Yerel veritabanına yazılamadı; sayfa yenilenmeyecek. Lütfen tekrar deneyin veya sekmeyi açık tutun.",
     cloud_logout_toast: "Çıkış yapıldı.",
 
 

@@ -61,8 +61,16 @@ function BackupCardInner({ t, toast, confirmDialog }) {
             setPending(null);
             // Veriler yeniden okunsun diye kisa gecikmeyle yenile
             setTimeout(() => window.location.reload(), 900);
-        } catch {
-            toast.error(t('bkp_restore_fail'));
+        } catch (err) {
+            // IDB yazma hatasi: reload OLMAZ — hidrasyon IDB'yi tercih ettiginden
+            // reload verileri restore-oncesi haline gerisi cevirirdi. Kullaniciyi
+            // bilgilendirip durumu gozlemlemesini iste.
+            if (err && err.message === 'IDB_RESTORE_FAILED') {
+                toast.error(t('bkp_restore_idb_fail'));
+                setPending(null);
+            } else {
+                toast.error(t('bkp_restore_fail'));
+            }
         } finally {
             setBusy(false);
         }

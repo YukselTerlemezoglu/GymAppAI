@@ -81,8 +81,15 @@ function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
                 // Kullanıcı giriş yaptı, buluttan veriyi çek
                 try {
                     setSyncStatusText(t('auth_searching_cloud'));
-                    // 3 Saniye içinde cevap gelmezse geç
-                    const pullPromise = pullDataFromCloud(userCredential.user.uid);
+                    // 3 Saniye içinde cevap gelmezse beklemeden devam et; ama
+                    // gec ceken pull arkadan gelirse veriyi YINE de uygular.
+                    const pullPromise = pullDataFromCloud(userCredential.user.uid).catch(() => null);
+                    // Geciken cekme tamamlandiginda eventi her durumda at:
+                    // timeout yolu bizden once onLoginSuccess cagirmis olsa
+                    // bile state'ler bu guncellemeyle tazelenir.
+                    pullPromise.then((late) => {
+                        if (late) window.dispatchEvent(new Event('gymapp-storage'));
+                    });
                     const pulled = await Promise.race([
                         pullPromise,
                         new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
@@ -96,12 +103,11 @@ function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
                         // her seferinde yeniden giris yapmak zorunda kalir.
                         // Veriler zaten localStorage'a yazildi; gymapp-storage
                         // eventi tum useLocalStorage state'lerini canli tazeler.
-                        window.dispatchEvent(new Event('gymapp-storage'));
                         onLoginSuccess();
                         return;
                     } else {
                         setSyncStatusText(t('auth_backing_up'));
-                        pushDataToCloud(userCredential.user.uid);
+                        await pushDataToCloud(userCredential.user.uid);
                     }
                 } catch (syncErr) {
                     logWarn("Giriş yapıldı ama eşitleme başarısız veya zaman aşımı:", syncErr);
@@ -120,7 +126,7 @@ function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
                 // Yeni kayıt oldu, mevcut cihaz verilerini buluta yedekle
                 try {
                     setSyncStatusText(t('auth_backing_up'));
-                    pushDataToCloud(userCredential.user.uid);
+                    await pushDataToCloud(userCredential.user.uid);
                 } catch (syncErr) {
                     logWarn("Kayıt olundu ama yedekleme başarısız:", syncErr);
                 }
@@ -135,14 +141,14 @@ function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
                 'auth/wrong-password': t('auth_error_wrong_password'),
                 'auth/email-already-in-use': t('auth_error_email_in_use'),
                 'auth/weak-password': t('auth_error_weak_password'),
-                'auth/invalid-email': 'Geçersiz email formatı.',
-                'auth/missing-password': 'Şifre gerekli.',
-                'auth/operation-not-allowed': 'Email/Password girişi Firebase Console\'da kapalı. (Authentication → Sign-in method → Email/Password\'u açın)',
-                'auth/too-many-requests': 'Çok fazla deneme. Daha sonra tekrar deneyin.',
-                'auth/network-request-failed': 'Ağ hatası. İnternet bağlantınızı kontrol edin.',
-                'auth/api-key-not-valid': 'API anahtarı geçersiz. .env dosyasını kontrol edin.',
-                'auth/invalid-api-key': 'API anahtarı geçersiz. .env dosyasını kontrol edin.',
-                'auth/configuration-not-found': 'Firebase yapılandırması bulunamadı. .env değerlerini kontrol edin.',
+                'auth/invalid-email': t('auth_error_invalid_email'),
+                'auth/missing-password': t('auth_error_missing_password'),
+                'auth/operation-not-allowed': t('auth_error_operation_not_allowed'),
+                'auth/too-many-requests': t('auth_error_too_many_requests'),
+                'auth/network-request-failed': t('auth_error_network'),
+                'auth/api-key-not-valid': t('auth_error_api_key'),
+                'auth/invalid-api-key': t('auth_error_api_key'),
+                'auth/configuration-not-found': t('auth_error_configuration'),
             };
             const friendly = errorMap[err.code];
             if (friendly) {
@@ -150,7 +156,7 @@ function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
             } else if (err.code) {
                 setError(`${t('auth_error_generic')} [${err.code}]`);
             } else {
-                setError(`${t('auth_error_generic')} ${err.message || 'Bilinmeyen hata'}`);
+                setError(`${t('auth_error_generic')} ${err.message || t('auth_error_generic_msg')}`);
             }
         } finally {
             setLoading(false);

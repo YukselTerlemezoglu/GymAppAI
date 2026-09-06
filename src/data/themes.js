@@ -111,6 +111,25 @@ export const THEMES = {
 };
 
 /**
+ * DUKKAN TEMA KATALOGU - tek dogru kaynak.
+ * Dukkan bu listeyi render eder; THEMES'e yeni tema eklenince buraya da
+ * bir kayit dustugunde dukkan otomatik gosterir (isim/fiyat burada,
+ * CSS degiskenleri THEMES'te yasar).
+ * not: price 0 = ucretsiz (default).
+ */
+export const THEME_CATALOG = [
+    { id: 'default', name_tr: 'Klasik Neon (Zümrüt)', name_en: 'Classic Neon (Emerald)', price: 0 },
+    { id: 'blood', name_tr: 'Kanlı Ay (Kırmızı)', name_en: 'Blood Moon (Red)', price: 100 },
+    { id: 'cyberpunk', name_tr: 'Siberpunk (Mor)', name_en: 'Cyberpunk (Purple)', price: 250 },
+    { id: 'gold', name_tr: 'Olimpiyat (Altın)', name_en: 'Olympic (Gold)', price: 500 },
+    { id: 'abyss', name_tr: 'Abyss (Okyanus Mavisi)', name_en: 'Abyss (Ocean Blue)', price: 750 },
+    { id: 'toxic', name_tr: 'Zehir (Asit Yeşili)', name_en: 'Toxic (Acid Green)', price: 1000 },
+    { id: 'sakura', name_tr: 'Sakura (Pembe)', name_en: 'Sakura (Pink)', price: 1000 },
+    { id: 'sunset', name_tr: 'Gün Batımı (Turuncu)', name_en: 'Sunset (Orange)', price: 1250 },
+    { id: 'darkmatter', name_tr: 'Karanlık Madde (Siyah&Beyaz)', name_en: 'Dark Matter (B&W)', price: 1500 }
+];
+
+/**
  * Verilen tema adını document root'una uygular.
  * Bilinmeyen tema adı 'default'a düşer.
  */

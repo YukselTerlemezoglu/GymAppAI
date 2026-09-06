@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Zap, Package, Dices, Palette, ArrowLeft, Lock, Check } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext';
@@ -10,6 +10,7 @@ import { openChest, updateChestPity, openEgg, updateEggPity, spinWheel, getWheel
 import GachaRevealModal from './GachaRevealModal';
 import { playSound } from '../../utils/sounds';
 import { totalXpForLevel, levelFromTotalXp } from '../../utils/levelSystem';
+import { THEMES, THEME_CATALOG } from '../../data/themes';
 import BuddyCapsule from './BuddyCapsule';
 import EvolutionModal from './EvolutionModal';
 
@@ -43,7 +44,6 @@ function ShopPage({
     wheelState, setWheelState,
     // XP (oduller icin)
     setUserXP,
-    userXP,
     userLevel,
     setUserLevel,
     // temalar
@@ -56,6 +56,19 @@ function ShopPage({
     const [tab, setTab] = useState('boosts');
     const [reveal, setReveal] = useState(null);
     const [spinning, setSpinning] = useState(false);
+    // Senkron meşguliyet kilidi: cark/kutu/yumurta handler'lari await
+    // icerir (onay dialogu); ayni karede ikinci tik state guncellenmeden
+    // gecebilirdi -> cift odeme/cift animasyon. Ref ile aninda kilitlenir.
+    const busyRef = useRef(false);
+    // Envanter senkron aynasi: feed handler'i prop'un render'dan gecikmis
+    // degerini degil guncel degeri okur (ayni karede spam tik korumasi).
+    const inventoryRef = useRef(inventory);
+    useEffect(() => { inventoryRef.current = inventory; }, [inventory]);
+    // Reveal sesi zamanlayicisi: bilesen erken kapatinca ses calmasin
+    const revealSoundTimerRef = useRef(null);
+    useEffect(() => () => {
+        if (revealSoundTimerRef.current) clearTimeout(revealSoundTimerRef.current);
+    }, []);
     const [wheelAngle, setWheelAngle] = useState(0);
     // Gacha modalinin key'i: her acilista artar (Date.now yerine saf sayaç)
     const [revealKey, setRevealKey] = useState(0);
@@ -133,100 +146,115 @@ function ShopPage({
 
     // ---------- SANS KUTUSU ----------
     const handleOpenChest = async (count = 1) => {
-        const unit = BOXES[0].price;
-        const total = count === CHEST_PACK.count ? unit * CHEST_PACK.payFor : unit * count;
-        if (userCoins < total) {
-            playSound('deny'); toast.warning(t('shop_insufficient_coins', { needed: total - userCoins }));
-            return;
-        }
-        const ok = await confirmDialog({
-            title: t('shop_chest_title'),
-            message: count === CHEST_PACK.count
-                ? t('shop_chest_pack_confirm', { count: CHEST_PACK.count, price: total })
-                : t('shop_chest_confirm', { price: unit }),
-            confirmLabel: t('shop_buy_yes'),
-            cancelLabel: t('shop_buy_no')
-        });
-        if (!ok) return;
+        if (busyRef.current) return;
+        busyRef.current = true;
+        try {
+            const unit = BOXES[0].price;
+            const total = count === CHEST_PACK.count ? unit * CHEST_PACK.payFor : unit * count;
+            if (userCoins < total) {
+                playSound('deny'); toast.warning(t('shop_insufficient_coins', { needed: total - userCoins }));
+                return;
+            }
+            const ok = await confirmDialog({
+                title: t('shop_chest_title'),
+                message: count === CHEST_PACK.count
+                    ? t('shop_chest_pack_confirm', { count: CHEST_PACK.count, price: total })
+                    : t('shop_chest_confirm', { price: unit }),
+                confirmLabel: t('shop_buy_yes'),
+                cancelLabel: t('shop_buy_no')
+            });
+            if (!ok) return;
 
-        if (count === 1) {
-            const result = openChest(gachaPity, ownedCosmetics);
-            applyGachaResult({ ...result, source: 'chest' });
+            if (count === 1) {
+                const result = openChest(gachaPity, ownedCosmetics);
+                applyGachaResult({ ...result, source: 'chest' });
+                setUserCoins((prev) => (prev || 0) - total); playSound('buy');
+                setGachaPity(updateChestPity(gachaPity, result));
+                return;
+            }
+
+            // Coklu kutu: sonuclar sirali kart animasyonuyla tek modale gider.
+            // Dusan kozmetik aninda sahip olunan listesine eklenir; ayni paket
+            // icinde ayni kozmetik ikinci kez dusmez (dupe deger kaybi olmaz).
+            let pity = gachaPity;
+            let owned = [...(ownedCosmetics || [])];
+            const results = [];
+            for (let i = 0; i < count; i++) {
+                const result = openChest(pity, owned);
+                pity = updateChestPity(pity, result);
+                if (result.type === 'cosmetic') owned = [...owned, result.cosmeticId];
+                results.push(result);
+            }
             setUserCoins((prev) => (prev || 0) - total); playSound('buy');
-            setGachaPity(updateChestPity(gachaPity, result));
-            return;
+            setGachaPity(pity);
+            applyGachaResult({ type: 'multiChest', source: 'chest', results, rarity: results.reduce((acc, r) => (r.rarity === 'legendary' || acc === 'legendary') ? 'legendary' : (r.rarity === 'epic' || acc === 'epic') ? 'epic' : 'common', 'common') });
+        } finally {
+            busyRef.current = false;
         }
-
-        // Coklu kutu: sonuclar sirali kart animasyonuyla tek modale gider.
-        // Dusan kozmetik aninda sahip olunan listesine eklenir; ayni paket
-        // icinde ayni kozmetik ikinci kez dusmez (dupe deger kaybi olmaz).
-        let pity = gachaPity;
-        let owned = [...(ownedCosmetics || [])];
-        const results = [];
-        for (let i = 0; i < count; i++) {
-            const result = openChest(pity, owned);
-            pity = updateChestPity(pity, result);
-            if (result.type === 'cosmetic') owned = [...owned, result.cosmeticId];
-            results.push(result);
-        }
-        setUserCoins((prev) => (prev || 0) - total); playSound('buy');
-        setGachaPity(pity);
-        applyGachaResult({ type: 'multiChest', source: 'chest', results, rarity: results.reduce((acc, r) => (r.rarity === 'legendary' || acc === 'legendary') ? 'legendary' : (r.rarity === 'epic' || acc === 'epic') ? 'epic' : 'common', 'common') });
     };
 
     // ---------- DOST YUMURTASI ----------
     const handleOpenEgg = async (count = 1) => {
-        const unit = BOXES[1].price;
-        const total = count === EGG_PACK.count ? unit * EGG_PACK.payFor : unit * count;
-        if (userCoins < total) {
-            playSound('deny'); toast.warning(t('shop_insufficient_coins', { needed: total - userCoins }));
-            return;
-        }
-        const ok = await confirmDialog({
-            title: t('shop_egg_title'),
-            message: count === EGG_PACK.count
-                ? t('shop_egg_pack_confirm', { count: EGG_PACK.count, price: total })
-                : t('shop_egg_confirm', { price: unit }),
-            confirmLabel: t('shop_buy_yes'),
-            cancelLabel: t('shop_buy_no')
-        });
-        if (!ok) return;
-
-        let pity = gachaPity;
-        let collection = buddyCollection;
-        const results = [];
-        const newBuddyIds = [];
-        for (let i = 0; i < count; i++) {
-            const result = openEgg(pity);
-            pity = updateEggPity(pity, result);
-            const dupe = !!(collection && collection[result.buddyId]);
-            if (dupe) {
-                collection = { ...collection, [result.buddyId]: { xp: (collection[result.buddyId]?.xp || 0) + result.dupeXp } };
-            } else {
-                collection = { ...collection, [result.buddyId]: { xp: 0 } };
-                newBuddyIds.push(result.buddyId);
+        if (busyRef.current) return;
+        busyRef.current = true;
+        try {
+            const unit = BOXES[1].price;
+            const total = count === EGG_PACK.count ? unit * EGG_PACK.payFor : unit * count;
+            if (userCoins < total) {
+                playSound('deny'); toast.warning(t('shop_insufficient_coins', { needed: total - userCoins }));
+                return;
             }
-            results.push({ ...result, dupe });
+            const ok = await confirmDialog({
+                title: t('shop_egg_title'),
+                message: count === EGG_PACK.count
+                    ? t('shop_egg_pack_confirm', { count: EGG_PACK.count, price: total })
+                    : t('shop_egg_confirm', { price: unit }),
+                confirmLabel: t('shop_buy_yes'),
+                cancelLabel: t('shop_buy_no')
+            });
+            if (!ok) return;
+
+            let pity = gachaPity;
+            let collection = buddyCollection;
+            const results = [];
+            const newBuddyIds = [];
+            for (let i = 0; i < count; i++) {
+                const result = openEgg(pity);
+                pity = updateEggPity(pity, result);
+                const dupe = !!(collection && collection[result.buddyId]);
+                if (dupe) {
+                    collection = { ...collection, [result.buddyId]: { xp: (collection[result.buddyId]?.xp || 0) + result.dupeXp } };
+                } else {
+                    collection = { ...collection, [result.buddyId]: { xp: 0 } };
+                    newBuddyIds.push(result.buddyId);
+                }
+                results.push({ ...result, dupe });
+            }
+            setUserCoins((prev) => (prev || 0) - total); playSound('buy');
+            setGachaPity(pity);
+            setBuddyCollection(collection);
+            if (!activeBuddyId && newBuddyIds.length > 0) setActiveBuddyId(newBuddyIds[0]);
+            // Coklu acilis: tum sonuclar tek modale gider (siralı kartlanma)
+            applyGachaResult({ type: 'multiEgg', source: 'egg', results, rarity: results.reduce((acc, r) => (r.rarity === 'legendary' || acc === 'legendary') ? 'legendary' : (r.rarity === 'epic' || acc === 'epic') ? 'epic' : 'common', 'common') });
+        } finally {
+            busyRef.current = false;
         }
-        setUserCoins((prev) => (prev || 0) - total); playSound('buy');
-        setGachaPity(pity);
-        setBuddyCollection(collection);
-        if (!activeBuddyId && newBuddyIds.length > 0) setActiveBuddyId(newBuddyIds[0]);
-        // Coklu acilis: tum sonuclar tek modale gider (siralı kartlanma)
-        applyGachaResult({ type: 'multiEgg', source: 'egg', results, rarity: results.reduce((acc, r) => (r.rarity === 'legendary' || acc === 'legendary') ? 'legendary' : (r.rarity === 'epic' || acc === 'epic') ? 'epic' : 'common', 'common') });
     };
 
     // ---------- CARK ----------
     const handleSpin = async (useFree) => {
-        if (spinning) return;
+        if (busyRef.current || spinning) return;
+        busyRef.current = true;
         if (!useFree) {
             const ws = getWheelState(wheelState);
             if (ws.extraLeft <= 0) {
                 toast.warning(t('shop_wheel_no_extra'));
+                busyRef.current = false;
                 return;
             }
             if (userCoins < WHEEL_PRICE) {
                 playSound('deny'); toast.warning(t('shop_insufficient_coins', { needed: WHEEL_PRICE - userCoins }));
+                busyRef.current = false;
                 return;
             }
             const ok = await confirmDialog({
@@ -235,7 +263,7 @@ function ShopPage({
                 confirmLabel: t('shop_buy_yes'),
                 cancelLabel: t('shop_buy_no')
             });
-            if (!ok) return;
+            if (!ok) { busyRef.current = false; return; }
             setUserCoins((prev) => (prev || 0) - WHEEL_PRICE); playSound('buy');
         }
 
@@ -264,15 +292,20 @@ function ShopPage({
             setSpinning(false);
             setWheelState(updateWheelState(wheelState, useFree));
             applyGachaResult({ ...result, source: 'wheel' });
+            busyRef.current = false; // animasyon bitince kilidi ac
         }, 4000);
     };
 
     // ---------- GACHA SONUCU UYGULA ----------
     // XP kazançları eğrisel seviye sisteminden geçirilir; seviye atlanabilir.
+    // Fonksiyonel updater: coklu pakette ardışık XP dusleri birbirini EZMEZ,
+    // toplam XP uzerinden birikir; seviye de son toplamdan hesaplanir.
     const grantXp = (amount) => {
-        const after = levelFromTotalXp(totalXpForLevel(userLevel || 1) + (userXP || 0) + amount);
-        if (setUserLevel && after.level !== userLevel) setUserLevel(after.level);
-        setUserXP(after.xp);
+        setUserXP((prevXp) => {
+            const after = levelFromTotalXp(totalXpForLevel(userLevel || 1) + (prevXp || 0) + amount);
+            if (setUserLevel && after.level !== userLevel) setUserLevel(after.level);
+            return after.xp;
+        });
     };
     const applySingleResult = (r) => {
         switch (r.type) {
@@ -322,7 +355,7 @@ function ShopPage({
         setReveal(result);
         // Acilis sesi reveal aninda (GachaRevealModal patlamasiyla es zamanli)
         const delay = result.source === 'wheel' ? 0 : (result.type === 'multiEgg' || result.type === 'multiChest') ? 900 : (result.rarity === 'legendary' ? 1400 : 1100);
-        setTimeout(() => playSound('reveal_' + result.rarity), delay);
+        revealSoundTimerRef.current = setTimeout(() => playSound('reveal_' + result.rarity), delay);
     };
 
     // ---------- KOZMETIK SATIR (render yardimcisi; bilesen degil) ----------
@@ -546,17 +579,19 @@ function ShopPage({
                                 {/* Atistirmalik besle */}
                                 <button
                                     onClick={() => {
-                                        const stock = inventory?.snack || 0;
-                                        if (stock <= 0) { toast.warning(t('shop_no_snacks')); return; }
+                                        // ATOMIK BESLEME: inventoryRef senkron aynadir; ayni
+                                        // karede spam tiklaninca ikinci tik stok 0'i gorur ve
+                                        // reddedilir (eski kod prop'tan okuyordu -> bedava XP).
+                                        if ((inventoryRef.current?.snack || 0) <= 0) { toast.warning(t('shop_no_snacks')); return; }
                                         haptic(10);
-playSound('feed');
-                                        setInventory((prev) => ({ ...prev, snack: (prev.snack || 1) - 1 }));
+                                        playSound('feed');
+                                        const nextInv = { ...inventoryRef.current, snack: inventoryRef.current.snack - 1 };
+                                        inventoryRef.current = nextInv;
+                                        setInventory(nextInv);
                                         // addBuddyXp evrimi tespit eder; evrim varsa tam ekran kutlama acilir
-setBuddyCollection((prev) => {
-    const res = addBuddyXp(prev, activeBuddyId, 150);
-    if (res.evolved) setEvolution({ buddyId: activeBuddyId, newXp: res.xp });
-    return res.collection;
-});
+                                        const res = addBuddyXp(buddyCollection, activeBuddyId, 150);
+                                        setBuddyCollection(res.collection);
+                                        if (res.evolved) setEvolution({ buddyId: activeBuddyId, newXp: res.xp });
                                         toast.success(t('shop_fed_buddy', { name: lang === 'tr' ? findBuddy(activeBuddyId)?.title_tr : findBuddy(activeBuddyId)?.title_en }));
                                     }}
                                     className="neon-btn"
@@ -654,24 +689,19 @@ setBuddyCollection((prev) => {
             {/* ============ SEKME: TEMALAR ============ */}
             {tab === 'themes' && (
                 <div className="glass-card" style={{ padding: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                    {[
-                        { id: 'default', name_tr: 'Klasik Neon (Zümrüt)', name_en: 'Classic Neon (Emerald)', price: 0, color1: '#00ff88', color2: '#00d4ff' },
-                        { id: 'blood', name_tr: 'Kanlı Ay (Kırmızı)', name_en: 'Blood Moon (Red)', price: 100, color1: '#ff4757', color2: '#ff6b81' },
-                        { id: 'cyberpunk', name_tr: 'Siberpunk (Mor)', name_en: 'Cyberpunk (Purple)', price: 250, color1: '#ff00ff', color2: '#00ffff' },
-                        { id: 'gold', name_tr: 'Olimpiyat (Altın)', name_en: 'Olympic (Gold)', price: 500, color1: '#ffd700', color2: '#ffa502' },
-                        { id: 'abyss', name_tr: 'Abyss (Okyanus Mavisi)', name_en: 'Abyss (Ocean Blue)', price: 750, color1: '#0984e3', color2: '#00cec9' },
-                        { id: 'toxic', name_tr: 'Zehir (Asit Yeşili)', name_en: 'Toxic (Acid Green)', price: 1000, color1: '#adff2f', color2: '#7fff00' },
-                        { id: 'sakura', name_tr: 'Sakura (Pembe)', name_en: 'Sakura (Pink)', price: 1000, color1: '#ffb7b2', color2: '#e28495' },
-                        { id: 'sunset', name_tr: 'Gün Batımı (Turuncu)', name_en: 'Sunset (Orange)', price: 1250, color1: '#ff7e5f', color2: '#feb47b' },
-                        { id: 'darkmatter', name_tr: 'Karanlık Madde (Siyah&Beyaz)', name_en: 'Dark Matter (B&W)', price: 1500, color1: '#ffffff', color2: '#222222' }
-                    ].map((theme) => {
+                    {THEME_CATALOG.map((theme) => {
+                        // Renkler CSS degisken tanimindan okunur: katalog isim/
+                        // fiyat tasir, THEMES renkleri tek dogru kaynak kalir.
+                        const cssVars = THEMES[theme.id] || THEMES.default;
+                        const color1 = cssVars['--accent-primary'];
+                        const color2 = cssVars['--accent-secondary'];
                         const isUnlocked = unlockedThemes.includes(theme.id);
                         const isActive = activeTheme === theme.id;
                         const themeName = lang === 'tr' ? theme.name_tr : theme.name_en;
                         return (
-                            <div key={theme.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.9rem 1rem', background: isActive ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.3)', borderRadius: '12px', border: isActive ? `1px solid ${theme.color1}` : '1px solid rgba(255,255,255,0.05)' }}>
+                            <div key={theme.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.9rem 1rem', background: isActive ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.3)', borderRadius: '12px', border: isActive ? `1px solid ${color1}` : '1px solid rgba(255,255,255,0.05)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: `linear-gradient(135deg, ${theme.color1}, ${theme.color2})`, border: '2px solid #fff' }}></div>
+                                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: `linear-gradient(135deg, ${color1}, ${color2})`, border: '2px solid #fff' }}></div>
                                     <div>
                                         <div style={{ color: '#fff', fontWeight: 'bold' }}>{themeName}</div>
                                         {!isUnlocked && <div style={{ color: '#ffd700', fontSize: '0.8rem', fontWeight: 'bold' }}>🪙 {theme.price}</div>}
@@ -703,7 +733,7 @@ setBuddyCollection((prev) => {
                                         }
                                     }}
                                     className="neon-btn"
-                                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: 'auto', background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent', borderColor: isUnlocked ? theme.color1 : '#ffd700', color: isUnlocked ? (isActive ? '#fff' : theme.color1) : '#ffd700', boxShadow: isActive ? 'none' : 'auto' }}
+                                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', width: 'auto', background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent', borderColor: isUnlocked ? color1 : '#ffd700', color: isUnlocked ? (isActive ? '#fff' : color1) : '#ffd700', boxShadow: isActive ? 'none' : 'auto' }}
                                 >
                                     {isActive ? <><Check size={16} /> {t('shop_active')}</> : (isUnlocked ? t('shop_equip') : <><Lock size={16} /> 🪙 {theme.price}</>)}
                                 </button>

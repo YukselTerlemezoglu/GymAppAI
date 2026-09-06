@@ -3,17 +3,16 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, Dumbbell, TrendingUp, User, Cloud } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
-import useLocalStorage from '../../hooks/useLocalStorage';
 
 /**
  * Ilk acilis rehberi (onboarding turu).
  * 5 adim: Bugun / Antrenman / Gelim / Profil + hesap olusturma CTA'si.
- * "gym_app_onboarded" bayragi ile bir kez gosterilir.
+ * "gym_app_onboarded" bayragi App.jsx'te tek useLocalStorage orneginde
+ * tutulur; burada ikinci writer tutmak IDB/LS esitlemesini bozuyordu.
  * 5. adimda "Hesap Olustur" auth ekranina yonlendirir; tur tamamlanmis sayilir.
  */
 function OnboardingOverlay({ onFinish, onCreateAccount }) {
     const { t } = useLanguage();
-    const [, setOnboarded] = useLocalStorage('gym_app_onboarded', false);
     const [step, setStep] = useState(0);
 
     const steps = [
@@ -48,12 +47,12 @@ function OnboardingOverlay({ onFinish, onCreateAccount }) {
     const isAccountStep = step === steps.length - 1;
 
     const finish = () => {
-        setOnboarded(true);
+        // Kalici bayrak App'teki tek useLocalStorage orneginde yasar
+        // (cift writer IDB/LS esitlemesini bozuyordu).
         onFinish && onFinish();
     };
 
     const createAccount = () => {
-        setOnboarded(true);
         onFinish && onFinish();
         onCreateAccount && onCreateAccount();
     };

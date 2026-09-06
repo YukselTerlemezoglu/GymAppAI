@@ -22,13 +22,15 @@ export function flip(random = Math.random) {
 }
 
 /**
- * Gunluk hak kontrolu.
- * @param {Object} donData - { day, chainsUsed, stats }
+ * Gunluk hak kontrolu. Bekleyen escrow da hak gibi davranir: escrow cozulmeden
+ * yeni zincir baslamaz (tahsil-edilmis odul kaybolmasin).
+ * @param {Object} donData - { day, chainsUsed, stats, escrow? }
  * @param {string} dayKey - bugunun 'YYYY-MM-DD' anahtari
  */
 export function canStartChain(donData, dayKey) {
     if (!donData) return true;
     if (donData.day !== dayKey) return true;
+    if (donData.escrow && donData.escrow.day === dayKey) return false;
     return (donData.chainsUsed || 0) < DON_CHAINS_PER_DAY;
 }
 

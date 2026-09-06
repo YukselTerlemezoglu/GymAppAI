@@ -7,7 +7,6 @@ import { ArrowLeft, Check, Trophy, Info, Settings, TrendingUp, Calculator, Histo
 import useLocalStorage from '../../hooks/useLocalStorage';
 import ExerciseModal from './ExerciseModal';
 import RestTimer from './RestTimer';
-import PrCelebrationModal from '../ui/PrCelebrationModal';
 import PlateCalculator from '../ui/PlateCalculator';
 import { detectPRs, getOverloadSuggestion, getExerciseHistory } from '../../utils/prTracker';
 import { totalXpForLevel, levelFromTotalXp } from '../../utils/levelSystem';
@@ -38,9 +37,11 @@ function ActiveWorkoutView({
     inventory, setInventory,
     buddyCollection, setBuddyCollection,
     activeBuddyId,
-    activePrEffect,
 
-    setUserCoins
+    setUserCoins,
+    // PR kutlamasi App seviyesinde yasar: antrenman kaydedilip dashboard'a
+    // donuldugunde bu bilesen unmount olur; modal burada kalsa gorunmezdi.
+    setPendingPRs
 }) {
     const { t, lang } = useLanguage();
     const { toast, confirmDialog, haptic } = useToast();
@@ -55,8 +56,10 @@ function ActiveWorkoutView({
     const [aiFeedbackFatigue, setAiFeedbackFatigue] = useState('');
     const [feedbackValErr, setFeedbackValErr] = useState('');
     const [selectedExerciseForModal, setSelectedExerciseForModal] = useState(null);
-    const [pendingPRs, setPendingPRs] = useState(null);
     const [showPlateCalc, setShowPlateCalc] = useState(false);
+    // CIFT GONDERME KILIDI: kaydet butonu cift tiklaninca oduller iki kez
+    // verilmesin (coin fonksiyonel updater olsa da iksir iki kez tuketilir).
+    const submitLockRef = useRef(false);
 
     // REST TIMER STATE
     // Varsayilan KAPALI: isteyen antrenman basinda ayarlardan acar.
@@ -240,26 +243,31 @@ function ActiveWorkoutView({
                 setIsRestTimerActive(true);
             }
             // zincir devam ediyorsa: sayac zaten kapali kalir
+        }
 
-            if (isTrackingMode) {
-                // Tamamlanma kontrolu guncel (checkbox sonrasi) loglarla yapilir
-                const after = (activeAiWorkoutLogs[eIdx] || getSetsForExercise(eIdx, ex)).map((s, j) => (j === sIdx ? { ...s, completed: true } : s));
-                const allDone = (activeAiWorkoutDayParams?.exercises || []).every((loopEx, i) => {
-                    const logs = i === eIdx ? after : (activeAiWorkoutLogs[i] || getSetsForExercise(i, loopEx));
-                    return !logs.some(set => !set.completed);
-                });
-                if (allDone && activeAiWorkoutDayParams.exercises.length > 0) {
-                    setShowAiFeedbackModal(true);
-                }
+        // TUM SETLER BITTI MI? Kontrol rest-timer kosulundan BAGIMSIZDIR:
+        // Takip Modu + otomatik sayac KAPALI kombinsayonunda son set
+        // isaretlenince geri bildirim modali eskiden acilmiyordu; kullanici
+        // FINISH butonunu kendisi bulmak zorunda kaliyordu.
+        if (willBeChecked && isTrackingMode) {
+            const after = (activeAiWorkoutLogs[eIdx] || getSetsForExercise(eIdx, ex)).map((s, j) => (j === sIdx ? { ...s, completed: true } : s));
+            const allDone = (activeAiWorkoutDayParams?.exercises || []).every((loopEx, i) => {
+                const logs = i === eIdx ? after : (activeAiWorkoutLogs[i] || getSetsForExercise(i, loopEx));
+                return !logs.some(set => !set.completed);
+            });
+            if (allDone && activeAiWorkoutDayParams.exercises.length > 0) {
+                setShowAiFeedbackModal(true);
             }
         }
     };
 
     const submitAiFeedbackAndSave = () => {
+        if (submitLockRef.current) return; // cift tiklama korumasi
         if (!aiFeedbackRpe || !aiFeedbackFatigue) {
             setFeedbackValErr(lang === 'tr' ? "Lütfen İdman Zorluğu (RPE) ve Yorgunluk durumunu seçin." : "Please select Workout Difficulty (RPE) and Fatigue level.");
             return;
         }
+        submitLockRef.current = true;
         setFeedbackValErr('');
 
         const todayStr = localDayKey();
@@ -321,8 +329,13 @@ function ActiveWorkoutView({
                 date: new Date().toISOString(),
                 exercise: typeof ex.name === 'string' ? ex.name : (lang === 'tr' ? 'Bilinmeyen Egzersiz' : 'Unknown Exercise'),
                 sets: performedSetsCount > 0 ? performedSetsCount : parseInt(ex.sets) || 1,
-                maxWeight: logs.reduce((max, s) => Math.max(max, parseFloat(s.weight) || 0), parsedWeight) || parsedWeight,
-                bestReps: logs.reduce((max, s) => Math.max(max, parseInt(s.reps) || 0), parsedReps) || parsedReps,
+                // HIZLI MOD SAHTESI ONLENI: maxWeight/bestReps program hedefiyle
+                // degil SADECE girilen loglarla tohumlanir. Eskiden parsedWeight
+                // tohum oldugu icin Quick Mod'da dokunulmamis hedef degerleri
+                // "kaldirildi" kaydolur, detectPRs sahte PR uretir +25 XP verirdi.
+                // Hic gecerli log yoksa fallback program hedefine doner.
+                maxWeight: logs.reduce((max, s) => Math.max(max, parseFloat(s.weight) || 0), 0) || parsedWeight,
+                bestReps: logs.reduce((max, s) => Math.max(max, parseInt(s.reps) || 0), 0) || parsedReps,
                 setLogs,
                 totalWeight: exTotalWeight > 0 ? exTotalWeight : (parsedWeight * parsedReps * parseInt(ex.sets || 1)),
                 totalReps: exTotalReps > 0 ? exTotalReps : (parsedReps * parseInt(ex.sets || 1)),
@@ -861,14 +874,8 @@ function ActiveWorkoutView({
                 />,
                 document.body
             )}
-            {/* PR Kutlama Modalı */}
-            {pendingPRs && pendingPRs.length > 0 && (
-                <PrCelebrationModal
-                    prs={pendingPRs}
-                    onClose={() => setPendingPRs(null)}
-                    activePrEffect={activePrEffect}
-                />
-            )}
+            {/* PR Kutlama Modalı: App seviyesine taşındı (bkz. App.jsx).
+                setPendingPRs prop'u hâlâ iletilir; modal orada render edilir. */}
 
             {/* Pul Hesaplayıcı */}
             {showPlateCalc && (

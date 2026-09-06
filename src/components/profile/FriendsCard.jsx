@@ -87,15 +87,20 @@ function FriendsCard({ currentUser, myCode, userName, userXP, userLevel, activeB
 
     // Arkadas uids degistiginde profilleri cek (canli: anlik XP degisimleri yansir)
     // Not: bosalma durumu render'da turetilir (asagida), efektte senkron setState yok.
+    // catch/finally: getFriendProfiles reddedilirse loadingBoard ASILI kalirdi
+    // (tabela sonsuz spinner) ve yakalanmamis promise reddi olurdu.
     useEffect(() => {
         if (!isLoggedIn || friendUids.length === 0) return;
         let alive = true;
         const load = async () => {
             setLoadingBoard(true);
-            const profiles = await getFriendProfiles(friendUids);
-            if (alive) {
-                setFriendProfiles(profiles);
-                setLoadingBoard(false);
+            try {
+                const profiles = await getFriendProfiles(friendUids);
+                if (alive) setFriendProfiles(profiles);
+            } catch {
+                /* cevrimdisi/firebase hatasi: son profiller kalir */
+            } finally {
+                if (alive) setLoadingBoard(false);
             }
         };
         load();
@@ -241,10 +246,10 @@ function FriendsCard({ currentUser, myCode, userName, userXP, userLevel, activeB
     const refreshBoard = () => {
         haptic(8);
         setLoadingBoard(true);
-        getFriendProfiles(friendUids).then((p) => {
-            setFriendProfiles(p);
-            setLoadingBoard(false);
-        });
+        getFriendProfiles(friendUids)
+            .then((p) => setFriendProfiles(p))
+            .catch(() => { /* cevrimdisi: eski liste kalir */ })
+            .finally(() => setLoadingBoard(false));
     };
 
     /* ---- Giris yok ---- */

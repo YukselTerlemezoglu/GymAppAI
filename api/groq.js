@@ -32,8 +32,8 @@ function base64UrlToBuffer(str) {
   return Buffer.from(b64, 'base64');
 }
 
-async function getJwks() {
-  if (jwksCache.keys && Date.now() - jwksCache.fetchedAt < JWKS_CACHE_MS) {
+async function getJwks(force = false) {
+  if (!force && jwksCache.keys && Date.now() - jwksCache.fetchedAt < JWKS_CACHE_MS) {
     return jwksCache.keys;
   }
   const resp = await fetch(JWKS_URL);
@@ -68,7 +68,13 @@ async function verifyFirebaseToken(idToken) {
 
     // Imza dogrulama: header.payload'in RS256 imzasi
     const jwks = await getJwks();
-    const jwk = jwks.find(k => k.kid === header.kid);
+    let jwk = jwks.find(k => k.kid === header.kid);
+    if (!jwk) {
+      // Anahtar donusumu: kid cache'te yoksa bir kez ZORLA yenile.
+      // Aksi halde rotasyon sonrasi gecerli tokenler 1 saate kadar reddedilir.
+      const fresh = await getJwks(true);
+      jwk = fresh.find(k => k.kid === header.kid);
+    }
     if (!jwk) return null;
 
     const { createPublicKey, createVerify } = await import('node:crypto');
@@ -133,6 +139,9 @@ export default async function handler(req, res) {
   if (typeof systemPrompt !== 'string' || systemPrompt.length === 0) {
     return res.status(400).json({ error: 'systemPrompt gerekli.' });
   }
+  if (systemPrompt.length > 4000) {
+    return res.status(400).json({ error: 'systemPrompt çok uzun.' });
+  }
   if (typeof userPrompt !== 'string' || userPrompt.length === 0) {
     return res.status(400).json({ error: 'userPrompt gerekli.' });
   }
@@ -180,7 +189,8 @@ export default async function handler(req, res) {
     if (groqResp.status === 429) {
       return res.status(429).json({ error: 'AI servisi quota aşımı. Lütfen birazdan tekrar deneyin.' });
     }
-    return res.status(502).json({ error: `AI servisi hatası (${groqResp.status}).`, detail });
+    // Ham hata mesaji istemciye yansimaz (bilgi sizdirmasi); sadece kod.
+    return res.status(502).json({ error: `AI servisi hatası (${groqResp.status}).` });
   }
 
   const result = await groqResp.json();

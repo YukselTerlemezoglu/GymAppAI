@@ -14,7 +14,7 @@ import { playSound } from '../../utils/sounds';
 
 const FLIP_MS = 1300;
 
-function DonModal({ baseCoins, dayKey, onFinish, onClose }) {
+function DonModal({ baseCoins, dayKey, onFinish }) {
     const { t } = useTranslation();
     const { haptic } = useToast();
 
@@ -57,8 +57,17 @@ function DonModal({ baseCoins, dayKey, onFinish, onClose }) {
         }, FLIP_MS);
     };
 
-    const takeSafe = () => { setStage('banked'); finish(pot, 0); playSound('buy'); haptic([15, 20, 15]); };
-    const safeFromOffer = () => { setStage('banked'); finish(baseCoins, 0); playSound('buy'); };
+    // Konfeti: buyuk bankalama veya tavan — tum guvenli alma yollarinda atilir
+    // (manuel take, offer'dan safe, tavan otomatik bankasi).
+    const fireConfetti = () => {
+        confetti({ particleCount: 90, spread: 75, origin: { y: 0.6 }, colors: ['#ffd700', '#00ff88', '#00d4ff'] });
+    };
+
+    // Guvenli alma: parent onFinish ile isler ve modalı kapatır.
+    // ('banked' ara aşaması eskiden hic gorunmuyordu — parent aninda
+    // setDonOpen(null) yaptigindan dead code'du; kaldirildi.)
+    const takeSafe = () => { fireConfetti(); finish(pot, 0); playSound('buy'); haptic([15, 20, 15]); };
+    const safeFromOffer = () => { fireConfetti(); finish(baseCoins, 0); playSound('buy'); };
     const closeAfterLoss = () => finish(0, pot);
 
     // 8x tavanina ulasildi mi? (won asamasinda otomatik bankala)
@@ -66,16 +75,11 @@ function DonModal({ baseCoins, dayKey, onFinish, onClose }) {
     useEffect(() => {
         if (stage === 'won' && atCap) {
             // Kisa bir gecikmeyle otomatik cekilis — kullanici serbest birakmis olamaz
-            const id = setTimeout(() => { setStage('banked'); finish(pot, 0); playSound('pr'); }, 1400);
+            const id = setTimeout(() => { fireConfetti(); finish(pot, 0); playSound('pr'); }, 1400);
             return () => clearTimeout(id);
         }
         return undefined;
     }, [stage, atCap]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    // Konfeti: buyuk bankalama veya tavan
-    const fireConfetti = () => {
-        confetti({ particleCount: 90, spread: 75, origin: { y: 0.6 }, colors: ['#ffd700', '#00ff88', '#00d4ff'] });
-    };
 
     return createPortal(
         <div className="modal-overlay">
@@ -115,7 +119,7 @@ function DonModal({ baseCoins, dayKey, onFinish, onClose }) {
                         </motion.div>
                     )}
 
-                    {(stage === 'won' || stage === 'banked') && (
+                    {(stage === 'won') && (
                         <>
                             <motion.div initial={{ scale: 0.5, rotate: -20 }} animate={{ scale: 1, rotate: 0 }} style={{ fontSize: '3.2rem', lineHeight: 1 }}>🪙</motion.div>
                             <div style={{ fontSize: '2.4rem', fontWeight: 800, color: '#00ff88' }}>{pot} 🪙</div>
@@ -154,7 +158,7 @@ function DonModal({ baseCoins, dayKey, onFinish, onClose }) {
                             <button onClick={doFlip} className="neon-btn" style={{ background: 'rgba(255,215,0,0.12)', borderColor: '#ffd700', color: '#ffd700', fontWeight: 800 }}>
                                 🎲 {t('don_continue')} ({t('don_next', { coins: pot * 2 })})
                             </button>
-                            <button onClick={() => { takeSafe(); fireConfetti(); }} className="neon-btn" style={{ background: 'rgba(0,255,136,0.1)', borderColor: '#00ff88', color: '#00ff88', fontSize: '0.85rem', fontWeight: 800 }}>
+                            <button onClick={takeSafe} className="neon-btn" style={{ background: 'rgba(0,255,136,0.1)', borderColor: '#00ff88', color: '#00ff88', fontSize: '0.85rem', fontWeight: 800 }}>
                                 💰 {t('don_take', { coins: pot })}
                             </button>
                             <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.65rem' }}>{t('don_cap_hint', { max: DON_MAX_MULT })}</p>
@@ -168,12 +172,6 @@ function DonModal({ baseCoins, dayKey, onFinish, onClose }) {
                     {stage === 'lost' && (
                         <button onClick={closeAfterLoss} className="neon-btn-secondary">
                             {t('don_ok')}
-                        </button>
-                    )}
-
-                    {stage === 'banked' && (
-                        <button onClick={onClose} className="neon-btn" style={{ background: 'rgba(0,255,136,0.1)', borderColor: '#00ff88', color: '#00ff88' }}>
-                            {t('don_nice')}
                         </button>
                     )}
                 </div>

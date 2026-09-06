@@ -3,7 +3,7 @@ import {
     doc, getDoc, setDoc, updateDoc, deleteDoc,
     collection, query, where, getDocs, onSnapshot, serverTimestamp
 } from 'firebase/firestore';
-import { log, error as logError } from './logger';
+import { error as logError } from './logger';
 
 /*
  * ARKADAS SISTEMI (tamamen istemci tarafli, Firestore kurallariyla korunur)
@@ -340,6 +340,3 @@ export const deleteProfile = async () => {
         logError('deleteProfile:', err);
     }
 };
-
-// log bazi build'lerde kullanilmayabilir; referans kalsin
-void log;
