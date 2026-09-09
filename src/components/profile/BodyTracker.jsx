@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
 import ReminderSettingsCard from './ReminderSettingsCard';
-import { Save, Trash2, LineChart as LineChartIcon, TrendingUp, Award, Camera, X, Image as ImageIcon, Settings, Type, Globe, CalendarCheck } from 'lucide-react';
+import PrivacyModal from '../legal/PrivacyModal';
+import { Save, Trash2, LineChart as LineChartIcon, TrendingUp, Award, Camera, X, Image as ImageIcon, Settings, Type, Globe, CalendarCheck, ShieldCheck } from 'lucide-react';
 import BuddyCapsule from '../shop/BuddyCapsule';
 import { findBuddy, getBuddyStageInfo, addBuddyXp } from '../../utils/buddy';
 import { RARITY } from '../../data/shopItems';
@@ -27,7 +28,7 @@ import { computeWeekStats } from '../../utils/duel';
 import { localDayKey } from '../../utils/dateKey';
 import { error as logError } from '../../utils/logger';
 
-function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, weeklyGoal = 3, setWeeklyGoal, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName, activeBuddyId = null, buddyCollection = {}, setBuddyCollection, activeCosmetics = {}, setActiveCosmetics, ownedCosmetics = [], inventory = {}, setInventory, onOpenShop, onBuddyEvolved, setUserCoins }) {
+function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, weeklyGoal = 3, setWeeklyGoal, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName, activeBuddyId = null, buddyCollection = {}, setBuddyCollection, activeCosmetics = {}, setActiveCosmetics, ownedCosmetics = [], inventory = {}, setInventory, onOpenShop, onBuddyEvolved, setUserCoins, minimalMode = false, setMinimalMode }) {
     const { t, lang, setLang } = useTranslation();
     const { toast, confirmDialog, haptic } = useToast();
     const [nameDraft, setNameDraft] = useState(userName);
@@ -111,6 +112,7 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
     const [chartDataKey, setChartDataKey] = useState('weight');
     const [selectedBadge, setSelectedBadge] = useState(null);
     const [isBadgesExpanded, setIsBadgesExpanded] = useState(false);
+    const [showPrivacy, setShowPrivacy] = useState(false);
 
     // Photo Tracking States
     const [selectedPhoto, setSelectedPhoto] = useState(null);
@@ -977,6 +979,52 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
 
             {/* Bildirim / Hatirlatma Ayarlari */}
             <ReminderSettingsCard />
+
+            {/* SADE MOD: oyunlastirmayi gizleyen sade arayuz tercihi */}
+            {setMinimalMode && (
+            <div className="glass-card slide-in" style={{ marginTop: '1.5rem', border: '1px solid rgba(148,163,184,0.25)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                    <div>
+                        <h3 style={{ margin: 0, color: '#fff', fontSize: '1.05rem' }}>{t('minimal_title')}</h3>
+                        <p style={{ margin: '4px 0 0 0', color: 'var(--text-light)', fontSize: '0.75rem' }}>{t('minimal_desc')}</p>
+                    </div>
+                    <button
+                        onClick={() => { haptic(8); setMinimalMode(!minimalMode); }}
+                        style={{
+                            width: '44px', height: '24px', flexShrink: 0,
+                            borderRadius: '12px',
+                            border: `1px solid ${minimalMode ? 'rgba(0,195,255,0.5)' : 'rgba(255,255,255,0.15)'}`,
+                            background: minimalMode ? 'rgba(0,195,255,0.25)' : 'rgba(255,255,255,0.06)',
+                            position: 'relative', cursor: 'pointer'
+                        }}
+                        aria-label={t('minimal_title')}
+                    >
+                        <span style={{
+                            position: 'absolute', top: '2px',
+                            left: minimalMode ? '22px' : '2px',
+                            width: '18px', height: '18px', borderRadius: '50%',
+                            background: minimalMode ? '#00c3ff' : '#888',
+                            transition: 'all 0.2s'
+                        }} />
+                    </button>
+                </div>
+            </div>
+            )}
+
+            {/* GIZLILIK POLITIKASI (KVKK) */}
+            <button
+                onClick={() => { haptic(8); setShowPrivacy(true); }}
+                style={{
+                    width: '100%', marginTop: '1.5rem', padding: '0.9rem 1rem',
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    background: 'rgba(0,255,136,0.05)', border: '1px solid rgba(0,255,136,0.25)',
+                    borderRadius: '12px', color: '#00ff88', fontSize: '0.85rem',
+                    cursor: 'pointer', fontWeight: 600
+                }}
+            >
+                <ShieldCheck size={16} /> {t('privacy_title')}
+            </button>
+            {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
         </div >
     );
 }

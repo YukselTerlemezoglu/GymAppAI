@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { ArrowLeft, User, Mail, Lock, LogIn, UserPlus, Type, KeyRound } from 'lucide-react';
+import { ArrowLeft, User, Mail, Lock, LogIn, UserPlus, Type, KeyRound, ShieldCheck } from 'lucide-react';
+import PrivacyModal from '../legal/PrivacyModal';
 import { auth } from '../../services/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'firebase/auth';
-import { pushDataToCloud, pullDataFromCloud } from '../../utils/cloudSync';
+import { pushDataToCloud, mergeAndPullFromCloud } from '../../utils/cloudSync';
 import { warn as logWarn, error as logError } from '../../utils/logger';
 
 function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
     const { t } = useLanguage();
     const [isLogin, setIsLogin] = useState(true);
+    const [showPrivacy, setShowPrivacy] = useState(false);
     const [isResetMode, setIsResetMode] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -78,12 +80,13 @@ function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
                 setSyncStatusText(t('auth_signing_in'));
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 
-                // Kullanıcı giriş yaptı, buluttan veriyi çek
+                // Kullanıcı giriş yaptı, buluttan veriyi BIRLEŞTİREREK çek
+                // (merge-sync: iki cihazin verileri de korunur, ezme yok)
                 try {
                     setSyncStatusText(t('auth_searching_cloud'));
                     // 3 Saniye içinde cevap gelmezse beklemeden devam et; ama
-                    // gec ceken pull arkadan gelirse veriyi YINE de uygular.
-                    const pullPromise = pullDataFromCloud(userCredential.user.uid).catch(() => null);
+                    // gec ceken merge arkadan gelirse veriyi YINE de uygular.
+                    const pullPromise = mergeAndPullFromCloud(userCredential.user.uid).catch(() => null);
                     // Geciken cekme tamamlandiginda eventi her durumda at:
                     // timeout yolu bizden once onLoginSuccess cagirmis olsa
                     // bile state'ler bu guncellemeyle tazelenir.
@@ -324,10 +327,20 @@ function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
                             >
                                 {isLogin ? t('auth_title_register') : t('auth_title_login')}
                             </button>
+
+                            {/* KVKK: kayit oncesi gizlilik politikasi erisimi */}
+                            <button
+                                onClick={() => setShowPrivacy(true)}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'none', border: 'none', color: 'var(--text-muted)', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.78rem', marginTop: '0.8rem', padding: '4px' }}
+                            >
+                                <ShieldCheck size={12} /> {t('privacy_title')}
+                            </button>
                         </div>
                     )}
                 </div>
             </div>
+
+            {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
         </div>
     );
 }

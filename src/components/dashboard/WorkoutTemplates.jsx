@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Zap, Trash2, Play, Save, X, Plus, Search } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast, haptic } from '../ui/ToastProvider';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { EXERCISES_DB } from '../../data/exercises';
+import { loadWgerExercises } from '../../data/wgerExercises';
 
 // Antrenman sablonlari: kaydedilen egzersiz listeleri.
 // Tek dokunusla aktif antrenman olarak baslatilabilir.
@@ -29,18 +30,34 @@ function WorkoutTemplates({ onStartTemplate }) {
         setExSearch('');
     };
 
-    // Arama sonuclari (veritabani isimleri, TR+EN arama)
+    // wger katalogu bir kez yuklenir ve hafizada kalir (190KB, lazy)
+    const [wgerList, setWgerList] = useState([]);
+    useEffect(() => {
+        let alive = true;
+        loadWgerExercises().then(list => { if (alive) setWgerList(list); }).catch(() => { });
+        return () => { alive = false; };
+    }, []);
+
+    // Arama sonuclari: once mevcut DB (detayli), sonra wger katalogu (892 hareket)
     const searchResults = useMemo(() => {
         const q = exSearch.trim().toLowerCase();
         if (!q) return [];
-        return EXERCISES_DB
+        const own = EXERCISES_DB
             .filter(ex => {
                 const tr = (ex.name || '').toLowerCase();
                 const en = (ex.name_en || '').toLowerCase();
                 return tr.includes(q) || en.includes(q);
             })
             .slice(0, 8);
-    }, [exSearch]);
+        if (own.length >= 8) return own;
+        // wger: ayni ada sahip olanlari atla (own listesinde zaten var)
+        const ownNames = new Set(own.map(e => e.name.toLowerCase()));
+        const wger = wgerList
+            .filter(e => e.name && !ownNames.has(e.name.toLowerCase()) && e.name.toLowerCase().includes(q))
+            .slice(0, 8 - own.length)
+            .map(e => ({ name: e.name, name_en: e.name }));
+        return [...own, ...wger];
+    }, [exSearch, wgerList]);
 
     const saveTemplate = (name, exercises) => {
         if (!name.trim()) {

@@ -184,6 +184,23 @@ function AICoachOnboarding({ setSavedAiProgram, setCurrentView }) {
 
             {aiResponseJson && (
                 <div className="ai-response glass-card slide-in" style={{ padding: '1.5rem', marginBottom: '3rem' }}>
+                    {/* AI Gerekçe + Guvenlik Notu (seffaflik) */}
+                    {(aiResponseJson.rationale || aiResponseJson.safetyNote) && (
+                        <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {aiResponseJson.rationale && (
+                                <div style={{ background: 'rgba(0,195,255,0.07)', border: '1px solid rgba(0,195,255,0.25)', borderRadius: '10px', padding: '0.8rem 1rem' }}>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#00c3ff', marginBottom: '4px' }}>💡 {t('coach_rationale_title')}</div>
+                                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>{aiResponseJson.rationale}</p>
+                                </div>
+                            )}
+                            {aiResponseJson.safetyNote && (
+                                <div style={{ background: 'rgba(255,107,81,0.07)', border: '1px solid rgba(255,107,81,0.3)', borderRadius: '10px', padding: '0.8rem 1rem' }}>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ff6b81', marginBottom: '4px' }}>⚠️ {t('coach_safety_title')}</div>
+                                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>{aiResponseJson.safetyNote}</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                     <div className="glass-card slide-in" style={{ animationDelay: '0.2s', border: '1px solid var(--accent-primary)', background: 'linear-gradient(145deg, rgba(0,0,0,0.6) 0%, rgba(0, 255, 136, 0.05) 100%)' }}>
                         <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: 0, color: '#fff' }}>
                             <Bot size={20} color="var(--accent-primary)" /> {t('coach_params_title')}
@@ -212,6 +229,9 @@ function AICoachOnboarding({ setSavedAiProgram, setCurrentView }) {
                     <button onClick={saveProgramToDashboard} className="neon-btn" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}>
                         {t('coach_save_btn')}
                     </button>
+                    <p style={{ margin: '10px 0 0 0', fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.5 }}>
+                        🤖 {t('coach_ai_disclaimer')}
+                    </p>
                 </div>
             )}
         </div>

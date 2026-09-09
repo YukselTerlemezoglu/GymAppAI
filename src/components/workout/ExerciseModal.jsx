@@ -1,6 +1,7 @@
-import React from 'react';
-import { X, PlayCircle, Info, AlertTriangle, Target, Repeat } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, PlayCircle, Info, AlertTriangle, Target, Repeat, Youtube, Film } from 'lucide-react';
 import { findExerciseByName } from '../../data/exercises';
+import { resolveExerciseVideo, youtubeSearchUrl } from '../../utils/exerciseVideo';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 function ExerciseModal({ exerciseName, onClose }) {
@@ -9,6 +10,16 @@ function ExerciseModal({ exerciseName, onClose }) {
     const isEn = lang === 'en';
 
     const name = ex ? (isEn ? (ex.name_en || ex.name) : ex.name) : exerciseName;
+
+    // Video kaynagi async cozulur (wger katalogu lazy yuklenir)
+    const [video, setVideo] = useState(null); // null = hesaplaniyor
+    const [videoLoaded, setVideoLoaded] = useState(false);
+    useEffect(() => {
+        let alive = true;
+        resolveExerciseVideo(exerciseName).then(v => { if (alive) setVideo(v); });
+        return () => { alive = false; };
+    }, [exerciseName]);
+
     const primary = ex ? (isEn ? (ex.primaryMuscles_en || ex.primaryMuscles) : ex.primaryMuscles) : null;
     const secondary = ex ? (isEn ? (ex.secondaryMuscles_en || ex.secondaryMuscles) : ex.secondaryMuscles) : null;
     const repRange = ex ? (isEn ? (ex.repRange_en || ex.repRange) : ex.repRange) : null;
@@ -35,6 +46,43 @@ function ExerciseModal({ exerciseName, onClose }) {
 
                 {/* Content */}
                 <div style={{ padding: '1.5rem', maxHeight: '70vh', overflowY: 'auto' }}>
+                    {/* ---------- VIDEO BOLUMU ---------- */}
+                    {video && (video.mp4 || video.youtube) && (
+                        <div style={{ marginBottom: '1.25rem' }}>
+                            {video.mp4 ? (
+                                // wger mp4: dogrudan akar, otomatik sessiz oynatma
+                                <video
+                                    src={video.mp4}
+                                    controls
+                                    playsInline
+                                    preload="metadata"
+                                    loop
+                                    style={{ width: '100%', borderRadius: '10px', display: 'block', background: '#000', aspectRatio: '16/9', objectFit: 'contain' }}
+                                />
+                            ) : (
+                                // YouTube embed: tiklayinca yuklenir (hafif + mobil guvenli)
+                                videoLoaded ? (
+                                    <iframe
+                                        src={video.youtube}
+                                        title={`${name} video`}
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                        style={{ width: '100%', aspectRatio: '16/9', border: 'none', borderRadius: '10px', display: 'block' }}
+                                    />
+                                ) : (
+                                    <button
+                                        onClick={() => setVideoLoaded(true)}
+                                        style={{ width: '100%', aspectRatio: '16/9', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', background: 'linear-gradient(135deg, rgba(255,0,0,0.15), rgba(0,0,0,0.6))', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', padding: '1rem' }}
+                                    >
+                                        <Youtube size={44} color="#ff4e45" />
+                                        <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 700 }}>{t('ex_modal_watch_form')}</span>
+                                        <span style={{ color: 'var(--text-light)', fontSize: '0.7rem' }}>{t('ex_modal_video_tap')}</span>
+                                    </button>
+                                )
+                            )}
+                        </div>
+                    )}
+
                     {ex ? (
                         <>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '1rem' }}>
@@ -117,11 +165,20 @@ function ExerciseModal({ exerciseName, onClose }) {
                 </div>
 
                 {/* Footer */}
-                <div style={{ padding: '1rem 1.5rem', background: 'rgba(0,0,0,0.3)', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                    <button onClick={onClose} className="neon-btn-secondary" style={{ width: '100%' }}>
+                <div style={{ padding: '1rem 1.5rem', background: 'rgba(0,0,0,0.3)', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '10px' }}>
+                    <a
+                        href={youtubeSearchUrl(name)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="neon-btn-secondary"
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', flex: '0 0 auto' }}
+                    >
+                        <Film size={15} /> {t('ex_modal_yt_search')}
+                    </a>
+                    <button onClick={onClose} className="neon-btn-secondary" style={{ flex: 1 }}>
                         {t('ex_modal_close_btn')}
                     </button>
- </div>
+                </div>
 
             </div>
         </div>

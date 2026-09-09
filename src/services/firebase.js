@@ -15,6 +15,7 @@ const firebaseConfig = {
 let app;
 let auth = null;
 let db = null;
+let messaging = null;
 
 try {
     if (firebaseConfig.apiKey) {
@@ -37,3 +38,20 @@ try {
 }
 
 export { auth, db };
+
+// --- Lazy erisim (dinamik import ile kod bolme) ---
+// pushNotifications gibi gec yuklenen ozellikler bu fonksiyonlari
+// kullanir; ana bundle'a firebase/messaging yuklenmez.
+
+export async function getFirebase() {
+    return { app, auth, db };
+}
+
+export async function getMessaging() {
+    if (!app) return null;
+    if (!messaging) {
+        const { getMessaging: init } = await import('firebase/messaging');
+        messaging = init(app);
+    }
+    return messaging;
+}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, BellOff, CalendarPlus } from 'lucide-react';
+import { Bell, BellOff, CalendarPlus, Zap } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useToast, haptic } from '../ui/ToastProvider';
 import { downloadIcs } from '../../utils/icsExport';
@@ -9,6 +9,7 @@ import {
     requestNotificationPermission,
     notificationsSupported
 } from '../../utils/notificationScheduler';
+import { pushSupported, enablePush, syncPushSettings } from '../../utils/pushNotifications';
 
 // Takvim sirasi (Pzt'den baslar); dayIdx = JS getDay() degeri (0=Pazar)
 const DAYS_TR = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Pzr'];
@@ -25,6 +26,11 @@ function ReminderSettingsCard() {
     const [, setPermission] = useState(
         typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
     );
+    // Push token durumu — lazy initializer: ilk render'da bir kez okunur,
+    // render sirasinda tekrarli localStorage erisimi olmaz.
+    const [hasPushToken, setHasPushToken] = useState(
+        () => !!localStorage.getItem('gym_app_push_token')
+    );
 
     const days = lang === 'tr' ? DAYS_TR : DAYS_EN;
     const supported = notificationsSupported();
@@ -40,7 +46,7 @@ function ReminderSettingsCard() {
             ...settings,
             workoutDays: has ? settings.workoutDays.filter(x => x !== d) : [...settings.workoutDays, d]
         };
-        persist(next);
+        persistAndSync(next);
     };
 
     const enableReminders = async () => {
@@ -49,10 +55,50 @@ function ReminderSettingsCard() {
         if (perm === 'granted') {
             persist({ ...settings, enabled: true });
             toast.success(t('rem_enabled_ok'));
+            // Push token alindiktan sonra gostergenin guncellenmesi icin
+            // enableReminders icinde setHasPushToken(true) cagrilir
+            if (pushSupported()) {
+                const tok = await enablePush();
+                if (tok) {
+                    localStorage.setItem('gym_app_push_token', tok);
+                    setHasPushToken(true);
+                }
+            }
         } else if (perm === 'denied') {
             toast.error(t('rem_blocked'));
         } else {
             toast.warning(t('rem_unsupported'));
+        }
+    };
+
+    // Ayar degistikce push ayarlarini da sunucuya senkron et
+    const persistAndSync = (next) => {
+        persist(next);
+        syncPushSettings();
+    };
+
+    // Test bildirimi: /api/push uzerinden kendi token'ina gercek FCM gonderimi
+    const sendTestPush = async () => {
+        const token = localStorage.getItem('gym_app_push_token');
+        if (!token) { toast.warning(t('rem_push_no_token')); return; }
+        haptic(10);
+        try {
+            const { auth } = await import('../../services/firebase');
+            const idToken = await auth?.currentUser?.getIdToken?.();
+            const r = await fetch('/api/push', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}) },
+                body: JSON.stringify({
+                    token,
+                    title: lang === 'tr' ? 'Test Bildirimi 🎯' : 'Test Notification 🎯',
+                    body: lang === 'tr' ? 'Push bildirimleri çalışıyor! Antrenman saatlerinde haber vereceğiz.' : 'Push notifications work! We will ping you at workout times.'
+                })
+            });
+            if (r.ok) toast.success(t('rem_push_test_ok'));
+            else if (r.status === 503) toast.warning(t('rem_push_server_off'));
+            else toast.error(t('rem_push_test_fail'));
+        } catch {
+            toast.error(t('rem_push_test_fail'));
         }
     };
 
@@ -135,7 +181,7 @@ function ReminderSettingsCard() {
                         <input
                             type="time"
                             value={settings.time}
-                            onChange={(e) => persist({ ...settings, time: e.target.value })}
+                            onChange={(e) => persistAndSync({ ...settings, time: e.target.value })}
                             style={{
                                 background: 'rgba(0,0,0,0.4)',
                                 border: '1px solid rgba(0,195,255,0.3)',
@@ -157,7 +203,7 @@ function ReminderSettingsCard() {
                             {settings.waterReminder && (
                                 <select
                                     value={settings.waterEveryMin}
-                                    onChange={(e) => persist({ ...settings, waterEveryMin: parseInt(e.target.value, 10) })}
+                                    onChange={(e) => persistAndSync({ ...settings, waterEveryMin: parseInt(e.target.value, 10) })}
                                     style={{
                                         background: 'rgba(0,0,0,0.4)',
                                         border: '1px solid rgba(0,255,136,0.3)',
@@ -175,7 +221,7 @@ function ReminderSettingsCard() {
                                 </select>
                             )}
                             <button
-                                onClick={() => persist({ ...settings, waterReminder: !settings.waterReminder })}
+                                onClick={() => persistAndSync({ ...settings, waterReminder: !settings.waterReminder })}
                                 style={{
                                     width: '44px', height: '24px',
                                     borderRadius: '12px',
@@ -198,6 +244,17 @@ function ReminderSettingsCard() {
                             </button>
                         </div>
                     </div>
+
+                    {/* Push test bildirimi (uygulama kapaliyken bildirim almanin yolu) */}
+                    {pushSupported() && hasPushToken && (
+                        <button
+                            onClick={sendTestPush}
+                            className="neon-btn"
+                            style={{ width: '100%', padding: '0.6rem', fontSize: '0.8rem', marginBottom: '10px', borderColor: '#a855f7', color: '#c084fc', background: 'rgba(168,85,247,0.08)' }}
+                        >
+                            <Zap size={14} /> {t('rem_push_test')}
+                        </button>
+                    )}
 
                     <button
                         onClick={() => { persist({ ...settings, enabled: false }); toast.info(t('rem_disabled')); }}

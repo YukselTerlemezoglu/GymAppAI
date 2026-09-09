@@ -7,6 +7,7 @@ import AICoachOnboarding from './components/aicoach/AICoachOnboarding';
 import CustomProgramBuilder from './components/dashboard/CustomProgramBuilder';
 import ActiveWorkoutView from './components/workout/ActiveWorkoutView';
 import ScoreTracker from './components/dashboard/ScoreTracker';
+import SocialWeeklyCard from './components/dashboard/SocialWeeklyCard';
 import CoachInsightFeed from './components/dashboard/CoachInsightFeed';
 import WorkoutCalendar from './components/dashboard/WorkoutCalendar';
 import StrengthCurves from './components/dashboard/StrengthCurves';
@@ -79,6 +80,33 @@ function AppContent() {
     }
   }, []);
 
+  // SOSYAL HAFTALIK OZET: dost listesi + haftalik skorlari (dashboard karti).
+  // Giris yapilmisssa arkadas UID listesine abone ol, profilleri cek.
+  // FriendsCard'in kendi icinde yaptigi ayni islemin sade kopyasi; burada
+  // yalnizca haftalik skorlar kullanilir.
+  const [socialFriends, setSocialFriends] = useState([]);
+  useEffect(() => {
+    if (!currentUser) return;
+    let alive = true;
+    const load = async () => {
+      try {
+        const { subscribeFriendships, getFriendProfiles } = await import('./utils/friends');
+        subscribeFriendships(async (uids) => {
+          if (!alive) return;
+          if (!uids || uids.length === 0) { setSocialFriends([]); return; }
+          try {
+            const profiles = await getFriendProfiles(uids);
+            if (alive) setSocialFriends(profiles || []);
+          } catch { /* cevrimdisi: son liste kalir */ }
+        });
+      } catch { /* firebase yok: kart bos kalir */ }
+    };
+    load();
+    return () => { alive = false; };
+  }, [currentUser]);
+  // Cikis yapilinca liste bosalt (render ici kosul yerine derive)
+  const socialFriendsSafe = currentUser ? socialFriends : [];
+
   const profileClickTimeout = useRef(null);
 
   // Cleanup: eğer kullanıcı tek tıkladıktan sonra component unmount olursa,
@@ -115,6 +143,11 @@ function AppContent() {
   const [userCoins, setUserCoins] = useLocalStorage('gym_app_coins', 0);
   const [unlockedThemes, setUnlockedThemes] = useLocalStorage('gym_app_unlocked_themes', ['default']);
   const [activeTheme, setActiveTheme] = useLocalStorage('gym_app_theme', 'default');
+
+  // SADE MOD: oyunlastirma ogelerini (coin, XP, dost, sezon, dukkan)
+  // gizleyen sade arayuz tercihi. Veriler toplanmaya DEVAM EDER; sadece
+  // gorsel olarak saklanir. Kapatilinca hicbir sey kaybolmaz.
+  const [minimalMode, setMinimalMode] = useLocalStorage('gym_app_minimal_mode', false);
 
   // Storage State
   const [workoutHistory, setWorkoutHistory] = useLocalStorage('gym_app_history', []);
@@ -157,7 +190,12 @@ function AppContent() {
   const [signupBannerDismissed, setSignupBannerDismissed] = useLocalStorage('gym_app_signup_banner_dismissed', false);
   const [dashCardVisibility, setDashCardVisibility] = useLocalStorage('gym_app_dash_cards', null);
   const [showDashCardEditor, setShowDashCardEditor] = useState(false);
-  const isCardVisible = (id) => dashCardVisibility?.[id] !== false;
+  // Sade Mod: oyunlastirma kartlari (gorevler/sezon) gizlenir; skor karti
+  // sadelesir. Kullanicinin elle gizledigi kartlarla birlesir.
+  const isCardVisible = (id) => {
+    if (minimalMode && (id === 'quests' || id === 'season')) return false;
+    return dashCardVisibility?.[id] !== false;
+  };
   // FAZ 3: program sihirbazi
   const [showWizard, setShowWizard] = useState(false);
   const [showCheckIn, setShowCheckIn] = useState(false);
@@ -562,6 +600,7 @@ function AppContent() {
       onSelectTab={handleNavSelectTab}
       onOpenShop={() => setCurrentView('shop')}
       freeSpinAvailable={getWheelState(wheelState).freeAvailable}
+      hideShop={minimalMode}
     />
   );
 
@@ -637,7 +676,9 @@ function AppContent() {
             setInventory={setInventory}
             onOpenShop={() => setCurrentView('shop')}
             setUserCoins={setUserCoins}
-            onBuddyEvolved={(buddyId, newXp) => setBuddyEvolution({ buddyId, newXp })}   />
+            minimalMode={minimalMode}
+            setMinimalMode={setMinimalMode}
+            onBuddyEvolved={(buddyId, newXp) => setBuddyEvolution({ buddyId, newXp})}   />
         );
       }
       if (currentView === 'shop') {
@@ -779,8 +820,8 @@ function AppContent() {
 
                 <div className="greeting" style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minWidth: 0 }}>
                   <h1 style={{ fontSize: '1.05rem', margin: 0, color: activeNameStyle ? activeNameStyle.cssColor : 'var(--text-primary)', textShadow: activeNameStyle ? activeNameStyle.cssTextShadow : undefined, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</h1>
-                  {/* Rank + seviye + XP tek satırda */}
-                  {(() => {
+                  {/* Rank + seviye + XP tek satırda (Sade Mod'da gizli) */}
+                  {!minimalMode && (() => {
                     const currentRank = getRank(userLevel) || { icon: '🛡️', color: '#fff', title_tr: '...', title_en: '...' };
                     return (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.78rem', minWidth: 0 }}>
@@ -797,7 +838,7 @@ function AppContent() {
                   })()}
                 </div>
 
-                {/* Coin: profil kartının içinde, sağda. Ucretsiz cark varsa 🎡 isareti yanip soner */}
+                {/* Coin: profil kartının içinde, sağda. Sade Mod'da gizli. */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                   <button
                     onClick={() => { haptic(8); setShowDashCardEditor(true); }}
@@ -808,6 +849,7 @@ function AppContent() {
                   >
                     <LayoutGrid size={16} />
                   </button>
+                  {!minimalMode && (
                   <div
                     onClick={(e) => { e.stopPropagation(); setCurrentView('shop'); }}
                     style={{ background: 'rgba(255, 215, 0, 0.1)', border: '1px solid #ffd700', borderRadius: '12px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#ffd700', fontWeight: 'bold', fontSize: '0.85rem', flexShrink: 0 }}
@@ -818,6 +860,7 @@ function AppContent() {
                     )}
                     <span>🪙</span> {userCoins}
                   </div>
+                  )}
                 </div>
               </div>
 
@@ -917,6 +960,7 @@ function AppContent() {
                 weeklyGoal={weeklyGoal}
                 weeksThisWeek={weeksThisWeek}
                 flameColor={getActive(activeCosmetics, ownedCosmetics, 'flame')?.color || '#ffa502'}
+                minimal={minimalMode}
               />
               )}
               {isCardVisible('quests') && (
@@ -937,6 +981,10 @@ function AppContent() {
               )}
               {isCardVisible('water') && <WaterTrackerWidget />}
               {isCardVisible('recovery') && <RecoveryWidget workoutHistory={workoutHistory} />}
+              {/* Sosyal haftalik ozet: girisli + arkadasi olan kullaniciya ozel */}
+              {currentUser && socialFriendsSafe.length > 0 && (
+                <SocialWeeklyCard friends={socialFriendsSafe} myName={userName} workoutHistory={workoutHistory} />
+              )}
             </div>
           </div>
         )}

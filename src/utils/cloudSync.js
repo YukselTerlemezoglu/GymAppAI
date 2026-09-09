@@ -45,6 +45,131 @@ const LOCAL_STORAGE_KEYS = [
   'gym_app_quests'
 ];
 
+// Her anahtarin birlestirme stratejisi:
+//   'lww'  : Last-Write-Wins — degisim zaman damgasi bilinemiyorsa sayisal
+//            deger icerenler icin BUYUK olan kazanir (coin, xp, streak vb.
+//            asla geri gitmemeli; kucuk olani secmek veri kaybi olurdu)
+//   'list' : liste birlestirme — id bazli dedupe, en yeni ustte
+//            (history, badges, completed_days)
+//   'max'  : sayisal maksimum (coins, xp, level — cikarma islemi olmadigi
+//            icin buyuk olan daima daha guncel/fazla birikimdir)
+const MERGE_STRATEGY = {
+  'gym_app_history': 'list',
+  'gym_app_pinned_badges': 'list',
+  'gym_app_unlocked_badges': 'list',
+  'gym_app_completed_days': 'list',
+  'gym_app_body_metrics': 'list',
+  'gym_app_xp': 'max',
+  'gym_app_level': 'max',
+  'gym_app_prev_level': 'max',
+  'gym_app_coins': 'max',
+  'gym_app_streak': 'max',
+  'gym_app_inventory': 'lww',
+  'gym_app_cosmetics': 'list',
+  'gym_app_cosmetics_active': 'lww',
+  'gym_app_buddies': 'lww',
+  'gym_app_buddies_active': 'lww',
+  'gym_app_buddy_active': 'lww',
+  'gym_app_gacha_pity': 'max',
+  'gym_app_wheel': 'lww',
+  'gym_app_don': 'lww',
+  'gym_app_quests': 'lww'
+};
+
+// --- Yardımcılar ---
+
+const safeParse = (raw) => {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw !== 'string') return raw; // zaten parse edilmis
+  try { return JSON.parse(raw); } catch { return null; }
+};
+
+/**
+ * Iki listeyi id bazli dedupe ile birlestirir.
+ * Ayni id'li elemanlardan guncel olani (updatedAt/timestamp varsa) tutar.
+ */
+function mergeLists(localRaw, cloudRaw) {
+  const local = safeParse(localRaw);
+  const cloud = safeParse(cloudRaw);
+  if (local === null) return cloudRaw; // lokal yoksa bulut
+  if (cloud === null) return localRaw;
+  if (!Array.isArray(local) && !Array.isArray(cloud)) return localRaw; // ikisi de dizi degil
+
+  const lArr = Array.isArray(local) ? local : [local];
+  const cArr = Array.isArray(cloud) ? cloud : [cloud];
+
+  const map = new Map();
+  const keyOf = (item) => {
+    if (item && typeof item === 'object') {
+      return String(item.id || item.date || item.day || JSON.stringify(item));
+    }
+    return String(item);
+  };
+  const tsOf = (item) => {
+    if (item && typeof item === 'object') {
+      return Number(item.updatedAt || item.timestamp || item.ts || 0) || 0;
+    }
+    return 0;
+  };
+
+  // once lokal (kok deger), sonra bulut ayni id'yi kazannirsa ezer
+  for (const item of lArr) map.set(keyOf(item), item);
+  for (const item of cArr) {
+    const k = keyOf(item);
+    const existing = map.get(k);
+    if (!existing || tsOf(item) > tsOf(existing)) map.set(k, item);
+  }
+
+  return JSON.stringify([...map.values()]);
+}
+
+/**
+ * Sayisal maksimum birlestirme (coin, xp, streak). Ayrisan sayilar
+ * birbirine en az zarar verecek sekilde en buyuk degeri secer.
+ */
+function mergeMax(localRaw, cloudRaw) {
+  const local = safeParse(localRaw);
+  const cloud = safeParse(cloudRaw);
+  const ln = typeof local === 'number' ? local : parseFloat(local);
+  const cn = typeof cloud === 'number' ? cloud : parseFloat(cloud);
+  if (Number.isNaN(ln)) return cloudRaw; // lokal yok/bozuk -> bulut
+  if (Number.isNaN(cn)) return localRaw; // bulut yok/bozuk -> lokal
+  return JSON.stringify(Math.max(ln, cn));
+}
+
+/**
+ * LWW: degerin icinde "updatedAt" benzeri alan varsa karsilastir,
+ * yoksa (konservatif) lokal kalir — bulut degeri SADECE lokalde hic
+ * yoksa uygulanir. Boylece daha once yazilmis guncel lokal veriyi
+ * eski bir bulut snapshot'i ezemez.
+ */
+function mergeLww(localRaw, cloudRaw) {
+  if (localRaw === null || localRaw === undefined) return cloudRaw;
+  if (cloudRaw === null || cloudRaw === undefined) return localRaw;
+
+  const local = safeParse(localRaw);
+  const cloud = safeParse(cloudRaw);
+  if (local === null) return cloudRaw;
+  if (cloud === null) return localRaw;
+
+  const lt = (local && typeof local === 'object') ? Number(local.updatedAt || local.ts || 0) || 0 : 0;
+  const ct = (cloud && typeof cloud === 'object') ? Number(cloud.updatedAt || cloud.ts || 0) || 0 : 0;
+  // Iki tarafta da zaman damgasi yoksa: lokal kalir (konservatif)
+  if (lt === 0 && ct === 0) return localRaw;
+  return ct > lt ? cloudRaw : localRaw;
+}
+
+/**
+ * Tek anahtari stratejisine gore birlestirir. Donus: birlestirilmis RAW string.
+ */
+function mergeKey(key, localRaw, cloudRaw) {
+  const strat = MERGE_STRATEGY[key];
+  if (!strat) return localRaw !== null && localRaw !== undefined ? localRaw : cloudRaw; // tanimsiz: lokal
+  if (strat === 'list') return mergeLists(localRaw, cloudRaw);
+  if (strat === 'max') return mergeMax(localRaw, cloudRaw);
+  return mergeLww(localRaw, cloudRaw);
+}
+
 /**
  * Uygulamadaki verileri buluta (Firestore) gönderir.
  *
@@ -68,8 +193,6 @@ export const pushDataToCloud = async (uid) => {
             // Veriyi olduğu gibi (string) sakla. JSON parse ETME.
             // Sebep: parse edip sonra tekrar stringify etmek tip round-trip
             // bozulmalarına yol açıyordu (örn. string "5" -> number 5).
-            // Firestore object içinde string saklayabilir; geri çekerken
-            // typeof kontrolü ile doğru şekilde localStorage'a yazarız.
             dataToSync[key] = val;
         }
     });
@@ -89,10 +212,67 @@ export const pushDataToCloud = async (uid) => {
 };
 
 /**
- * Buluttaki verileri cihaza (LocalStorage) çeker.
+ * BULUT + LOKAL BİRLEŞTİRME (merge-sync).
  *
- * Tip korunumu: cloudSync artık string olarak sakladığı için, çekilen veri
- * string ise doğrudan, object ise (eski kayıtlar) JSON.stringify ile yazılır.
+ * ÖNCEKİ DAVRANIŞ: pull = bulut lokalı ezerdi; iki cihaz arasında veri
+ * kaybı yaşanıyordu (cihaz A'da antrenman → cihaz B'ye geçince kaybolurdu).
+ *
+ * YENİ DAVRANIŞ: her anahtar stratejisine göre birleştirilir:
+ *   - history/badges/metrics: id bazlı dedupe (iki cihazın antrenmanları
+ *     da korunur)
+ *   - coins/xp/level/streak: maksimum (birikim asla geri gitmez)
+ *   - envanter/kozmetik vb.: updatedAt LWW, damga yoksa lokal korunur
+ *
+ * @param {string} uid
+ * @returns {Promise<boolean>} true = birleştirme yapıldı ve lokal güncellendi
+ */
+export const mergeAndPullFromCloud = async (uid) => {
+    if (!db) throw new Error('Firebase yapılandırılmamış.');
+    if (!uid) throw new Error('Geçersiz kullanıcı kimliği.');
+
+    try {
+        const docRef = doc(db, "users", uid);
+        const docSnap = await withTimeout(getDoc(docRef), 10000);
+
+        if (!docSnap.exists()) return false;
+        const cloudData = docSnap.data().data;
+        if (!cloudData || typeof cloudData !== 'object') return false;
+
+        let changed = 0;
+        Object.keys(cloudData).forEach(key => {
+            const cloudRaw = cloudData[key];
+            // stratejisi olmayan anahtar (senkron listemiz disindan) yok sayilir
+            if (!MERGE_STRATEGY[key] && !LOCAL_STORAGE_KEYS.includes(key)) return;
+
+            const localRaw = localStorage.getItem(key);
+            const merged = mergeKey(key, localRaw, normalizeCloudValue(cloudRaw));
+            if (merged !== null && merged !== undefined && merged !== localRaw) {
+                localStorage.setItem(key, typeof merged === 'string' ? merged : JSON.stringify(merged));
+                changed++;
+            }
+        });
+
+        // Birlesmeyen taraftan yeni degerler varsa (lokalde olmayan bulut
+        // anahtarlari) onlari da yaz
+        log(`Merge-sync: ${changed} anahtar birleştirildi.`);
+        return true;
+    } catch (err) {
+        error("Buluttan birleştirme sırasında hata:", err);
+        throw err;
+    }
+};
+
+// Bulut degerini RAW localStorage formatina cevirir (string saklanir)
+const normalizeCloudValue = (val) => {
+    if (typeof val === 'string') return val;
+    if (val === null || val === undefined) return null;
+    try { return JSON.stringify(val); } catch { return null; }
+};
+
+/**
+ * Buluttaki verileri cihaza (LocalStorage) çeker. (ESKİ DAVRANIŞ — üzerine yazma)
+ * Yeni kod mergeAndPullFromCloud kullanmalı; bu fonksiyon geriye dönük
+ * uyumluluk için duruyor (AuthScreen'deki manuel "buluttan yükle" akışı).
  *
  * @param {string} uid
  * @returns {Promise<boolean>} true = veri bulundu ve yüklendi

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { Trophy, CalendarCheck } from 'lucide-react';
 
-function ScoreTracker({ workoutHistory, streak, weeklyGoal = 3, weeksThisWeek = 0, flameColor = '#ffa502' }) {
+function ScoreTracker({ workoutHistory, streak, weeklyGoal = 3, weeksThisWeek = 0, flameColor = '#ffa502', minimal = false }) {
     const { t } = useTranslation();
     const { volumeScore, prScore, streakScore, totalScore } = useMemo(() => {
         if (!workoutHistory || workoutHistory.length === 0) return { volumeScore: 0, prScore: 0, streakScore: 0, totalScore: 0 };
@@ -70,9 +70,9 @@ function ScoreTracker({ workoutHistory, streak, weeklyGoal = 3, weeksThisWeek = 
                         <span style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)', marginLeft: '4px' }}>/100</span>
                         <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '1.2rem', letterSpacing: '1px' }}>{t('score_gym_puan').toUpperCase()}</div>
                     </div>
-                    {totalScore >= 80 && <Trophy size={48} color="var(--accent-warning)" style={{ filter: 'drop-shadow(0 0 10px rgba(255, 215, 0, 0.5))' }} />}
+                    {totalScore >= 80 && !minimal && <Trophy size={48} color="var(--accent-warning)" style={{ filter: 'drop-shadow(0 0 10px rgba(255, 215, 0, 0.5))' }} />}
 
-                    {multActive && (
+                    {multActive && !minimal && (
                         <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(255, 165, 0, 0.2)', border: '1px solid #ffa502', padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 'bold', color: '#ffa502', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             🔥 {streak >= 4 ? '1.5x' : '1.2x'} {t('score_multiplier_active')}
                         </div>

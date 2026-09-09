@@ -8,7 +8,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
  * Stil index.css'teki .bottom-nav / .bottom-nav-item class'larinda;
  * burada sadece tema bagimli ikon renkleri hesaplanir.
  */
-function BottomNav({ currentView, dashboardTab, onGoHome, onSelectTab, onOpenShop, freeSpinAvailable }) {
+function BottomNav({ currentView, dashboardTab, onGoHome, onSelectTab, onOpenShop, freeSpinAvailable, hideShop = false }) {
     const { t } = useLanguage();
 
     const isDashboard = currentView === 'dashboard';
@@ -16,7 +16,7 @@ function BottomNav({ currentView, dashboardTab, onGoHome, onSelectTab, onOpenSho
         { id: 'today', icon: Home, label: t('tab_today') },
         { id: 'train', icon: Dumbbell, label: t('tab_train') },
         { id: 'progress', icon: Trophy, label: t('tab_progress') },
-        { id: 'shop', icon: ShoppingBag, label: t('tab_shop') },
+        ...(hideShop ? [] : [{ id: 'shop', icon: ShoppingBag, label: t('tab_shop') }]),
         { id: 'profile', icon: User, label: t('nav_profile') }
     ];
 
