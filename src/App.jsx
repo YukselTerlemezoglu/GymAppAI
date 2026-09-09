@@ -85,13 +85,15 @@ function AppContent() {
   // FriendsCard'in kendi icinde yaptigi ayni islemin sade kopyasi; burada
   // yalnizca haftalik skorlar kullanilir.
   const [socialFriends, setSocialFriends] = useState([]);
+  // Firestore dinleyicisini temizlemek icin (listener leak onlemi)
+  const unsubRef = useRef(null);
   useEffect(() => {
     if (!currentUser) return;
     let alive = true;
     const load = async () => {
       try {
         const { subscribeFriendships, getFriendProfiles } = await import('./utils/friends');
-        subscribeFriendships(async (uids) => {
+        const unsub = subscribeFriendships(async (uids) => {
           if (!alive) return;
           if (!uids || uids.length === 0) { setSocialFriends([]); return; }
           try {
@@ -99,10 +101,11 @@ function AppContent() {
             if (alive) setSocialFriends(profiles || []);
           } catch { /* cevrimdisi: son liste kalir */ }
         });
+        unsubRef.current = unsub;
       } catch { /* firebase yok: kart bos kalir */ }
     };
     load();
-    return () => { alive = false; };
+    return () => { alive = false; if (unsubRef.current) { try { unsubRef.current(); } catch { /* already gone */ } } };
   }, [currentUser]);
   // Cikis yapilinca liste bosalt (render ici kosul yerine derive)
   const socialFriendsSafe = currentUser ? socialFriends : [];
@@ -879,8 +882,8 @@ function AppContent() {
                 </div>
               )}
 
-              {/* XP ilerleme çubuğu: tam genişlik ince şerit (v2 eğrisel sistem) */}
-              {(() => {
+              {/* XP ilerleme çubuğu: tam genişlik ince şerit (v2 eğrisel sistem) — sade modda gizli */}
+              {!minimalMode && (() => {
                 const { need, percent } = levelProgress(userXP, userLevel);
                 return (
                   <div style={{ width: '100%', height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }} title={`${userXP}/${need} XP`}>

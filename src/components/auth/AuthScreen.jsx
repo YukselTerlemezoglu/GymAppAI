@@ -91,7 +91,12 @@ function AuthScreen({ onBack, onLoginSuccess, setUserName }) {
                     // timeout yolu bizden once onLoginSuccess cagirmis olsa
                     // bile state'ler bu guncellemeyle tazelenir.
                     pullPromise.then((late) => {
-                        if (late) window.dispatchEvent(new Event('gymapp-storage'));
+                        if (late) {
+                            window.dispatchEvent(new Event('gymapp-storage'));
+                            // Merge sonucunu buluta geri yaz (push-back):
+                            // birlesmis yeni durum diger cihazlara da yayilsin.
+                            pushDataToCloud(userCredential.user.uid).catch(() => null);
+                        }
                     });
                     const pulled = await Promise.race([
                         pullPromise,

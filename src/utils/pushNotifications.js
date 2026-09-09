@@ -33,14 +33,19 @@ export async function enablePush() {
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') return null;
 
-        const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-        await navigator.serviceWorker.ready;
+        // TEK SW: PWA SW'si (/sw.js - Workbox precache + vanilla push handler)
+        // hem offline cache hem push'i ayni kayitta tasir. Ayni scope'a ikinci
+        // SW kaydi yapmak yerine mevcut kayit getToken'a verilir.
+        const reg = await navigator.serviceWorker.ready;
 
         const token = await getToken(messaging, {
             vapidKey,
             serviceWorkerRegistration: reg
         });
         if (!token) return null;
+
+        // Token sahipliğini tek yerde yonet (ReminderSettingsCard'a delege etme)
+        localStorage.setItem('gym_app_push_token', token);
 
         // Token'i kullanici profiline yaz (login gerekli)
         const { auth, db } = await getFirebase();

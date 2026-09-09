@@ -230,6 +230,8 @@ function ReminderSettingsCard() {
                                     position: 'relative',
                                     cursor: 'pointer'
                                 }}
+                                role="switch"
+                                aria-checked={settings.waterReminder}
                                 aria-label={t('rem_water')}
                             >
                                 <span style={{
@@ -257,7 +259,7 @@ function ReminderSettingsCard() {
                     )}
 
                     <button
-                        onClick={() => { persist({ ...settings, enabled: false }); toast.info(t('rem_disabled')); }}
+                        onClick={() => { persistAndSync({ ...settings, enabled: false }); toast.info(t('rem_disabled')); }}
                         style={{
                             width: '100%',
                             padding: '8px 0',

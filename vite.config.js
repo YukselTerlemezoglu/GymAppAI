@@ -8,6 +8,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
       includeAssets: ['favicon-64.png', 'apple-touch-icon.png', 'icon.svg'],
       manifest: {
         name: 'GymApp AI - AI Powered Workout Manager',

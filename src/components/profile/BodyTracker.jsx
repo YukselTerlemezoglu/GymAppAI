@@ -997,6 +997,8 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                             background: minimalMode ? 'rgba(0,195,255,0.25)' : 'rgba(255,255,255,0.06)',
                             position: 'relative', cursor: 'pointer'
                         }}
+                        role="switch"
+                        aria-checked={minimalMode}
                         aria-label={t('minimal_title')}
                     >
                         <span style={{

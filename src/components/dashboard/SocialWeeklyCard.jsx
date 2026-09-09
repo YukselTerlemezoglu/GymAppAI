@@ -13,13 +13,12 @@ function SocialWeeklyCard({ friends, myName, workoutHistory }) {
     const rows = useMemo(() => {
         const my = computeWeekStats(workoutHistory);
         const list = [
-            { name: myName, workouts: my.workouts, minutes: my.minutes || 0, sets: my.sets || 0, score: my.workouts, isMe: true },
+            { name: myName, workouts: my.days || 0, volume: my.volume || 0, score: my.days || 0, isMe: true },
             ...(friends || []).map(f => ({
                 name: f.name || 'Athlete',
-                workouts: f.weekStats?.workouts || 0,
-                minutes: f.weekStats?.minutes || 0,
-                sets: f.weekStats?.sets || 0,
-                score: f.weekStats?.workouts || 0,
+                workouts: f.weekStats?.days || 0,
+                volume: f.weekStats?.volume || 0,
+                score: f.weekStats?.days || 0,
                 isMe: false
             }))
         ];
@@ -64,7 +63,7 @@ function SocialWeeklyCard({ friends, myName, workoutHistory }) {
                                 <Dumbbell size={12} /> {r.workouts}
                             </span>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.75rem', color: 'var(--text-light)', flexShrink: 0 }}>
-                                <Swords size={12} /> {r.sets}
+                                <Swords size={12} /> {(r.volume / 1000).toFixed(1)}t
                             </span>
                         </div>
                     ))}

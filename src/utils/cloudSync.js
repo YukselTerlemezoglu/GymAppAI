@@ -1,6 +1,7 @@
 import { db } from '../services/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { log, warn, error } from './logger';
+import { persistToIdb as idbMirror } from '../hooks/useLocalStorage';
 
 // Promise'i zaman aşımına uğratan yardımcı fonksiyon
 const withTimeout = (promise, ms) => {
@@ -64,10 +65,10 @@ const MERGE_STRATEGY = {
   'gym_app_prev_level': 'max',
   'gym_app_coins': 'max',
   'gym_app_streak': 'max',
-  'gym_app_inventory': 'lww',
+  'gym_app_inventory': 'object-union',
   'gym_app_cosmetics': 'list',
   'gym_app_cosmetics_active': 'lww',
-  'gym_app_buddies': 'lww',
+  'gym_app_buddies': 'object-union',
   'gym_app_buddies_active': 'lww',
   'gym_app_buddy_active': 'lww',
   'gym_app_gacha_pity': 'max',
@@ -138,11 +139,59 @@ function mergeMax(localRaw, cloudRaw) {
 }
 
 /**
+ * Objelerin birlesimi: her alan icin iki tarafin maksimumu.
+ * Envanter ({itemId: adet}) icin: iki cihazdan yapilan satin almalar
+ * HEP korunur - ne lokal ne bulut satin alinmis kalemi dusurmez.
+ * Sayisal olmayan alanlarda kapsayici taraftan alinir.
+ */
+function mergeObjectUnion(localRaw, cloudRaw) {
+  if (localRaw === null || localRaw === undefined) return cloudRaw;
+  if (cloudRaw === null || cloudRaw === undefined) return localRaw;
+  const local = safeParse(localRaw);
+  const cloud = safeParse(cloudRaw);
+  if (local === null || typeof local !== 'object') return cloudRaw;
+  if (cloud === null || typeof cloud !== 'object') return localRaw;
+
+  const out = { ...cloud };
+  Object.keys(local).forEach((k) => {
+    const lv = local[k];
+    const cv = cloud[k];
+    if (typeof lv === 'number' && typeof cv === 'number') {
+      out[k] = Math.max(lv, cv);
+    } else if (cv === undefined) {
+      out[k] = lv;
+    } else if (typeof lv === 'object' && lv !== null && typeof cv === 'object' && cv !== null) {
+      // ic ice obje (orn. buddy koleksiyonu): kapsayici taraf kazanir
+      out[k] = Object.keys(lv).length >= Object.keys(cv).length ? lv : cv;
+    }
+    // skalar farkliysa: bulut degeri korunur (out zaten cv)
+  });
+  return JSON.stringify(out);
+}
+
+/**
  * LWW: degerin icinde "updatedAt" benzeri alan varsa karsilastir,
  * yoksa (konservatif) lokal kalir — bulut degeri SADECE lokalde hic
  * yoksa uygulanir. Boylece daha once yazilmis guncel lokal veriyi
  * eski bir bulut snapshot'i ezemez.
  */
+/**
+ * ts bilgisi olmayan objeler icin kapsayicilik (superset) heuristigi:
+ * daha fazla anahtar tasiyan taraf kazanir. Gerekce: ekonomi objelerinde
+ * (envanter, buddy koleksiyonu) "yeni kazanilan" her zaman yeni alan ekler;
+ * eski cihaz bu alanlari tasiyamaz. Boylece satin alma kaybi onlenir.
+ * Iki taraf da ts tasiyorsa gercek LWW yine once gelir.
+ */
+function pickSuperset(local, cloud) {
+  if (local === null || local === undefined) return null; // caller ele alir
+  if (cloud === null || cloud === undefined) return null;
+  const lk = (local && typeof local === 'object') ? Object.keys(local).length : 0;
+  const ck = (cloud && typeof cloud === 'object') ? Object.keys(cloud).length : 0;
+  if (ck > lk) return 'cloud';
+  if (lk > ck) return 'local';
+  return null; // esit: belirlenemedi
+}
+
 function mergeLww(localRaw, cloudRaw) {
   if (localRaw === null || localRaw === undefined) return cloudRaw;
   if (cloudRaw === null || cloudRaw === undefined) return localRaw;
@@ -154,8 +203,14 @@ function mergeLww(localRaw, cloudRaw) {
 
   const lt = (local && typeof local === 'object') ? Number(local.updatedAt || local.ts || 0) || 0 : 0;
   const ct = (cloud && typeof cloud === 'object') ? Number(cloud.updatedAt || cloud.ts || 0) || 0 : 0;
-  // Iki tarafta da zaman damgasi yoksa: lokal kalir (konservatif)
-  if (lt === 0 && ct === 0) return localRaw;
+  if (lt === 0 && ct === 0) {
+    // Zaman damgasi yok: lokal kazanir yerine kapsayicilik kontrolu.
+    // Satin alma/hak kazanma tek yonlu buyur; kucuk (eski) obje buyuk
+    // (yeni) olani ezmesin. Esitse lokal kalir (konservatif).
+    const superset = pickSuperset(local, cloud);
+    if (superset === 'cloud') return cloudRaw;
+    return localRaw;
+  }
   return ct > lt ? cloudRaw : localRaw;
 }
 
@@ -167,6 +222,7 @@ function mergeKey(key, localRaw, cloudRaw) {
   if (!strat) return localRaw !== null && localRaw !== undefined ? localRaw : cloudRaw; // tanimsiz: lokal
   if (strat === 'list') return mergeLists(localRaw, cloudRaw);
   if (strat === 'max') return mergeMax(localRaw, cloudRaw);
+  if (strat === 'object-union') return mergeObjectUnion(localRaw, cloudRaw);
   return mergeLww(localRaw, cloudRaw);
 }
 
@@ -247,7 +303,12 @@ export const mergeAndPullFromCloud = async (uid) => {
             const localRaw = localStorage.getItem(key);
             const merged = mergeKey(key, localRaw, normalizeCloudValue(cloudRaw));
             if (merged !== null && merged !== undefined && merged !== localRaw) {
-                localStorage.setItem(key, typeof merged === 'string' ? merged : JSON.stringify(merged));
+                const strVal = typeof merged === 'string' ? merged : JSON.stringify(merged);
+                localStorage.setItem(key, strVal);
+                // IDB'yi de esitle: monte edilmemis anahtarlar (orn. streak,
+                // prev_level) bir sonraki acilista IDB hidrasyonuyla eski
+                // degere geri donmesin (MEDIUM bulgu fix).
+                idbMirror(key, strVal);
                 changed++;
             }
         });

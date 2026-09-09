@@ -51,6 +51,10 @@ const idbSet = async (key, value) => {
     } catch { /* sessiz hata */ }
 };
 
+// Dis moduller (cloudSync) merge sonrasini IDB'ye de yazmak istediginde
+// kullanir: hidrasyon kaynak-alim gerceklesmesin diye.
+export const persistToIdb = idbSet;
+
 // --- GLOBAL HIDRASYON SINYALI ---
 // Tum useLocalStorage ornekleri IDB okumalarini bitirince bir kez ateşlenir
 // ve bir daha sönilmez (latch). App.jsx'teki tek seferlik migrasyon/sezon

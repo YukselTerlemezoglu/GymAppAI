@@ -17,11 +17,12 @@ const ctx = {};
 new Function('ctx', `${moduleCode}\nctx.mergeLists = typeof mergeLists !== 'undefined' ? mergeLists : null;
 ctx.mergeMax = typeof mergeMax !== 'undefined' ? mergeMax : null;
 ctx.mergeLww = typeof mergeLww !== 'undefined' ? mergeLww : null;
+ctx.mergeObjectUnion = typeof mergeObjectUnion !== 'undefined' ? mergeObjectUnion : null;
 ctx.mergeKey = typeof mergeKey !== 'undefined' ? mergeKey : null;
 ctx.MERGE_STRATEGY = typeof MERGE_STRATEGY !== 'undefined' ? MERGE_STRATEGY : null;
 ctx.hasMergePull = typeof mergeAndPullFromCloud === 'function';`)(ctx);
 
-const { mergeLists, mergeMax, mergeLww, mergeKey, MERGE_STRATEGY } = ctx;
+const { mergeLists, mergeMax, mergeLww, mergeKey, mergeObjectUnion, MERGE_STRATEGY } = ctx;
 assert.ok(mergeLists && mergeMax && mergeLww && mergeKey, 'merge fonksiyonlari ayiklanamadi');
 assert.ok(ctx.hasMergePull, 'mergeAndPullFromCloud tanimli degil');
 
@@ -104,4 +105,25 @@ test('MERGE_STRATEGY: kritik ekonomi anahtarlari tanimli', () => {
     for (const k of ['gym_app_history', 'gym_app_coins', 'gym_app_xp', 'gym_app_inventory', 'gym_app_quests']) {
         assert.ok(MERGE_STRATEGY[k], `${k} stratejisi eksik`);
     }
+});
+// ---- mergeObjectUnion: envanter birlestirme ----
+test('mergeObjectUnion: iki cihazin satin almaalri birlesir', () => {
+    const local = JSON.stringify({ snack: 3, freeze: 1 });
+    const cloud = JSON.stringify({ snack: 1, potion: 2 });
+    const merged = JSON.parse(mergeObjectUnion(local, cloud));
+    assert.deepEqual(merged, { snack: 3, freeze: 1, potion: 2 });
+});
+test('mergeObjectUnion: lokal yoksa bulut kalir', () => {
+    const cloud = JSON.stringify({ snack: 1 });
+    assert.equal(mergeObjectUnion(null, cloud), cloud);
+});
+test('mergeLww: ts yok, bulut kapsayiciysa bulut kazanir (sat\u0131n alma kaybi onlenir)', () => {
+    const local = JSON.stringify({ a: 1 });
+    const cloud = JSON.stringify({ a: 1, b: 2, c: 3 });
+    assert.equal(mergeLww(local, cloud), cloud);
+});
+test('mergeLww: ts yok, esit boyutta lokal kalir', () => {
+    const local = JSON.stringify({ a: 1 });
+    const cloud = JSON.stringify({ b: 2 });
+    assert.equal(mergeLww(local, cloud), local);
 });
