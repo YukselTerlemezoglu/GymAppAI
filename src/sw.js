@@ -16,9 +16,17 @@ import { StaleWhileRevalidate } from 'workbox-strategies';
 // Vite PWA injectManifest: build sirasinda manifest sabitleri enjekte edilir
 self.__WB_MANIFEST;
 
+// Yeni SW surumu beklemeden devralir: kullanicilar deploy sonrasi
+// ikinci yuklemede degil ILK yenilemede yeni surumu alir.
+self.skipWaiting();
 clientsClaim();
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
+
+// Sayfadan gelen SKIP_WAITING mesaji (manual update akisi icin)
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
 
 // wger egzersiz katalogu (190KB JSON) - agresif olmayan cache ile
 registerRoute(
