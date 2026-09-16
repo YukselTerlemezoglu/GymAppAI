@@ -622,24 +622,59 @@ function ShopPage({
                         <h4 style={{ color: '#fff', margin: '0 0 0.4rem', fontSize: '1rem' }}>🎡 {t('shop_wheel_title')}</h4>
                         <p style={{ color: 'var(--text-light)', fontSize: '0.75rem', margin: '0 0 1rem' }}>{t('shop_wheel_desc')}</p>
 
-                        {/* Cark gorseli (CSS konik gradyan) */}
+                        {/* Cark gorseli (CSS konik gradyan + dilim etiketleri) */}
                         <div style={{ position: 'relative', width: '230px', height: '230px', margin: '0 auto 1rem' }}>
                             <motion.div
                                 animate={{ rotate: wheelAngle }}
                                 transition={spinning ? { duration: 4, ease: [0.16, 1, 0.3, 1] } : { duration: 0 }}
                                 style={{
                                     position: 'absolute', inset: 0, borderRadius: '50%',
+                                    // Alternating tonlama: ayni renkli komsu dilimler (common-common,
+                                    // rare-rare bitisik) bicimsiz conic-gradient'te tek blok gibi
+                                    // gorunup "renkler uyusmuyor" hissi yaratıyordu. Cift indeksli
+                                    // dilimler %18 karartilir; boylece her dilimin siniri okunur.
                                     background: `conic-gradient(${WHEEL_SEGMENTS.map((s, i) => {
                                         const rc = RARITY[s.rarity].color;
+                                        const shade = i % 2 === 1 ? '80%' : '100%';
                                         const start = (i / WHEEL_SEGMENTS.length) * 360;
                                         const end = ((i + 1) / WHEEL_SEGMENTS.length) * 360;
-                                        return `${rc} ${start}deg ${end}deg`;
+                                        return `color-mix(in srgb, ${rc} ${shade}, #0f1115) ${start}deg ${end}deg`;
                                     }).join(', ')})`,
                                     boxShadow: '0 0 30px rgba(0,195,255,0.25)',
                                     border: '4px solid rgba(255,255,255,0.15)'
                                 }}
-                            />
-                            {/* Merkez */}
+                            >
+                                {/* Dilim ayirici cizgileri: merkezden kenara ince cizgiler */}
+                                {WHEEL_SEGMENTS.map((_, i) => {
+                                    const ang = (i / WHEEL_SEGMENTS.length) * 360;
+                                    return (
+                                        <div key={i} style={{
+                                            position: 'absolute', left: '50%', top: '50%',
+                                            width: '1.5px', height: '50%',
+                                            background: 'rgba(15,17,21,0.55)',
+                                            transformOrigin: 'top center',
+                                            transform: `translateX(-50%) rotate(${ang}deg)`
+                                        }} />
+                                    );
+                                })}
+                                {/* Dilim etiketleri: her odulun ne oldugu cark uzerinde okunur */}
+                                {WHEEL_SEGMENTS.map((s, i) => {
+                                    const mid = ((i + 0.5) / WHEEL_SEGMENTS.length) * 360;
+                                    return (
+                                        <div key={i} style={{
+                                            position: 'absolute', left: '50%', top: '50%',
+                                            transform: `rotate(${mid}deg) translate(-50%, -50%) translateY(-76px) rotate(${-mid}deg)`,
+                                            fontSize: '0.58rem', fontWeight: 700,
+                                            color: s.rarity === 'legendary' ? '#1a1a2e' : '#fff',
+                                            textShadow: s.rarity === 'legendary' ? 'none' : '0 1px 3px rgba(0,0,0,0.7)',
+                                            whiteSpace: 'nowrap', pointerEvents: 'none'
+                                        }}>
+                                            {lang === 'tr' ? s.label_tr : s.label_en}
+                                        </div>
+                                    );
+                                })}
+                            </motion.div>
+   640|                            {/* Merkez */}
                             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '54px', height: '54px', borderRadius: '50%', background: '#0f1115', border: '3px solid var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', zIndex: 2 }}>
                                 🎡
                             </div>

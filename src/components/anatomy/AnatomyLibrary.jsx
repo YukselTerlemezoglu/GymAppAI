@@ -1,12 +1,26 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, ChevronDown, ChevronUp, Dumbbell, Info, AlertTriangle,
-  Target, Repeat, Layers, Filter, BookOpen, Zap
+  Target, Repeat, Layers, Filter, BookOpen, Zap, Search, PlayCircle, Database, X
 } from 'lucide-react';
 import { MUSCLE_GROUPS, EXERCISES_DB } from '../../data/exercises';
+import { loadWgerExercises, getWgerByMuscleGroup } from '../../data/wgerExercises';
+import ExerciseModal from '../workout/ExerciseModal';
 
 const DIFFICULTY_ORDER = { 'Başlangıç': 0, 'Beginner': 0, 'Orta': 1, 'Intermediate': 1, 'Zor': 2, 'Advanced': 2 };
+
+// Erisilebilirlik: animasyon istemeyen kullaniciya sade gecisler
+const REDUCED = typeof window !== 'undefined'
+  && window.matchMedia
+  && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const normalizeName = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+// Anatomi sayfasinda ilk gosterilecek katalog satir sayisi ("Daha Fazla" ile buyur)
+const INITIAL_VISIBLE = 15;
+const LOAD_STEP = 30;
 
 function AnatomyLibrary({ onBack }) {
   const { t, lang } = useLanguage();
@@ -14,18 +28,34 @@ function AnatomyLibrary({ onBack }) {
   const [expandedExercise, setExpandedExercise] = useState(null);
   const [difficultyFilter, setDifficultyFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  // wger katalog durumu: null = yukleniyor, false = hata, true = hazir
+  const [catalogReady, setCatalogReady] = useState(null);
+  const [search, setSearch] = useState('');
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  // Video modali (ExerciseModal yeniden kullanilir - video cozumleme zinciri hazir)
+  const [videoExercise, setVideoExercise] = useState(null);
+
+  // Katalogu arka planda yukle (sayfa acilir acilmaz; 190KB, tek sefer cache)
+  useEffect(() => {
+    let alive = true;
+    loadWgerExercises()
+      .then(() => { if (alive) setCatalogReady(true); })
+      .catch(() => { if (alive) setCatalogReady(false); });
+    return () => { alive = false; };
+  }, []);
 
   const isEn = lang === 'en';
 
   const handleMuscleClick = (muscleId) => {
     if (selectedMuscle === muscleId) {
       setSelectedMuscle(null);
-      setExpandedExercise(null);
     } else {
       setSelectedMuscle(muscleId);
       setExpandedExercise(null);
       setDifficultyFilter('all');
       setTypeFilter('all');
+      setSearch('');
+      setVisibleCount(INITIAL_VISIBLE);
     }
   };
 
@@ -38,7 +68,8 @@ function AnatomyLibrary({ onBack }) {
     [selectedMuscle]
   );
 
-  const filteredExercises = useMemo(() => {
+  // Ozden hazirlanmis (curated) hareketler - filtreler uygulanir
+  const curatedExercises = useMemo(() => {
     if (!selectedMuscle) return [];
     return EXERCISES_DB
       .filter(ex => ex.muscleGroupId === selectedMuscle)
@@ -46,6 +77,46 @@ function AnatomyLibrary({ onBack }) {
       .filter(ex => typeFilter === 'all' || ex.type === typeFilter)
       .sort((a, b) => (DIFFICULTY_ORDER[a.difficulty] ?? 0) - (DIFFICULTY_ORDER[b.difficulty] ?? 0));
   }, [selectedMuscle, difficultyFilter, typeFilter]);
+
+  // wger katalog hareketleri: kas grubuna gore; filtreler katalogda
+  // difficulty/type olmadigi icin yalnizca "all" iken gosterilir
+  // NOT: catalogReady bilincli bagimliliktir - katalog arka plandan
+  // geldiginde bu memo yeniden hesaplanip satirlar belirmelidir.
+  const catalogExercises = useMemo(() => {
+    if (!selectedMuscle) return [];
+    if (difficultyFilter !== 'all' || typeFilter !== 'all') return [];
+    const list = getWgerByMuscleGroup(selectedMuscle);
+    // Ayni isimli curated hareketlerle cakisma: normalize isim dedupe
+    const curatedNames = new Set(
+      EXERCISES_DB
+        .filter(ex => ex.muscleGroupId === selectedMuscle)
+        .map(ex => normalizeName(isEn ? (ex.name_en || ex.name) : ex.name))
+    );
+    return list.filter(ex => !curatedNames.has(normalizeName(ex.name)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMuscle, difficultyFilter, typeFilter, catalogReady, isEn]);
+
+  // Arama: her iki kaynaga da uygulanir
+  const searchTerm = search.trim().toLowerCase();
+  const filteredCurated = useMemo(() => {
+    if (!searchTerm) return curatedExercises;
+    return curatedExercises.filter(ex =>
+      (isEn ? (ex.name_en || ex.name) : ex.name).toLowerCase().includes(searchTerm)
+    );
+  }, [curatedExercises, searchTerm, isEn]);
+
+  const filteredCatalog = useMemo(() => {
+    if (!searchTerm) return catalogExercises;
+    return catalogExercises.filter(ex => ex.name.toLowerCase().includes(searchTerm));
+  }, [catalogExercises, searchTerm]);
+
+  const totalFiltered = filteredCurated.length + filteredCatalog.length;
+
+  // Gorunur satirlar: once curated, sonra katalog; kismi liste
+  const visibleCurated = filteredCurated;
+  const remaining = Math.max(0, visibleCount - visibleCurated.length);
+  const visibleCatalog = filteredCatalog.slice(0, remaining);
+  const hiddenCount = totalFiltered - visibleCurated.length - visibleCatalog.length;
 
   const availableDifficulties = useMemo(() => {
     if (!selectedMuscle) return [];
@@ -74,6 +145,247 @@ function AnatomyLibrary({ onBack }) {
     return '#f87171';
   };
 
+  // ---------- SATIR RENDER (ortak: curated + katalog) ----------
+
+  const renderCuratedRow = (ex) => {
+    const isExpanded = expandedExercise === ex.id;
+    return (
+      <motion.div
+        key={ex.id}
+        initial={REDUCED ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        style={{
+          background: 'var(--bg-card)',
+          border: '1px solid rgba(255,255,255,0.05)',
+          borderRadius: '12px',
+          overflow: 'hidden',
+          transition: 'border-color 0.3s ease'
+        }}
+      >
+        <div
+          onClick={() => toggleExercise(ex.id)}
+          style={{
+            padding: '1rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            cursor: 'pointer',
+            background: isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent',
+            gap: '10px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+            <div style={{
+              background: 'rgba(255,255,255,0.1)',
+              padding: '8px',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--accent-primary)',
+              flexShrink: 0
+            }}>
+              <Dumbbell size={18} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-primary)', overflowWrap: 'break-word' }}>
+                {isEn ? (ex.name_en || ex.name) : ex.name}
+              </h4>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.7rem', color: '#000', background: diffColor(ex.difficulty), padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold' }}>
+                  {isEn ? (ex.difficulty_en || ex.difficulty) : ex.difficulty}
+                </span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-light)', background: 'rgba(255,255,255,0.07)', padding: '2px 8px', borderRadius: '10px' }}>
+                  {typeLabel(ex.type)}
+                </span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-light)' }}>
+                  {isEn ? (ex.equipment_en || ex.equipment) : ex.equipment}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            {isExpanded && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setVideoExercise(isEn ? (ex.name_en || ex.name) : ex.name); }}
+                className="neon-btn-secondary"
+                style={{ padding: '6px 10px', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                title={t('anatomy_watch_video')}
+              >
+                <PlayCircle size={14} /> {t('anatomy_watch_video')}
+              </button>
+            )}
+            {isExpanded ? <ChevronUp size={20} color="var(--text-light)" /> : <ChevronDown size={20} color="var(--text-light)" />}
+          </div>
+        </div>
+
+        <AnimatePresence initial={false}>
+          {isExpanded && (
+            <motion.div
+              key="detay"
+              initial={REDUCED ? false : { height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={REDUCED ? { opacity: 0 } : { height: 0, opacity: 0 }}
+              transition={{ duration: 0.28, ease: 'easeInOut' }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div style={{ padding: '0 1rem 1rem 1rem', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '0.5rem', paddingTop: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                    <Target size={14} color="#4ade80" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>
+                      <strong>{t('anatomy_primary')}:</strong> {(isEn ? (ex.primaryMuscles_en || ex.primaryMuscles) : ex.primaryMuscles).join(', ')}
+                    </span>
+                  </div>
+                  {(isEn ? (ex.secondaryMuscles_en || ex.secondaryMuscles) : ex.secondaryMuscles).length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <Target size={14} color="var(--accent-secondary)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
+                        <strong>{t('anatomy_secondary')}:</strong> {(isEn ? (ex.secondaryMuscles_en || ex.secondaryMuscles) : ex.secondaryMuscles).join(', ')}
+                      </span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                    <Repeat size={14} color="var(--accent-warning)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
+                      <strong>{t('anatomy_rep_range')}:</strong> {isEn ? (ex.repRange_en || ex.repRange) : ex.repRange}
+                    </span>
+                  </div>
+                </div>
+
+                <h5 style={{ margin: '0 0 8px 0', color: 'var(--accent-secondary)', fontSize: '0.85rem' }}>{t('anatomy_tips')}:</h5>
+                <ul style={{ margin: '0 0 14px 0', paddingLeft: '1.2rem', color: 'var(--text-light)', fontSize: '0.85rem', lineHeight: '1.5' }}>
+                  {(isEn ? (ex.tips_en || ex.tips) : ex.tips).map((tip, idx) => (
+                    <li key={idx} style={{ marginBottom: '6px' }}>{tip}</li>
+                  ))}
+                </ul>
+
+                {(isEn ? (ex.commonMistakes_en || ex.commonMistakes) : ex.commonMistakes)?.length > 0 && (
+                  <>
+                    <h5 style={{ margin: '0 0 8px 0', color: '#f87171', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <AlertTriangle size={14} /> {t('anatomy_mistakes')}:
+                    </h5>
+                    <ul style={{ margin: 0, paddingLeft: '1.2rem', color: 'var(--text-light)', fontSize: '0.85rem', lineHeight: '1.5' }}>
+                      {(isEn ? (ex.commonMistakes_en || ex.commonMistakes) : ex.commonMistakes).map((m, idx) => (
+                        <li key={idx} style={{ marginBottom: '6px' }}>{m}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    );
+  };
+
+  const renderCatalogRow = (ex) => {
+    const rowKey = `wger-${ex.wgerId}`;
+    const isExpanded = expandedExercise === rowKey;
+    const hasVideo = (ex.videos || []).length > 0;
+    return (
+      <motion.div
+        key={rowKey}
+        initial={REDUCED ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        style={{
+          background: 'var(--bg-card)',
+          border: '1px solid rgba(255,255,255,0.05)',
+          borderRadius: '12px',
+          overflow: 'hidden'
+        }}
+      >
+        <div
+          onClick={() => toggleExercise(rowKey)}
+          style={{
+            padding: '1rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            cursor: 'pointer',
+            background: isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent',
+            gap: '10px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+            <div style={{
+              background: 'rgba(0,195,255,0.08)',
+              padding: '8px',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--accent-secondary)',
+              flexShrink: 0
+            }}>
+              <Database size={16} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <h4 style={{ margin: 0, fontSize: '0.92rem', color: 'var(--text-primary)', overflowWrap: 'break-word' }}>
+                {ex.name}
+              </h4>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px', alignItems: 'center' }}>
+                {ex.equipment && (
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-light)' }}>
+                    {ex.equipment}
+                  </span>
+                )}
+                {hasVideo && (
+                  <span style={{ fontSize: '0.65rem', color: '#ff4e45', background: 'rgba(255,78,69,0.12)', padding: '2px 8px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}>
+                    <PlayCircle size={11} /> VIDEO
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          {isExpanded ? <ChevronUp size={20} color="var(--text-light)" /> : <ChevronDown size={20} color="var(--text-light)" />}
+        </div>
+
+        <AnimatePresence initial={false}>
+          {isExpanded && (
+            <motion.div
+              key="detay"
+              initial={REDUCED ? false : { height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={REDUCED ? { opacity: 0 } : { height: 0, opacity: 0 }}
+              transition={{ duration: 0.28, ease: 'easeInOut' }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div style={{ padding: '0 1rem 1rem 1rem', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '0.5rem', paddingTop: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                    <Target size={14} color="#4ade80" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>
+                      <strong>{t('anatomy_primary')}:</strong> {selectedGroup ? (isEn ? (selectedGroup.name_en || selectedGroup.name) : selectedGroup.name) : '-'}
+                    </span>
+                  </div>
+                  {ex.equipment && (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <Dumbbell size={14} color="var(--accent-warning)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
+                        <strong>{isEn ? 'Equipment' : 'Ekipman'}:</strong> {ex.equipment}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setVideoExercise(ex.name)}
+                  className="neon-btn"
+                  style={{ width: '100%', padding: '0.7rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                  <PlayCircle size={18} /> {t('anatomy_watch_video')}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    );
+  };
+
   return (
     <div className="page-shell fade-in">
       <header style={{ display: 'flex', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem' }}>
@@ -98,12 +410,16 @@ function AnatomyLibrary({ onBack }) {
           gridTemplateColumns: 'repeat(auto-fit, minmax(95px, 1fr))',
           gap: '10px'
         }}>
-          {MUSCLE_GROUPS.map((mg) => {
+          {MUSCLE_GROUPS.map((mg, idx) => {
             const isSelected = selectedMuscle === mg.id;
             return (
-              <div
+              <motion.div
                 key={mg.id}
+                initial={REDUCED ? false : { opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: REDUCED ? 0 : idx * 0.04, duration: 0.3 }}
                 onClick={() => handleMuscleClick(mg.id)}
+                whileHover={REDUCED ? undefined : { y: -3 }}
                 style={{
                   background: isSelected ? 'var(--gradient-1)' : 'var(--bg-card)',
                   border: `1px solid ${isSelected ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)'}`,
@@ -129,7 +445,7 @@ function AnatomyLibrary({ onBack }) {
                 }}>
                   {isEn ? (mg.name_en || mg.name) : mg.name}
                 </span>
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -224,12 +540,12 @@ function AnatomyLibrary({ onBack }) {
             </div>
           </div>
 
-          {/* ============ FİLTRELER ============ */}
+          {/* ============ FİLTRELER + ARAMA ============ */}
           <div style={{
             display: 'flex',
             flexWrap: 'wrap',
             gap: '8px',
-            marginBottom: '1rem',
+            marginBottom: '0.8rem',
             alignItems: 'center'
           }}>
             <Filter size={15} color="var(--text-light)" />
@@ -287,141 +603,94 @@ function AnatomyLibrary({ onBack }) {
             ))}
           </div>
 
+          {/* Arama kutusu */}
+          <div style={{ position: 'relative', marginBottom: '1rem' }}>
+            <Search size={15} color="var(--text-light)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setVisibleCount(INITIAL_VISIBLE); }}
+              placeholder={t('anatomy_search_ph')}
+              style={{
+                width: '100%',
+                background: 'rgba(0,0,0,0.3)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '10px',
+                padding: '9px 38px',
+                color: 'var(--text-primary)',
+                fontSize: '0.85rem',
+                outline: 'none'
+              }}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-light)', display: 'flex', padding: '4px' }}
+                aria-label={isEn ? 'Clear search' : 'Aramayı temizle'}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Liste basligi: onerilen + katalog sayaclari */}
           <h3 style={{
             color: 'var(--accent-secondary)',
             marginBottom: '1rem',
             borderBottom: '1px solid rgba(255,255,255,0.1)',
-            paddingBottom: '0.5rem'
+            paddingBottom: '0.5rem',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '8px',
+            alignItems: 'baseline'
           }}>
-            {(isEn ? selectedGroup.name_en : selectedGroup.name)} {t('anatomy_exercises_suffix')} ({filteredExercises.length})
+            <span>
+              {(isEn ? selectedGroup.name_en : selectedGroup.name)} {t('anatomy_exercises_suffix')} ({totalFiltered})
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-light)', fontWeight: 'normal' }}>
+              {t('anatomy_count_split', { curated: filteredCurated.length, catalog: filteredCatalog.length })}
+            </span>
           </h3>
 
-          {filteredExercises.length > 0 ? (
+          {catalogReady === null && (
+            <p style={{ color: 'var(--text-light)', fontSize: '0.8rem', textAlign: 'center', padding: '0.5rem 0' }}>
+              {t('anatomy_catalog_loading')}
+            </p>
+          )}
+          {catalogReady === false && (
+            <p style={{ color: 'var(--text-light)', fontSize: '0.8rem', textAlign: 'center', padding: '0.5rem 0' }}>
+              {t('anatomy_catalog_error')}
+            </p>
+          )}
+
+          {totalFiltered > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {filteredExercises.map((ex) => {
-                const isExpanded = expandedExercise === ex.id;
-                return (
-                  <div
-                    key={ex.id}
-                    style={{
-                      background: 'var(--bg-card)',
-                      border: '1px solid rgba(255,255,255,0.05)',
-                      borderRadius: '12px',
-                      overflow: 'hidden',
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    <div
-                      onClick={() => toggleExercise(ex.id)}
-                      style={{
-                        padding: '1rem',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        cursor: 'pointer',
-                        background: isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent',
-                        gap: '10px'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                        <div style={{
-                          background: 'rgba(255,255,255,0.1)',
-                          padding: '8px',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'var(--accent-primary)',
-                          flexShrink: 0
-                        }}>
-                          <Dumbbell size={18} />
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-primary)', overflowWrap: 'break-word' }}>
-                            {isEn ? (ex.name_en || ex.name) : ex.name}
-                          </h4>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.7rem', color: '#000', background: diffColor(ex.difficulty), padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold' }}>
-                              {isEn ? (ex.difficulty_en || ex.difficulty) : ex.difficulty}
-                            </span>
-                            <span style={{ fontSize: '0.7rem', color: 'var(--text-light)', background: 'rgba(255,255,255,0.07)', padding: '2px 8px', borderRadius: '10px' }}>
-                              {typeLabel(ex.type)}
-                            </span>
-                            <span style={{ fontSize: '0.7rem', color: 'var(--text-light)' }}>
-                              {isEn ? (ex.equipment_en || ex.equipment) : ex.equipment}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{ flexShrink: 0 }}>
-                        {isExpanded ? <ChevronUp size={20} color="var(--text-light)" /> : <ChevronDown size={20} color="var(--text-light)" />}
-                      </div>
-                    </div>
-
-                    {isExpanded && (
-                      <div style={{
-                        padding: '0 1rem 1rem 1rem',
-                        borderTop: '1px solid rgba(255,255,255,0.05)',
-                        marginTop: '0.5rem',
-                        paddingTop: '1rem'
-                      }}>
-                        {/* Kas hedefleri */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
-                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                            <Target size={14} color="#4ade80" style={{ flexShrink: 0, marginTop: '2px' }} />
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>
-                              <strong>{t('anatomy_primary')}:</strong> {(isEn ? (ex.primaryMuscles_en || ex.primaryMuscles) : ex.primaryMuscles).join(', ')}
-                            </span>
-                          </div>
-                          {(isEn ? (ex.secondaryMuscles_en || ex.secondaryMuscles) : ex.secondaryMuscles).length > 0 && (
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                              <Target size={14} color="var(--accent-secondary)" style={{ flexShrink: 0, marginTop: '2px' }} />
-                              <span style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
-                                <strong>{t('anatomy_secondary')}:</strong> {(isEn ? (ex.secondaryMuscles_en || ex.secondaryMuscles) : ex.secondaryMuscles).join(', ')}
-                              </span>
-                            </div>
-                          )}
-                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                            <Repeat size={14} color="var(--accent-warning)" style={{ flexShrink: 0, marginTop: '2px' }} />
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
-                              <strong>{t('anatomy_rep_range')}:</strong> {isEn ? (ex.repRange_en || ex.repRange) : ex.repRange}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* İpuçları */}
-                        <h5 style={{ margin: '0 0 8px 0', color: 'var(--accent-secondary)', fontSize: '0.85rem' }}>{t('anatomy_tips')}:</h5>
-                        <ul style={{ margin: '0 0 14px 0', paddingLeft: '1.2rem', color: 'var(--text-light)', fontSize: '0.85rem', lineHeight: '1.5' }}>
-                          {(isEn ? (ex.tips_en || ex.tips) : ex.tips).map((tip, idx) => (
-                            <li key={idx} style={{ marginBottom: '6px' }}>{tip}</li>
-                          ))}
-                        </ul>
-
-                        {/* Sık yapılan hatalar */}
-                        {(isEn ? (ex.commonMistakes_en || ex.commonMistakes) : ex.commonMistakes)?.length > 0 && (
-                          <>
-                            <h5 style={{ margin: '0 0 8px 0', color: '#f87171', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <AlertTriangle size={14} /> {t('anatomy_mistakes')}:
-                            </h5>
-                            <ul style={{ margin: 0, paddingLeft: '1.2rem', color: 'var(--text-light)', fontSize: '0.85rem', lineHeight: '1.5' }}>
-                              {(isEn ? (ex.commonMistakes_en || ex.commonMistakes) : ex.commonMistakes).map((m, idx) => (
-                                <li key={idx} style={{ marginBottom: '6px' }}>{m}</li>
-                              ))}
-                            </ul>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              {visibleCurated.map(renderCuratedRow)}
+              {visibleCatalog.map(renderCatalogRow)}
+              {hiddenCount > 0 && (
+                <button
+                  onClick={() => setVisibleCount(prev => prev + LOAD_STEP)}
+                  className="neon-btn-secondary"
+                  style={{ padding: '0.8rem', fontSize: '0.85rem' }}
+                >
+                  {t('anatomy_show_more', { count: hiddenCount })}
+                </button>
+              )}
             </div>
           ) : (
             <p style={{ color: 'var(--text-light)', fontStyle: 'italic', textAlign: 'center', padding: '2rem 0' }}>
-              {t('anatomy_no_exercises')}
+              {t('anatomy_no_match')}
             </p>
           )}
         </div>
+      )}
+
+      {/* Video modalı: mevcut ExerciseModal - video zinciri (wger MP4 / YT) hazir */}
+      {videoExercise && (
+        <ExerciseModal
+          exerciseName={videoExercise}
+          onClose={() => setVideoExercise(null)}
+        />
       )}
     </div>
   );

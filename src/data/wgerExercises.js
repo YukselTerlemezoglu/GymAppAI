@@ -65,10 +65,32 @@ export async function loadWgerExercises() {
     if (_cache) return _cache;
     const data = await import('./wger-exercises.json');
     _cache = (data.default || data).map(toAppExercise);
+    _byGroup = buildGroupIndex(_cache);
     return _cache;
 }
 
 /** Senkron erisim: onceden yuklenmisse dondurur, yoksa bos dizi. */
 export function getWgerExercisesSync() {
     return _cache || [];
+}
+
+/**
+ * Kas grubu bazli index: grup ID -> o kasin wger hareketleri.
+ * Anatomi sayfasi bu index ile "ozel 5 hareket + katalog" birlesik
+ * liste gosterir. Load sonrasi bir kez kurulur, sonraki secimler O(1).
+ */
+let _byGroup = null;
+
+export function getWgerByMuscleGroup(groupId) {
+    if (!_byGroup) return [];
+    return _byGroup[groupId] || [];
+}
+
+function buildGroupIndex(list) {
+    const idx = {};
+    list.forEach((ex) => {
+        if (!ex.muscleGroupId) return;
+        (idx[ex.muscleGroupId] = idx[ex.muscleGroupId] || []).push(ex);
+    });
+    return idx;
 }
