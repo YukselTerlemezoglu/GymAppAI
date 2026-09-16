@@ -33,7 +33,7 @@ const randInt = (min, max, random = defaultRandom) => Math.floor(random() * (max
 // ---------- DOST YUMURTASI ----------
 
 // Yumurta agirliklari: Sıradan %55, Nadir %30, Destansı %12, Efsanevi %3
-const EGG_RARITY_WEIGHTS = { common: 55, rare: 30, epic: 12, legendary: 3 };
+export const EGG_RARITY_WEIGHTS = { common: 55, rare: 30, epic: 12, legendary: 3 };
 
 export const EGG_PITY_EPIC = 10;   // 10 yumurtada Destansı+ garanti
 export const EGG_PITY_LEGENDARY = 30; // 30 yumurtada Efsanevi garanti
@@ -85,7 +85,8 @@ export const updateEggPity = (pity, result) => {
 
 export const CHEST_PITY_EPIC = 10;
 
-const CHEST_TABLE = [
+// Incele modali tablolari icin acilir (degerler degismez)
+export const CHEST_TABLE = [
     // Sıradan %60 — v2 ekonomi: coin bandi kutu fiyatina (100) gore dengeli
     { rarity: 'common', weight: 24, kind: 'xp', min: 60, max: 150 },
     { rarity: 'common', weight: 18, kind: 'coins', min: 40, max: 90 },

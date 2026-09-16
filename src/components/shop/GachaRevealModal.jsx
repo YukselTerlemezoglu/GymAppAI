@@ -6,6 +6,7 @@ import { RARITY, findCosmetic } from '../../data/shopItems';
 import { findBuddy, DUPE_XP } from '../../utils/buddy';
 import { haptic } from '../ui/ToastProvider';
 import { playSound } from '../../utils/sounds';
+import CsReel from './CsReel';
 
 /*
  * Gacha acilis modali: kutu / yumurta / cark sonucunu gosterir.
@@ -175,7 +176,10 @@ function GachaRevealModal({ result, lang, t, onClose }) {
     // Faz yalnizca "mount anindaki" sonuctan turetilir; modal her acilista
     // yeni mount edilir (parent key ile ya da conditional render), bu yuzden
     // effect icinde faz set etmek gerekmez.
-    const [phase, setPhase] = useState(result ? 'shake' : 'reveal');
+    // Tek kutu/yumurta: once CS2 reel ('reel'), sonra sonuc karti ('reveal').
+    // Cark: eskisi gibi titreme ('shake') -> sonuc ('reveal').
+    const isSingleBox = !!(result && (result.source === 'chest' || result.source === 'egg') && result.type !== 'multiChest' && result.type !== 'multiEgg');
+    const [phase, setPhase] = useState(result ? (isSingleBox ? 'reel' : 'shake') : 'reveal');
     // multiEgg: kac sonucun kartlandigi (0 = hepsi kapali)
     const [multiShown, setMultiShown] = useState(result?.type === 'multiEgg' || result?.type === 'multiChest' ? 1 : 0);
     const timers = useRef([]);
@@ -186,29 +190,33 @@ function GachaRevealModal({ result, lang, t, onClose }) {
         timers.current.push(setTimeout(() => haptic(15), 400), setTimeout(() => haptic(15), 800));
 
         const isMulti = result.type === 'multiEgg' || result.type === 'multiChest';
+        // Reel fazindan geliyorsa konfeti/ses reel bitisinde handleReelDone'da patlar;
+        // klasik zamanlayici yalnizca reel OLMAYAN akista calisir.
         const revealDelay = isMulti ? 900 : (result.rarity === 'legendary' ? 1400 : 1100);
-        timers.current.push(setTimeout(() => {
-            setPhase('reveal');
-            const colors = shakeColors(result.rarity);
+        if (!isSingleBox) {
+            timers.current.push(setTimeout(() => {
+                setPhase('reveal');
+                const colors = shakeColors(result.rarity);
 
-            if (result.rarity === 'common') {
-                confetti({ particleCount: 40, spread: 60, origin: { y: 0.55 }, colors });
-            } else if (result.rarity === 'rare') {
-                confetti({ particleCount: 90, spread: 75, origin: { y: 0.55 }, colors });
-            } else if (result.rarity === 'epic') {
-                confetti({ particleCount: 150, spread: 90, origin: { y: 0.55 }, colors });
-                timers.current.push(setTimeout(() => confetti({ particleCount: 80, angle: 60, spread: 65, origin: { x: 0, y: 0.7 }, colors }), 200));
-                timers.current.push(setTimeout(() => confetti({ particleCount: 80, angle: 120, spread: 65, origin: { x: 1, y: 0.7 }, colors }), 380));
-                haptic([30, 50, 30]);
-            } else {
-                // Efsanevi: tam savas
-                confetti({ particleCount: 220, spread: 110, origin: { y: 0.5 }, colors });
-                for (let i = 0; i < 5; i++) {
-                    timers.current.push(setTimeout(() => confetti({ particleCount: 100, spread: 100, origin: { x: Math.random(), y: 0.4 }, colors }), 250 * (i + 1)));
+                if (result.rarity === 'common') {
+                    confetti({ particleCount: 40, spread: 60, origin: { y: 0.55 }, colors });
+                } else if (result.rarity === 'rare') {
+                    confetti({ particleCount: 90, spread: 75, origin: { y: 0.55 }, colors });
+                } else if (result.rarity === 'epic') {
+                    confetti({ particleCount: 150, spread: 90, origin: { y: 0.55 }, colors });
+                    timers.current.push(setTimeout(() => confetti({ particleCount: 80, angle: 60, spread: 65, origin: { x: 0, y: 0.7 }, colors }), 200));
+                    timers.current.push(setTimeout(() => confetti({ particleCount: 80, angle: 120, spread: 65, origin: { x: 1, y: 0.7 }, colors }), 380));
+                    haptic([30, 50, 30]);
+                } else {
+                    // Efsanevi: tam savas
+                    confetti({ particleCount: 220, spread: 110, origin: { y: 0.5 }, colors });
+                    for (let i = 0; i < 5; i++) {
+                        timers.current.push(setTimeout(() => confetti({ particleCount: 100, spread: 100, origin: { x: Math.random(), y: 0.4 }, colors }), 250 * (i + 1)));
+                    }
+                    haptic([40, 60, 40, 60, 80]);
                 }
-                haptic([40, 60, 40, 60, 80]);
-            }
-        }, revealDelay));
+            }, revealDelay));
+        }
 
         // Coklu acilis (yumurta/kutu): kartlar sirayla acilir (her kartta hafif ses)
         if (isMulti && result.results) {
@@ -223,7 +231,30 @@ function GachaRevealModal({ result, lang, t, onClose }) {
         }
 
         return () => { timers.current.forEach(clearTimeout); timers.current = []; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- isSingleBox mount aninda sabit; result degismez
     }, [result]);
+
+    // CS2 reel fazindan sonuc kartina gecis (reel onDone callback'i tetikler)
+    const handleReelDone = () => {
+        if (phase !== 'reel') return;
+        setPhase('reveal');
+        const colors = shakeColors(result.rarity);
+        haptic(result.rarity === 'legendary' ? [40, 60, 40, 60, 80] : 25);
+        if (result.rarity === 'common') {
+            confetti({ particleCount: 40, spread: 60, origin: { y: 0.55 }, colors });
+        } else if (result.rarity === 'rare') {
+            confetti({ particleCount: 90, spread: 75, origin: { y: 0.55 }, colors });
+        } else if (result.rarity === 'epic') {
+            confetti({ particleCount: 150, spread: 90, origin: { y: 0.55 }, colors });
+            timers.current.push(setTimeout(() => confetti({ particleCount: 80, angle: 60, spread: 65, origin: { x: 0, y: 0.7 }, colors }), 200));
+            timers.current.push(setTimeout(() => confetti({ particleCount: 80, angle: 120, spread: 65, origin: { x: 1, y: 0.7 }, colors }), 380));
+        } else {
+            confetti({ particleCount: 220, spread: 110, origin: { y: 0.5 }, colors });
+            for (let i = 0; i < 5; i++) {
+                timers.current.push(setTimeout(() => confetti({ particleCount: 100, spread: 100, origin: { x: Math.random(), y: 0.4 }, colors }), 250 * (i + 1)));
+            }
+        }
+    };
 
     if (!result) return null;
 
@@ -235,7 +266,25 @@ function GachaRevealModal({ result, lang, t, onClose }) {
             <div onClick={phase === 'reveal' ? onClose : undefined} style={{ position: 'absolute', inset: 0 }} />
 
             <AnimatePresence mode="wait">
-                {phase === 'shake' ? (
+                {phase === 'reel' ? (
+                    <motion.div
+                        key="reel"
+                        initial={{ scale: 0.7, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.9, opacity: 0, transition: { duration: 0.2 } }}
+                        transition={{ type: 'spring', damping: 20, stiffness: 220 }}
+                        className="glass-card"
+                        style={{ width: '100%', maxWidth: '400px', padding: '1.4rem', background: 'rgba(15,17,21,0.98)' }}
+                    >
+                        <div style={{ color: '#fff', fontWeight: 'bold', fontSize: '1rem', textAlign: 'center', marginBottom: '1rem' }}>
+                            {result.source === 'egg' ? '🥚' : '🎁'} {result.source === 'egg' ? t('shop_egg_opening') : t('shop_chest_opening')}
+                        </div>
+                        <CsReel result={result} mode={result.source === 'egg' ? 'egg' : 'chest'} lang={lang} t={t} onDone={handleReelDone} />
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', textAlign: 'center', marginTop: '0.9rem' }}>
+                            {t('shop_reel_hint')}
+                        </div>
+                    </motion.div>
+                ) : phase === 'shake' ? (
                     <motion.div
                         key="shake"
                         initial={{ scale: 0.6, opacity: 0 }}

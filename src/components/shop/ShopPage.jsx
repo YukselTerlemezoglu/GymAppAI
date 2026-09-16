@@ -1,6 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Zap, Package, Dices, Palette, ArrowLeft, Lock, Check } from 'lucide-react';
+import { Zap, Package, Dices, Palette, ArrowLeft, Lock, Check, Info } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast, haptic } from '../ui/ToastProvider';
 import { BOOSTS, BOXES, RARITY, COSMETIC_FRAMES, COSMETIC_NAME_STYLES, COSMETIC_FLAMES, COSMETIC_PR_EFFECTS } from '../../data/shopItems';
@@ -8,6 +7,9 @@ import { canBuyBoost, ownsCosmetic, buyCosmetic, setCosmeticActive, clearCosmeti
 import { BUDDIES, getBuddyStageInfo, findBuddy, addBuddyXp } from '../../utils/buddy';
 import { openChest, updateChestPity, openEgg, updateEggPity, spinWheel, getWheelState, updateWheelState, WHEEL_SEGMENTS, WHEEL_PRICE, CHEST_PITY_EPIC, EGG_PITY_EPIC, EGG_PITY_LEGENDARY } from '../../utils/gacha';
 import GachaRevealModal from './GachaRevealModal';
+import WheelSvg from './WheelSvg';
+import WheelInfoModal from './WheelInfoModal';
+import BoxInfoModal from './BoxInfoModal';
 import { playSound } from '../../utils/sounds';
 import { totalXpForLevel, levelFromTotalXp } from '../../utils/levelSystem';
 import { THEMES, THEME_CATALOG } from '../../data/themes';
@@ -79,6 +81,9 @@ function ShopPage({
     // Yumurta 10'lu paketi: 10 yumurta 9 fiyatina (indirim)
     const EGG_PACK = { count: 10, payFor: 9 };
     const CHEST_PACK = { count: 10, payFor: 9 };
+    // Incele modallari (cark / kutu / yumurta sans tablolari)
+    const [showWheelInfo, setShowWheelInfo] = useState(false);
+    const [showBoxInfo, setShowBoxInfo] = useState(null); // 'chest' | 'egg' | null
 
     const wheel = useMemo(() => getWheelState(wheelState), [wheelState]);
 
@@ -279,11 +284,17 @@ function ShopPage({
             setTimeout(() => playSound('tick'), at);
         }
 
-        // Donus acisi: onceki acinin uzerine 4 tam tur + sonuc segmentinin
-        // isaretcinin altina gelmesi icin gereken aci (deterministik).
-        const segAngle = 360 / WHEEL_SEGMENTS.length;
-        const targetCenter = result.segmentIndex * segAngle + segAngle / 2;
-        const jitter = (result.segmentIndex * 37 + wheelAngle) % Math.max(1, segAngle - 8) - (segAngle - 8) / 2;
+        // Donus acisi (ORANTILI dilimli cark): onceki acinin uzerine 4 tam tur +
+        // kazanan dilimin MERKEZI isaretcinin (ust, 0deg) altina gelecek sekilde.
+        // Dilim acilari weight'e gore degisken; segmentAngles ile birebir ayni
+        // formul WheelSvg icinde de kullanilir (tek dogru kaynak ilkesi).
+        const totalW = WHEEL_SEGMENTS.reduce((s, seg) => s + seg.weight, 0);
+        let acc = 0;
+        for (let i = 0; i < result.segmentIndex; i++) acc += WHEEL_SEGMENTS[i].weight;
+        const segStart = (acc / totalW) * 360;
+        const segSweep = (WHEEL_SEGMENTS[result.segmentIndex].weight / totalW) * 360;
+        const targetCenter = segStart + segSweep / 2;
+        const jitter = ((result.segmentIndex * 37 + wheelAngle) % Math.max(1, segSweep * 0.4)) - (segSweep * 0.4) / 2;
         const nextAngle = wheelAngle + 1440 + (360 - targetCenter) + jitter;
         setWheelAngle(nextAngle);
 
@@ -507,6 +518,9 @@ function ShopPage({
                         <div style={{ marginTop: '0.8rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                             {t('shop_pity_egg', { epic: EGG_PITY_EPIC - (gachaPity?.egg || 0), leg: EGG_PITY_LEGENDARY - (gachaPity?.eggLegendary || 0) })}
                         </div>
+                        <button onClick={() => setShowBoxInfo('egg')} style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', fontSize: '0.7rem', cursor: 'pointer', padding: '2px 0', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'underline' }}>
+                            <Info size={11} /> {t('shop_egg_info_btn')}
+                        </button>
                     </div>
 
                     {/* Koleksiyon (BuddyDex) */}
@@ -622,65 +636,15 @@ function ShopPage({
                         <h4 style={{ color: '#fff', margin: '0 0 0.4rem', fontSize: '1rem' }}>🎡 {t('shop_wheel_title')}</h4>
                         <p style={{ color: 'var(--text-light)', fontSize: '0.75rem', margin: '0 0 1rem' }}>{t('shop_wheel_desc')}</p>
 
-                        {/* Cark gorseli (CSS konik gradyan + dilim etiketleri) */}
-                        <div style={{ position: 'relative', width: '230px', height: '230px', margin: '0 auto 1rem' }}>
-                            <motion.div
-                                animate={{ rotate: wheelAngle }}
-                                transition={spinning ? { duration: 4, ease: [0.16, 1, 0.3, 1] } : { duration: 0 }}
-                                style={{
-                                    position: 'absolute', inset: 0, borderRadius: '50%',
-                                    // Alternating tonlama: ayni renkli komsu dilimler (common-common,
-                                    // rare-rare bitisik) bicimsiz conic-gradient'te tek blok gibi
-                                    // gorunup "renkler uyusmuyor" hissi yaratıyordu. Cift indeksli
-                                    // dilimler %18 karartilir; boylece her dilimin siniri okunur.
-                                    background: `conic-gradient(${WHEEL_SEGMENTS.map((s, i) => {
-                                        const rc = RARITY[s.rarity].color;
-                                        const shade = i % 2 === 1 ? '80%' : '100%';
-                                        const start = (i / WHEEL_SEGMENTS.length) * 360;
-                                        const end = ((i + 1) / WHEEL_SEGMENTS.length) * 360;
-                                        return `color-mix(in srgb, ${rc} ${shade}, #0f1115) ${start}deg ${end}deg`;
-                                    }).join(', ')})`,
-                                    boxShadow: '0 0 30px rgba(0,195,255,0.25)',
-                                    border: '4px solid rgba(255,255,255,0.15)'
-                                }}
-                            >
-                                {/* Dilim ayirici cizgileri: merkezden kenara ince cizgiler */}
-                                {WHEEL_SEGMENTS.map((_, i) => {
-                                    const ang = (i / WHEEL_SEGMENTS.length) * 360;
-                                    return (
-                                        <div key={i} style={{
-                                            position: 'absolute', left: '50%', top: '50%',
-                                            width: '1.5px', height: '50%',
-                                            background: 'rgba(15,17,21,0.55)',
-                                            transformOrigin: 'top center',
-                                            transform: `translateX(-50%) rotate(${ang}deg)`
-                                        }} />
-                                    );
-                                })}
-                                {/* Dilim etiketleri: her odulun ne oldugu cark uzerinde okunur */}
-                                {WHEEL_SEGMENTS.map((s, i) => {
-                                    const mid = ((i + 0.5) / WHEEL_SEGMENTS.length) * 360;
-                                    return (
-                                        <div key={i} style={{
-                                            position: 'absolute', left: '50%', top: '50%',
-                                            transform: `rotate(${mid}deg) translate(-50%, -50%) translateY(-76px) rotate(${-mid}deg)`,
-                                            fontSize: '0.58rem', fontWeight: 700,
-                                            color: s.rarity === 'legendary' ? '#1a1a2e' : '#fff',
-                                            textShadow: s.rarity === 'legendary' ? 'none' : '0 1px 3px rgba(0,0,0,0.7)',
-                                            whiteSpace: 'nowrap', pointerEvents: 'none'
-                                        }}>
-                                            {lang === 'tr' ? s.label_tr : s.label_en}
-                                        </div>
-                                    );
-                                })}
-                            </motion.div>
-   640|                            {/* Merkez */}
-                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '54px', height: '54px', borderRadius: '50%', background: '#0f1115', border: '3px solid var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', zIndex: 2 }}>
-                                🎡
-                            </div>
-                            {/* Isaretci */}
-                            <div style={{ position: 'absolute', top: '-6px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderTop: '16px solid #fff', filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.8))', zIndex: 3 }} />
+                        {/* Cark gorseli: SVG (orantili dilimler + radial yazilar).
+                            conic-gradient'in dondurme artefaktlari (kenarlarda uyumsuz
+                            sabit renkler) ve yazi tasmasi buradan kokten giderildi. */}
+                        <div style={{ marginBottom: '0.6rem' }}>
+                            <WheelSvg angle={wheelAngle} spinning={spinning} isEn={lang === 'en'} onInfo={() => setShowWheelInfo(true)} />
                         </div>
+                        <button onClick={() => setShowWheelInfo(true)} className="neon-btn-secondary" style={{ padding: '6px 14px', fontSize: '0.75rem', marginBottom: '1rem' }}>
+                            <Info size={13} /> {t('shop_wheel_info_btn')}
+                        </button>
 
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <button onClick={() => handleSpin(true)} disabled={spinning || !wheel.freeAvailable} className="neon-btn" style={{ flex: 1, opacity: (!wheel.freeAvailable || spinning) ? 0.4 : 1, cursor: (!wheel.freeAvailable || spinning) ? 'not-allowed' : 'pointer' }}>
@@ -703,6 +667,9 @@ function ShopPage({
                                     <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: '3px' }}>
                                         {t('shop_pity_chest', { left: CHEST_PITY_EPIC - (gachaPity?.chest || 0) })}
                                     </div>
+                                    <button onClick={() => setShowBoxInfo('chest')} style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', fontSize: '0.7rem', cursor: 'pointer', padding: '2px 0', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'underline' }}>
+                                        <Info size={11} /> {t('shop_chest_info_btn')}
+                                    </button>
                                 </div>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
@@ -780,6 +747,10 @@ function ShopPage({
 
             {/* Acilis animasyonu modali (key: her sonucta yeni mount -> faz sifirlanir) */}
             {reveal && <GachaRevealModal key={revealKey} result={reveal} lang={lang} t={t} onClose={() => setReveal(null)} />}
+
+            {/* Incele modallari: cark sans tablosu / kutu-yumurta icerik + pity */}
+            {showWheelInfo && <WheelInfoModal lang={lang} t={t} onClose={() => setShowWheelInfo(false)} />}
+            {showBoxInfo && <BoxInfoModal mode={showBoxInfo} lang={lang} t={t} gachaPity={gachaPity} onClose={() => setShowBoxInfo(null)} />}
 
             {/* Evrim kutlamasi (tam ekran) */}
             {evolution && (
