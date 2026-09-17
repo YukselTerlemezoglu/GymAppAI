@@ -50,8 +50,10 @@ export default defineConfig({
   server: {
     port: 8080,
     host: true,
-    // Yerel gelistirme: /api/groq istekleri dev-api-server.cjs'e gider
-    // (prod'da Vercel serverless fonksiyonu devreye girer, proxy yok sayilir)
+    // NOT: /api proxy'si su an KULLANILMIYOR (dev-api-server.cjs diye bir
+    // dosya yok; prod'da /api Vercel serverless'a gider). Dev'de AI cagrilari
+    // dogrudan prod /api endpoint'ine gider. Kaldirilmadi cunku zararsiz;
+    // dosya bir gun geri gelirse proxy tekrar devreye girer.
     proxy: {
       '/api': {
         target: 'http://localhost:5174',

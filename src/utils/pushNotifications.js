@@ -47,17 +47,23 @@ export async function enablePush() {
         // Token sahipliğini tek yerde yonet (ReminderSettingsCard'a delege etme)
         localStorage.setItem('gym_app_push_token', token);
 
-        // Token'i kullanici profiline yaz (login gerekli)
-        const { auth, db } = await getFirebase();
-        const uid = auth?.currentUser?.uid;
-        if (uid) {
-            await setDoc(doc(db, 'pushTokens', token), {
-                uid,
-                createdAt: serverTimestamp(),
-                lastSeen: serverTimestamp(),
-                reminders: getReminderSettings()
-            });
-        }
+        // NOT: Firestore pushTokens koleksiyonu artik kullanilmiyor —
+        // api/push.js token'i request body'siyle alir (v1 akisi). Buradaki
+        // yazim eskiden kalma; rules default-deny oldugundan permission hatasi
+        // firlatir ve enablePush'in catch'e dusup TAMAMEN basarisiz olmasina
+        // yol acardi. Bu yuzden hata bilincli yutulur (best-effort, catch'siz).
+        try {
+            const { auth, db } = await getFirebase();
+            const uid = auth?.currentUser?.uid;
+            if (uid) {
+                await setDoc(doc(db, 'pushTokens', token), {
+                    uid,
+                    createdAt: serverTimestamp(),
+                    lastSeen: serverTimestamp(),
+                    reminders: getReminderSettings()
+                }).catch(() => { /* rules kapali: beklenen, push akisi etkilenmez */ });
+            }
+        } catch { /* firebase yoksa da sorun degil */ }
         return token;
     } catch (e) {
         logError('enablePush basarisiz:', e);

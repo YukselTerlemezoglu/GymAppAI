@@ -179,7 +179,12 @@ export async function takeSnapshot(uid, { force = false } = {}) {
             trimmedHistory: fitted.trimmed || 0
         });
         lsSet(SNAP_LAST_KEY, String(Date.now()));
-        lsSet(SNAP_FINGERPRINT_KEY, computeFingerprint(fitted.backup));
+        // Parmak izi TAM yedekten hesaplanir (kirpilmis olandan degil):
+        // karsilastirma bir sonraki buildBackup() ciktisiyla yapilir.
+        // Kirpilmis uzerinden hesaplansaydi history >120 kayit olnca
+        // parmak izleri hic eslesmezdi ve dirty-check her seferinde
+        // "degisti" derdi (gereksiz tam yazim, kota isi).
+        lsSet(SNAP_FINGERPRINT_KEY, computeFingerprint(backup));
         pruneOldSnapshots(uid); // fire-and-forget, beklenmez
         log(`Snapshot yazildi: ${day} (${fitted.trimmed ? 'kirpildi' : 'tam'})`);
         return true;
@@ -281,7 +286,9 @@ export async function restoreIfEmpty(uid) {
     _restoreBusy = true;
     try {
         if (!db || !uid) return false;
-        if (!isLocalEmpty()) return false;
+        // await ZORUNLU: isLocalEmpty async'tir; await'siz Promise (her zaman
+        // truthy) doner ve guard HIC calismaz -> her giriste yikici restore!
+        if (!(await isLocalEmpty())) return false;
 
         const list = await listSnapshots(uid);
         if (!list.length) return false;
@@ -292,7 +299,7 @@ export async function restoreIfEmpty(uid) {
         // Merge eklemelidir (union/max), restore yikicidir (replace) —
         // yikici yazma ONCESI bosluk kontrolu tekrarlanir: artik doluysa
         // restore iptal, merge kazansin (yeni veri ezilmesin).
-        if (!isLocalEmpty()) return false;
+        if (!(await isLocalEmpty())) return false;
 
         const parsed = JSON.parse(latest.payload);
         const check = validateBackup(parsed);

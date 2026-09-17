@@ -6,6 +6,7 @@ import { useToast } from '../ui/ToastProvider';
 import { error as logError } from '../../utils/logger';
 import { clearAllGymAppStorage } from '../../hooks/useLocalStorage';
 import { auth, db } from '../../services/firebase';
+import { levelFromTotalXp } from '../../utils/levelSystem';
 
 // Admin parolasinin SHA-256 hex hash'i (.env: VITE_ADMIN_PASSWORD_HASH).
 // Parola kendisi degil hash'i bundle'a gomulur; duz metin sifre expose edilmez.
@@ -135,19 +136,13 @@ function AdminPanel({
     };
 
     const handleSimulateXP = () => {
-        const calculateRequiredXP = (level) => level * 500 + (level * 100);
+        // Tek kaynak: utils/levelSystem.js (taban 500, %8 buyume). Eskiden
+        // buradaki yerel dogrusal formul (level*600) gercek seviye egrisinden
+        // sapan seviyeler uretiyordu.
         let newTotalXP = userXP + Number(simulateXP);
-        let currentLvl = userLevel;
-        let currentRequiredXP = calculateRequiredXP(currentLvl);
-
-        while (newTotalXP >= currentRequiredXP) {
-            newTotalXP -= currentRequiredXP;
-            currentLvl += 1;
-            currentRequiredXP = calculateRequiredXP(currentLvl);
-        }
-
-        setUserLevel(currentLvl);
-        setUserXP(newTotalXP);
+        const { level, xp } = levelFromTotalXp(newTotalXP);
+        setUserLevel(level);
+        setUserXP(xp);
 
         // Jeton da verelim
         const earnedCoins = Math.max(1, Math.round(Number(simulateXP) * 0.1));
@@ -156,7 +151,7 @@ function AdminPanel({
         toast.success(t('admin_simulate_success', {
             xp: simulateXP,
             coins: earnedCoins,
-            level: currentLvl
+            level: level
         }));
     };
 

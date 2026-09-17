@@ -173,6 +173,33 @@ test('sabitler: SK tasarimi degerleri', () => {
     assert.equal(KEEP_DAYS, 7);                    // döner pencere
 });
 
+// ---------- REGRESYON: await eksikligi (adversarial review bulgusu #1) ----------
+// restoreIfEmpty icindeki isLocalEmpty cagrilari await'siz olursa Promise
+// (her zaman truthy) doner ve guard hic calismaz -> her giriste yikici
+// restore. Kaynak kodda await'lerin varligini statik olarak dogrulariz.
+test('REGRESYON: restoreIfEmpty isLocalEmpty cagrilari await ile', () => {
+    const src = fs.readFileSync('src/utils/snapshotScheduler.js', 'utf8');
+    const body = src.slice(src.indexOf('async function restoreIfEmpty'));
+    const awaited = (body.match(/await isLocalEmpty\(\)/g) || []).length;
+    const bare = (body.match(/(?<!await )(?<!\w)\bisLocalEmpty\(\)/g) || []).length;
+    assert.ok(awaited >= 2, `await'li cagri bekleniyor (>=2), bulundu: ${awaited}`);
+    // await'siz (bare) cagri yalnizca fonksiyon tanimindan gelebilir; tanim
+    // satirinda 'function' on eki oldugu icin yukaridaki lookbehind onu da
+    // yakalar — bu yuzden bare <= 1 toleransi (tanim satiri) koyuldu.
+    assert.ok(bare <= 1, `await'siz isLocalEmpty cagrisi: ${bare} (tanim satiri haric olmamali)`);
+});
+
+// ---------- REGRESYON: i18n tek parantez interpolasyonu (review bulgusu #2) ----------
+test('REGRESYON: i18n degerlerinde {{param}} formati (tek parantez yok)', () => {
+    for (const p of ['src/i18n/tr.js', 'src/i18n/en.js']) {
+        const content = fs.readFileSync(p, 'utf8');
+        // anahtar: "deger {param} devam" — {{}} disinda kalan tek parantezli placeholder
+        const bad = [...content.matchAll(/^\s{4}(\w+):\s*"[^"]*([^{}]|^)\{(\w+)\}([^{}]|$)[^"]*"/gm)]
+            .filter(m => !m[0].includes(`{{${m[3]}}}`));
+        assert.equal(bad.length, 0, `${p}: tek parantezli placeholder -> ${bad.map(m => m[1]).join(', ')}`);
+    }
+});
+
 // ---------- rules dosyasi ----------
 test('firestore.rules: snapshots blogu sahibi + sema korumali', () => {
     const rules = fs.readFileSync('firestore.rules', 'utf8');
