@@ -18,6 +18,7 @@ import { compressImage } from '../../utils/imageCompressor';
 import PhotoGalleryModal from './PhotoGalleryModal';
 import CloudSyncCard from '../dashboard/CloudSyncCard';
 import BackupCard from './BackupCard';
+import CloudSnapshotCard from './CloudSnapshotCard';
 import ShareCard from './ShareCard';
 import InviteFriends from './InviteFriends';
 import FriendsCard from './FriendsCard';
@@ -922,6 +923,9 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
 
                 {/* Yedekleme: indir / geri yukle */}
                 <BackupCard />
+
+                {/* Bulut Snapshot: oto-yedek + yedeklerden yukle (girisli) */}
+                <CloudSnapshotCard />
 
             </div>
 

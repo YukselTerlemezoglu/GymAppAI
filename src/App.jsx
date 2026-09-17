@@ -73,11 +73,52 @@ function AppContent() {
     try {
       const unsubscribe = onAuthStateChanged(auth, (user) => {
         setCurrentUser(user);
+        // SK-4: giris sonrasi lokal veri BOSsa otomatik snapshot restore.
+        // Sadece bu kosulda; diger durumlarda manuel "Yedeklerden Yukle".
+        // HIDRASYON BEKLENIR: isLocalEmpty, IDB hidrasyonu dolmadan LS'e
+        // bakarsa yanlis "bos" gorur ve taze IDB verisini eski snapshotla
+        // ezebilir. useAllStorageHydrated latch'i zaten atmissa aninda cozulur.
+        if (user && storageHydrated) {
+          import('./utils/snapshotScheduler').then(({ restoreIfEmpty }) =>
+            restoreIfEmpty(user.uid).catch(() => { /* sessiz */ })
+          ).catch(() => { /* sessiz */ });
+        }
       });
       return () => unsubscribe();
     } catch (err) {
       logError("Firebase auth error:", err);
     }
+  }, [storageHydrated]);
+
+  // Hidrasyon giristen SONRA bittiyse (auth ilk, hidrasyon sonra): ayni
+  // restore kosulu burada da denenir — yoksa kullanicinin girisi
+  // hidrasyonu beklerken restore hic tetiklenmezdi.
+  useEffect(() => {
+    if (!storageHydrated) return;
+    const uid = auth?.currentUser?.uid;
+    if (!uid) return;
+    import('./utils/snapshotScheduler').then(({ restoreIfEmpty }) =>
+      restoreIfEmpty(uid).catch(() => { /* sessiz */ })
+    ).catch(() => { /* sessiz */ });
+  }, [storageHydrated]);
+
+  // SK-1: oto-yedek — uygulama gizlenince/kapaninca snapshot dene (throttle'li,
+  // fire-and-forget). pagehide iOS Safari icin yedek tetikleyicidir.
+  useEffect(() => {
+    const onHidden = (e) => {
+      if (e.type === 'visibilitychange' && document.visibilityState !== 'hidden') return;
+      const uid = auth?.currentUser?.uid;
+      if (!uid) return;
+      import('./utils/snapshotScheduler').then(({ maybeTakeSnapshot }) =>
+        maybeTakeSnapshot(uid)
+      ).catch(() => { /* sessiz */ });
+    };
+    document.addEventListener('visibilitychange', onHidden);
+    window.addEventListener('pagehide', onHidden);
+    return () => {
+      document.removeEventListener('visibilitychange', onHidden);
+      window.removeEventListener('pagehide', onHidden);
+    };
   }, []);
 
   // SOSYAL HAFTALIK OZET: dost listesi + haftalik skorlari (dashboard karti).

@@ -16,6 +16,32 @@ service cloud.firestore {
     match /users/{userId} {
       allow read, write: if request.auth != null
                           && request.auth.uid == userId;
+
+      // Bulut Snapshot (snapshotScheduler.js): users/{uid}/snapshots/{gun}
+      // SK-4b: sadece sahibi okur/yazar/siler.
+      // SK-4f: yazma aninda sema kontrolu — payload string, day YYYY-MM-DD,
+      // createdAt ISO string, bytes/trimmedHistory sayisal sinirli. Gun
+      // anahtari (docId) payload.icindeki day ile ayni olmali.
+      match /snapshots/{day} {
+        allow read, delete: if request.auth != null
+                            && request.auth.uid == userId;
+
+        allow create, update: if request.auth != null
+                              && request.auth.uid == userId
+                              && day == request.resource.data.day
+                              && request.resource.data.day is string
+                              && request.resource.data.day.size() == 10
+                              && request.resource.data.payload is string
+                              && request.resource.data.payload.size() <= 800000
+                              && request.resource.data.createdAt is string
+                              && request.resource.data.createdAt.size() <= 40
+                              && request.resource.data.bytes is int
+                              && request.resource.data.bytes >= 0
+                              && request.resource.data.bytes <= 1000000
+                              && request.resource.data.trimmedHistory is int
+                              && request.resource.data.trimmedHistory >= 0
+                              && request.resource.data.trimmedHistory <= 100000;
+      }
     }
 
     // ---------------------------------------------------------------
