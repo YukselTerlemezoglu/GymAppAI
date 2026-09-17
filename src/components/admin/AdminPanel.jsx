@@ -5,6 +5,7 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import { useToast } from '../ui/ToastProvider';
 import { error as logError } from '../../utils/logger';
 import { clearAllGymAppStorage } from '../../hooks/useLocalStorage';
+import { auth, db } from '../../services/firebase';
 
 // Admin parolasinin SHA-256 hex hash'i (.env: VITE_ADMIN_PASSWORD_HASH).
 // Parola kendisi degil hash'i bundle'a gomulur; duz metin sifre expose edilmez.
@@ -178,12 +179,45 @@ function AdminPanel({
             if (setSavedAiProgram) setSavedAiProgram(null);
             if (setUnlockedThemes) setUnlockedThemes(['default']);
             if (setActiveTheme) setActiveTheme('default');
+
+            // BULUT TEMIZLIGI (girisliyse): hard reset yalnizca lokali silerse,
+            // giris aninda merge-pull (cloudSync) ve auto-restore (snapshot)
+            // eski veriyi geri getirirdi — reset bosuna olurdu. Uc kaynak da
+            // ayni anda temizlenir:
+            //   1) users/{uid} senkron dokumani (merge-pull kaynagi)
+            //   2) users/{uid}/snapshots/* (auto-restore kaynagi)
+            //   3) lokal localStorage + IndexedDB
+            const uid = auth?.currentUser?.uid;
+            const cloudPromise = (async () => {
+                if (!uid) return { sync: false, snaps: false };
+                let sync = false, snaps = false;
+                try {
+                    const { deleteDoc, doc: docRef } = await import('firebase/firestore');
+                    await deleteDoc(docRef(db, 'users', uid));
+                    sync = true;
+                } catch (err) {
+                    logError('Hard reset: bulut senkron dokumani silinemedi:', err);
+                }
+                try {
+                    const { deleteAllSnapshots } = await import('../../utils/snapshotScheduler');
+                    snaps = await deleteAllSnapshots(uid);
+                } catch (err) {
+                    logError('Hard reset: snapshotlar silinemedi:', err);
+                }
+                return { sync, snaps };
+            })();
+
             // GERCEK hard reset: localStorage + IndexedDB (birincil depo) temizlenir.
             // await edilir ki IndexedDB temizligi reload'dan once tamamlansin.
             clearGymAppStorage();
-            clearAllGymAppStorage().finally(() => {
-                toast.success(t('admin_full_reset_success'));
-                setTimeout(() => window.location.reload(), 900);
+            Promise.all([clearAllGymAppStorage(), cloudPromise]).then(([, cloud]) => {
+                const cloudOk = !uid || (cloud.sync && cloud.snaps);
+                if (uid && !cloudOk) {
+                    toast.warning(t('admin_full_reset_cloud_fail'));
+                } else {
+                    toast.success(t('admin_full_reset_success'));
+                }
+                setTimeout(() => window.location.reload(), 1200);
             });
         }
     };

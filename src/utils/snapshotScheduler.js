@@ -25,6 +25,13 @@ const SNAP_LAST_KEY = 'gym_app_snap_last';
 const SNAP_FINGERPRINT_KEY = 'gym_app_snap_fp';
 const SNAP_TOAST_DATE_KEY = 'gym_app_snap_toast_date';
 
+// Hard reset gibi "bulut + lokal ayni anda temizlenir" akislarda snapshot
+// almayi gecici olarak askiya alan bayrak. Aksi halde reset penceresinde
+// (IDB henuz silinmemisken) arka plana gecilirse takeSnapshot eski IDB
+// verisiyle snapshot yazip az once silinen yedegi yeniden olustururdu.
+let _snapshotHold = false;
+export function holdSnapshots(v) { _snapshotHold = !!v; }
+
 const THROTTLE_MS = 60 * 60 * 1000;       // SK-1: 1 yedek/saat
 const MAX_SNAPSHOT_BYTES = 800_000;       // SK-5: Firestore 1MB limit ihtiyati
 // NOT: Firestore rules string.size() UTF-8 bayt sayar; JS .length UTF-16
@@ -129,6 +136,7 @@ const dayKey = (d) => {
  */
 export async function takeSnapshot(uid, { force = false } = {}) {
     if (!db || !uid) return false;
+    if (_snapshotHold) return false; // reset/temizlik penceresi: yedek yok
     if (lsGet(SNAP_ENABLED_KEY) === '0') return false; // kullanici kapatmis
 
     // SK-1 throttle: son yedekten beri 1 saat gecmediyse ve zorla istenmediyse atla
@@ -187,6 +195,7 @@ export async function takeSnapshot(uid, { force = false } = {}) {
  */
 export function maybeTakeSnapshot(uid) {
     if (!uid) return;
+    if (_snapshotHold) return;
     if (lsGet(SNAP_ENABLED_KEY) === '0') return;
     // SK-1: throttle kosulu takeSnapshot icinde de var; burada hizli cikis
     // icin tekrar kontrol edilir (buildBackup maliyetinden sakinarak)
@@ -342,3 +351,39 @@ export async function restoreFromSnapshot(uid, day) {
 export const isSnapshotEnabled = () => lsGet(SNAP_ENABLED_KEY) !== '0';
 export const setSnapshotEnabled = (v) => lsSet(SNAP_ENABLED_KEY, v ? '1' : '0');
 export const getLastSnapshotTs = () => Number(lsGet(SNAP_LAST_KEY) || 0);
+
+/**
+ * HARD RESET DESTEĞI: kullanicinin TUM snapshotlarini buluttan siler ve
+ * lokal snapshot meta'larini (throttle/parmak izi) sifirlar.
+ * Hard reset sonrasi auto-restore'un eski yedeki geri getirmesini
+ * engellemek icin kullanilir. Hata durumunda sessizce false doner.
+ * @returns {Promise<boolean>} tamamlandi mi
+ */
+export async function deleteAllSnapshots(uid) {
+    // Snapshot almayi askiya al: temizlik penceresinde arka plana gecilirse
+    // eski IDB verisiyle yeni yedek yazilmasin. finally ile serbest birakilir.
+    _snapshotHold = true;
+    try {
+        if (!db || !uid) return false;
+        const snapCol = collection(db, 'users', uid, 'snapshots');
+        const snap = await getDocs(snapCol);
+        if (!snap.empty) {
+            const batch = writeBatch(db);
+            snap.forEach((d) => batch.delete(d.ref));
+            await batch.commit();
+        }
+        // lokal meta temizligi: throttle saati + parmak izi sifirlanir ki
+        // yeni donemde ilk arka plana geciste temiz yedek alinsin
+        try {
+            localStorage.removeItem(SNAP_LAST_KEY);
+            localStorage.removeItem(SNAP_FINGERPRINT_KEY);
+        } catch { /* kota/erisim */ }
+        log('deleteAllSnapshots: tum bulut snapshotlari silindi');
+        return true;
+    } catch (err) {
+        warn('deleteAllSnapshots hatasi:', err?.code || err?.message);
+        return false;
+    } finally {
+        _snapshotHold = false;
+    }
+}

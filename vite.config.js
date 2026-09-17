@@ -11,6 +11,12 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.js',
+      // Ana bundle 2 MiB'i astigi icin varsayilan precache limiti yetmiyor;
+      // limit asilirsa ana JS precache DISINDA kalir ve offline calisma kirilir.
+      // 3 MiB: mevcut bundle (2.16 MB) + buyume payi.
+      injectManifest: {
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024
+      },
       includeAssets: ['favicon-64.png', 'apple-touch-icon.png', 'icon.svg'],
       manifest: {
         name: 'GymApp AI - AI Powered Workout Manager',
