@@ -62,6 +62,23 @@ function shade(hex, factor) {
 // Kisa etiket: deger bazli, TR/EN ayni format; dil destegi icin isEn hazir
 const shortLabel = (seg, isEn) => (isEn ? seg.label_en : seg.label_tr) || seg.label_tr;
 
+// Uzun etiket (or. "🎰 JACKPOT") dis halkadan tasmadan sigsin.
+// Metin yaricap boyunca akar; baslangic yari capi tahmini genislige gore iceri cekilir.
+function textLayout(txt, flip) {
+    const glyphs = [...txt];
+    const fontSize = glyphs.length >= 8 ? 7.5 : 9;
+    let width = 0;
+    for (const g of glyphs) {
+        width += g.codePointAt(0) > 0x2fff ? fontSize * 1.25 : fontSize * 0.68;
+    }
+    const outer = R_OUTER - 14;
+    const inner = 36;
+    const r = flip
+        ? Math.min(outer, Math.max(inner + 6, inner + width))
+        : Math.max(inner, outer - width);
+    return { r, fontSize };
+}
+
 function WheelSvg({ angle, spinning, isEn, onInfo }) {
     const angles = useMemo(() => segmentAngles(), []);
 
@@ -78,6 +95,9 @@ function WheelSvg({ angle, spinning, isEn, onInfo }) {
                             <stop offset="0%" stopColor="#00c3ff" />
                             <stop offset="100%" stopColor="#c06bff" />
                         </linearGradient>
+                        <clipPath id="wheelLabelClip">
+                            <circle cx={CX} cy={CY} r={R_OUTER - 6} />
+                        </clipPath>
                     </defs>
 
                     {/* Dis halka: tek tutarli gradyan cerceve (kenar uyumsuzlugu yok) */}
@@ -96,7 +116,7 @@ function WheelSvg({ angle, spinning, isEn, onInfo }) {
                         Dilim genisliginden bagimsiz (uzun eksen boyunca akar) -> tasma imkansiz.
                         Sol yaridaki etiketler 180 dondurulup disaridan ice okunur (tercihen okunabilir).
                         Donuste yumusakca silinir; durunca NADIRLIK RENGINDE geri gelir. */}
-                    <motion.g animate={{ opacity: spinning ? 0 : 1 }} transition={{ duration: spinning ? 0.3 : 0.6 }}>
+                    <motion.g clipPath="url(#wheelLabelClip)" animate={{ opacity: spinning ? 0 : 1 }} transition={{ duration: spinning ? 0.3 : 0.6 }}>
                         {WHEEL_SEGMENTS.map((seg, i) => {
                             const a = angles[i];
                             const mid = a.mid;
@@ -105,13 +125,14 @@ function WheelSvg({ angle, spinning, isEn, onInfo }) {
                             // Sol yarim kusak: etiket 180 doner ve DIS kenardan baslayip
                             // ice dogru akar -> harfler asla bas asagi durmaz, okunabilirlik korunur.
                             const flip = mid > 90 && mid < 270;
-                            const p = polar(CX, CY, flip ? 100 : 56, mid);
+                            const layout = textLayout(txt, flip);
+                            const p = polar(CX, CY, layout.r, mid);
                             const rot = mid - 90 + (flip ? 180 : 0);
                             return (
                                 <text
                                     key={i}
                                     x={p.x} y={p.y}
-                                    fontSize={9.5}
+                                    fontSize={layout.fontSize}
                                     fontWeight={700}
                                     fill={fill}
                                     stroke="rgba(0,0,0,0.6)" strokeWidth={2}

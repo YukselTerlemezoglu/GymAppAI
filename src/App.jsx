@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Bot, Activity, Wand2, Timer, PersonStanding, LayoutGrid } from 'lucide-react';
+import { Trophy, Bot, Activity, Wand2, Timer, PersonStanding, LayoutGrid, Dumbbell } from 'lucide-react';
 import useLocalStorage, { useAllStorageHydrated } from './hooks/useLocalStorage';
 import ErrorBoundary from './components/ErrorBoundary';
 import AICoachOnboarding from './components/aicoach/AICoachOnboarding';
@@ -1137,6 +1137,17 @@ function AppContent() {
                 transition={{ duration: 0.05 }}
               >
                 <PersonStanding size={20} /> {t('btn_mobility')}
+              </motion.button>
+
+              <motion.button
+                onClick={() => setShowCustomBuilder(true)}
+                className="neon-btn btn-accent"
+                style={{ background: 'rgba(0, 255, 136, 0.08)', borderColor: '#00ff88', color: '#00ff88', boxShadow: 'none', gridColumn: '1 / -1' }}
+                whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(0, 255, 136, 0.35)' }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.05 }}
+              >
+                <Dumbbell size={20} /> {t('btn_create_program')}
               </motion.button>
             </div>
 

@@ -32,6 +32,9 @@ function SavedProgramPreview({
                     <Trash2 size={14} /> {t('preview_delete_program')}
                 </button>
             </div>
+            {savedAiProgram.notes && (
+                <p style={{ margin: '-8px 0 12px 0', color: 'var(--text-muted)', fontSize: '0.78rem' }}>{savedAiProgram.notes}</p>
+            )}
             <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
                 <div className="json-program-preview" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.01)', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
                     {(savedAiProgram?.days || []).map((day, dIdx) => (
@@ -71,12 +74,22 @@ function SavedProgramPreview({
                                     )
                                 )}
                             </div>
+                            {!day.isRestDay && day.focus && (
+                                <p style={{ margin: '-0.4rem 0 0.8rem 0', color: 'var(--text-muted)', fontSize: '0.75rem' }}>{day.focus}</p>
+                            )}
                             {!day.isRestDay && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                                 {(day?.exercises || []).map((ex, eIdx) => (
                                     <div key={eIdx} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.8rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', flex: '1 1 200px', gap: '8px' }}>
-                                            <span style={{ color: 'var(--text-light)', fontWeight: '500' }}>{ex.name}</span>
+                                            <span style={{ color: 'var(--text-light)', fontWeight: '500' }}>
+                                                {ex.name}
+                                                {(ex.rest || ex.rpe || ex.notes) && (
+                                                    <span style={{ display: 'block', fontWeight: 400, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                                        {[ex.rest && `${ex.rest}s`, ex.rpe && `RPE ${ex.rpe}`, ex.notes].filter(Boolean).join(' · ')}
+                                                    </span>
+                                                )}
+                                            </span>
                                             <button
                                                 onClick={() => setSelectedExerciseForModal(ex.name)}
                                                 style={{ background: 'transparent', border: 'none', color: '#00c3ff', display: 'flex', alignItems: 'center', cursor: 'pointer', padding: 0 }}
