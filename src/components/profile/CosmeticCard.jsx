@@ -47,11 +47,16 @@ function CosmeticCard({ ownedCosmetics, activeCosmetics, setActiveCosmetics, onO
             </h3>
 
             {ownedTotal === 0 ? (
-                <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', margin: '0 0 0.8rem' }}>
-                    {t('cos_empty')}{' '}
-                    <button onClick={onOpenShop} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: '0.85rem' }}>
-                        {t('profile_open_shop')}
-                    </button>
+                <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', margin: 0 }}>
+                    {t('cos_empty')}
+                    {onOpenShop && (
+                        <>
+                            {' '}
+                            <button onClick={onOpenShop} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: '0.85rem' }}>
+                                {t('profile_open_shop')}
+                            </button>
+                        </>
+                    )}
                 </p>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>

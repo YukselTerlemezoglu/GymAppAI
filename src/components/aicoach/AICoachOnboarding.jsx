@@ -7,12 +7,11 @@ import { error as logError } from '../../utils/logger';
 import { normalizeAiProgram } from '../../utils/aiNormalizer';
 
 
-function AICoachOnboarding({ setSavedAiProgram, setCurrentView }) {
+function AICoachOnboarding({ setSavedAiProgram, setCurrentView, onSaved }) {
     const { t, lang } = useTranslation();
     const { toast } = useToast();
     const [aiGoal, setAiGoal] = useState('');
     const [aiDays, setAiDays] = useState('');
-    const [aiDuration, setAiDuration] = useState('');
     const [aiEquipment, setAiEquipment] = useState('');
     const [aiLevel, setAiLevel] = useState('');
     const [aiCardio, setAiCardio] = useState('');
@@ -22,7 +21,7 @@ function AICoachOnboarding({ setSavedAiProgram, setCurrentView }) {
 
     const handleGenerateProgram = async (e) => {
         e.preventDefault();
-        if (!aiGoal || !aiDays || !aiDuration || !aiEquipment || !aiLevel || !aiCardio) {
+        if (!aiGoal || !aiDays || !aiEquipment || !aiLevel || !aiCardio) {
             toast.warning(t('coach_error_required'));
             return;
         }
@@ -35,7 +34,6 @@ function AICoachOnboarding({ setSavedAiProgram, setCurrentView }) {
             const parsedData = await generateProgram({
                 goal: aiGoal,
                 days: aiDays,
-                duration: aiDuration,
                 equipment: aiEquipment,
                 level: aiLevel,
                 cardio: aiCardio,
@@ -83,6 +81,7 @@ function AICoachOnboarding({ setSavedAiProgram, setCurrentView }) {
     const saveProgramToDashboard = () => {
         if (aiResponseJson) {
             setSavedAiProgram(aiResponseJson);
+            onSaved?.();
             setCurrentView('dashboard');
         }
     };
@@ -127,15 +126,6 @@ function AICoachOnboarding({ setSavedAiProgram, setCurrentView }) {
                 </div>
 
                 <div className="metrics-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                    <div className="input-group">
-                        <label>{t('coach_duration_label')}</label>
-                        <select className="neon-input" value={aiDuration} onChange={(e) => setAiDuration(e.target.value)} required>
-                            <option value="">{lang === 'tr' ? 'Seçiniz...' : 'Select...'}</option>
-                            <option value="30-45 Dakika">{lang === 'tr' ? '30-45 Dakika' : '30-45 Minutes'}</option>
-                            <option value="45-60 Dakika">{lang === 'tr' ? '45-60 Dakika' : '45-60 Minutes'}</option>
-                            <option value="60-90 Dakika">{lang === 'tr' ? '60-90 Dakika' : '60-90 Minutes'}</option>
-                        </select>
-                    </div>
                     <div className="input-group">
                         <label>{t('coach_equipment_label')}</label>
                         <select className="neon-input" value={aiEquipment} onChange={(e) => setAiEquipment(e.target.value)} required>

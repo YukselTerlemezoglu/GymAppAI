@@ -27,9 +27,11 @@ import CosmeticCard from './CosmeticCard';
 import { ensureProfile, publishProfile } from '../../utils/friends';
 import { computeWeekStats } from '../../utils/duel';
 import { localDayKey } from '../../utils/dateKey';
+import { navyBodyFat, visualBodyFat, visualOptions } from '../../utils/bodyFat';
 import { error as logError } from '../../utils/logger';
 
-function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, weeklyGoal = 3, setWeeklyGoal, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName, activeBuddyId = null, buddyCollection = {}, setBuddyCollection, activeCosmetics = {}, setActiveCosmetics, ownedCosmetics = [], inventory = {}, setInventory, onOpenShop, onBuddyEvolved, setUserCoins, minimalMode = false, setMinimalMode }) {
+function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, workoutHistory = [], streak = 0, weeklyGoal = 3, setWeeklyGoal, pinnedBadges = [], setPinnedBadges, unlockedBadges = [], userName = 'Athlete', setUserName, activeBuddyId = null, buddyCollection = {}, setBuddyCollection, activeCosmetics = {}, setActiveCosmetics, ownedCosmetics = [], inventory = {}, setInventory, onBuddyEvolved, setUserCoins, minimalMode = false, setMinimalMode, variant = 'profile' }) {
+    const isMetrics = variant === 'metrics';
     const { t, lang, setLang } = useTranslation();
     const { toast, confirmDialog, haptic } = useToast();
     const [nameDraft, setNameDraft] = useState(userName);
@@ -108,6 +110,19 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
         arms: '',
         legs: '',
         shoulders: ''
+    });
+    const [fatOpen, setFatOpen] = useState(false);
+    const [fatMode, setFatMode] = useState('tape');
+    const [visualId, setVisualId] = useState('');
+    const [pendingEstimate, setPendingEstimate] = useState(null);
+    const [tape, setTape] = useState(() => {
+        let sex = 'male';
+        let height = '';
+        try {
+            sex = localStorage.getItem('gym_app_sex') || 'male';
+            height = localStorage.getItem('gym_app_height') || '';
+        } catch { /* gizli mod */ }
+        return { sex, height, neck: '', waist: '', hip: '' };
     });
 
     const [chartDataKey, setChartDataKey] = useState('weight');
@@ -218,17 +233,19 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
     const handleSaveMetrics = async (e) => {
         e.preventDefault();
 
-        if (!formData.weight && !formData.bodyFat && !formData.chest && !formData.waist && !formData.arms && !formData.legs && !formData.shoulders && !selectedPhoto) {
+        if (!formData.weight && !formData.bodyFat && !pendingEstimate && !formData.chest && !formData.waist && !formData.arms && !formData.legs && !formData.shoulders && !selectedPhoto) {
             toast.warning(t('body_error_empty'));
             return;
         }
 
         const newMetricId = Date.now().toString();
+        const measuredFat = formData.bodyFat ? parseFloat(formData.bodyFat) : null;
         const newMetric = {
             id: newMetricId,
             date: formData.date,
             weight: formData.weight ? parseFloat(formData.weight) : null,
-            bodyFat: formData.bodyFat ? parseFloat(formData.bodyFat) : null,
+            bodyFat: measuredFat,
+            bodyFatEstimate: measuredFat ? null : pendingEstimate,
             chest: formData.chest ? parseFloat(formData.chest) : null,
             waist: formData.waist ? parseFloat(formData.waist) : null,
             arms: formData.arms ? parseFloat(formData.arms) : null,
@@ -257,6 +274,7 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
 
         setSelectedPhoto(null);
         revokePreview();
+        setPendingEstimate(null);
         toast.success(t('saved_success'));
     };
 
@@ -309,23 +327,24 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
             <header className="top-bar fade-in" style={{ animationDelay: '0s', flexDirection: 'column', alignItems: 'flex-start', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem' }}>
                 <div style={{ width: '100%' }}>
                     <h2 style={{ color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.8rem', fontSize: '1.8rem', margin: '0 0 0.5rem 0' }}>
-                        <TrendingUp size={28} /> {t('profile_title')}
+                        <TrendingUp size={28} /> {isMetrics ? t('body_section_title') : t('profile_title')}
                     </h2>
-                    <p style={{ color: 'var(--text-light)', margin: 0, fontSize: '0.9rem' }}>{t('profile_subtitle')}</p>
+                    {!isMetrics && <p style={{ color: 'var(--text-light)', margin: 0, fontSize: '0.9rem' }}>{t('profile_subtitle')}</p>}
                 </div>
             </header>
 
             <div className="workout-tracker-list fade-in" style={{ animationDelay: '0.1s', display: 'flex', flexDirection: 'column', gap: '2rem', paddingTop: '1.5rem', paddingBottom: '3rem' }}>
+                {!isMetrics && <div style={{ display: 'contents' }}>
 
                 {/* 0. GIRIS YOKSA: Bulut/Kayit CTA'si EN USTE — yeni kullanici
                     hesap olusturmayi gormezse verilerini kaybetme riskini
                     anlamaz; girisliyken bu kart alta (yedekleme yanina) iner. */}
                 {!currentUser && (
-                    <CloudSyncCard currentUser={currentUser} onLoginClick={onLoginClick} />
+                    <div style={{ order: 30 }}><CloudSyncCard currentUser={currentUser} onLoginClick={onLoginClick} /></div>
                 )}
 
                 {/* 1. SEVİYE VE XP BARI (Gamification v2) */}
-                <div className="glass-card slide-in" style={{ border: '1px solid rgba(0, 195, 255, 0.2)', background: 'linear-gradient(145deg, rgba(0,0,0,0.6) 0%, rgba(0, 195, 255, 0.05) 100%)' }}>
+                <div className="glass-card slide-in" style={{ order: 10, border: '1px solid rgba(0, 195, 255, 0.2)', background: 'linear-gradient(145deg, rgba(0,0,0,0.6) 0%, rgba(0, 195, 255, 0.05) 100%)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                         <h3 style={{ margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.3rem' }}>
                             <span style={{ fontSize: '1.5rem' }}>{currentRank.icon}</span>
@@ -384,13 +403,13 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                 </div>
 
                 {/* 0a. DOST VITRINI: aktif dost kapsulu + evre (Steam profili tarzi) */}
-                <div className="glass-card slide-in" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div className="glass-card slide-in" style={{ order: 12, display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <BuddyCapsule
                         buddyId={activeBuddyId}
                         xp={buddyCollection?.[activeBuddyId]?.xp || 0}
                         size={72}
                         frameCosmeticId={getActive(activeCosmetics, ownedCosmetics, 'frame')?.id}
-                        onClick={onOpenShop}
+                        onClick={undefined}
                     />
                     <div style={{ flex: 1, minWidth: 0 }}>
                         {activeBuddyId && buddyCollection?.[activeBuddyId] ? (
@@ -416,14 +435,14 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                             })()
                         ) : (
                             <div style={{ color: 'var(--text-light)', fontSize: '0.85rem' }}>
-                                {t('profile_no_buddy')} <button onClick={onOpenShop} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: '0.85rem' }}>{t('profile_open_shop')}</button>
+                                {t('profile_no_buddy')}
                             </div>
                         )}
                     </div>
-                    <button onClick={onOpenShop} className="neon-btn-secondary" style={{ padding: '8px 12px', fontSize: '0.8rem', flexShrink: 0 }}>
-                        🥚 {t('shop_tab_buddy')}
-                    </button>
                 </div>
+
+                </div>}
+                {isMetrics && <div style={{ display: 'contents' }}>
 
                 {/* 3. Form Section */}
                 <div className="glass-card slide-in" style={{ animationDelay: '0.2s' }}>
@@ -450,8 +469,71 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                             <div className="input-group" style={{ marginBottom: 0 }}>
                                 <label>{t('body_fat_label')}</label>
                                 <input type="number" step="0.1" name="bodyFat" className="neon-input" placeholder={t('body_fat_placeholder')} value={formData.bodyFat} onChange={handleInputChange} />
+                                <button type="button" onClick={() => setFatOpen((v) => !v)} style={{ marginTop: 6, background: 'none', border: 'none', color: '#00c3ff', cursor: 'pointer', padding: 0, fontSize: '0.78rem' }}>
+                                    {t('bf_unknown')}
+                                </button>
                             </div>
                         </div>
+                        {fatOpen && (
+                            <div style={{ background: 'rgba(0,195,255,0.06)', border: '1px solid rgba(0,195,255,0.25)', borderRadius: 12, padding: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+                                <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t('bf_est_note')}</p>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <button type="button" onClick={() => setFatMode('tape')} className="neon-btn-secondary" style={{ flex: 1, borderColor: fatMode === 'tape' ? '#00c3ff' : undefined }}>{t('bf_tape')}</button>
+                                    <button type="button" onClick={() => setFatMode('visual')} className="neon-btn-secondary" style={{ flex: 1, borderColor: fatMode === 'visual' ? '#00c3ff' : undefined }}>{t('bf_visual')}</button>
+                                </div>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    {['male', 'female'].map((sx) => (
+                                        <button key={sx} type="button" onClick={() => setTape((p) => ({ ...p, sex: sx }))} className="neon-btn-secondary" style={{ flex: 1, borderColor: tape.sex === sx ? '#00c3ff' : undefined }}>
+                                            {t(sx === 'male' ? 'mc_male' : 'mc_female')}
+                                        </button>
+                                    ))}
+                                </div>
+                                {fatMode === 'tape' ? (
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                        <input className="neon-input" placeholder={t('bf_height')} value={tape.height} onChange={(e) => setTape((p) => ({ ...p, height: e.target.value }))} />
+                                        <input className="neon-input" placeholder={t('bf_neck')} value={tape.neck} onChange={(e) => setTape((p) => ({ ...p, neck: e.target.value }))} />
+                                        <input className="neon-input" placeholder={t('bf_waist')} value={tape.waist} onChange={(e) => setTape((p) => ({ ...p, waist: e.target.value }))} />
+                                        {tape.sex === 'female' && (
+                                            <input className="neon-input" placeholder={t('bf_hip')} value={tape.hip} onChange={(e) => setTape((p) => ({ ...p, hip: e.target.value }))} />
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                        {visualOptions(tape.sex).map((opt) => (
+                                            <button key={opt.id} type="button" onClick={() => setVisualId(opt.id)} className="neon-btn-secondary" style={{ textAlign: 'left', borderColor: visualId === opt.id ? '#00c3ff' : undefined }}>
+                                                {t(`bf_visual_${opt.id}`)}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                                <button
+                                    type="button"
+                                    className="neon-btn"
+                                    onClick={() => {
+                                        const est = fatMode === 'tape'
+                                            ? navyBodyFat(tape)
+                                            : visualBodyFat(tape.sex, visualId);
+                                        if (!est) {
+                                            toast.warning(t('bf_need_more'));
+                                            return;
+                                        }
+                                        try {
+                                            localStorage.setItem('gym_app_sex', tape.sex);
+                                            if (tape.height) localStorage.setItem('gym_app_height', String(tape.height));
+                                        } catch { /* gizli mod */ }
+                                        setPendingEstimate(est);
+                                        setFormData((prev) => ({ ...prev, bodyFat: '' }));
+                                    }}
+                                >
+                                    {t('bf_apply')}
+                                </button>
+                                {pendingEstimate && (
+                                    <p style={{ margin: 0, color: '#00ff88', fontSize: '0.85rem' }}>
+                                        {t('bf_result', { mid: pendingEstimate.mid, low: pendingEstimate.low, high: pendingEstimate.high })}
+                                    </p>
+                                )}
+                            </div>
+                        )}
 
                         <div className="metrics-row" style={{ marginBottom: '1rem' }}>
                             <div className="input-group" style={{ marginBottom: 0 }}>
@@ -542,7 +624,8 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                                 onChange={(e) => setChartDataKey(e.target.value)}
                             >
                                 <option value="weight">{t('body_weight')} (kg)</option>
-                                <option value="bodyFat">{t('body_fat')} (%)</option>
+                                <option value="bodyFat">{t('body_fat')} · {t('bf_measured')}</option>
+                                <option value="bodyFatEstimate">{t('body_fat')} · {t('bf_estimated')}</option>
                                 <option value="shoulders">{t('body_shoulders')} (cm)</option>
                                 <option value="chest">{t('body_chest')} (cm)</option>
                                 <option value="waist">{t('body_waist')} (cm)</option>
@@ -553,7 +636,7 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
 
                         <div style={{ width: '100%', height: 250, background: 'rgba(0,0,0,0.2)', borderRadius: '12px', padding: '10px 10px 10px 0' }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={bodyMetrics}>
+                                <LineChart data={bodyMetrics.map((m) => ({ ...m, bodyFatEstimate: m.bodyFatEstimate?.mid ?? null }))}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                                     <XAxis
                                         dataKey="date"
@@ -626,7 +709,8 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                                         </span>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '0.8rem', color: 'var(--text-light)' }}>
                                             {metric.weight && <span style={{ background: 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: '4px' }}>{t('body_weight')}: {metric.weight}kg</span>}
-                                            {metric.bodyFat && <span style={{ background: 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: '4px' }}>{t('body_fat')}: %{metric.bodyFat}</span>}
+                                            {metric.bodyFat && <span style={{ background: 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: '4px' }}>{t('body_fat')}: %{metric.bodyFat} · {t('bf_measured')}</span>}
+                                            {!metric.bodyFat && metric.bodyFatEstimate && <span style={{ background: 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: '4px' }}>{t('body_fat')}: %{metric.bodyFatEstimate.low}–{metric.bodyFatEstimate.high} · {t('bf_estimated')}</span>}
                                             {metric.waist && <span style={{ background: 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: '4px' }}>{t('body_waist')}: {metric.waist}cm</span>}
                                             {metric.arms && <span style={{ background: 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: '4px' }}>{t('body_arms')}: {metric.arms}cm</span>}
                                             {metric.chest && <span style={{ background: 'rgba(0,0,0,0.5)', padding: '2px 6px', borderRadius: '4px' }}>{t('body_chest')}: {metric.chest}cm</span>}
@@ -657,8 +741,11 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                     </div>
                 )}
 
+                </div>}
+                {!isMetrics && <div style={{ display: 'contents' }}>
+
                 {/* 2. ROZETLER (Badges) VİTRİNİ */}
-                <div className="glass-card slide-in" style={{ animationDelay: '0.15s' }}>
+                <div className="glass-card slide-in" style={{ order: 20, animationDelay: '0.15s' }}>
                     <div
                         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
                         onClick={() => setIsBadgesExpanded(!isBadgesExpanded)}
@@ -763,6 +850,7 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                 </div>
 
                 {/* Arkadaslar + Lider Tablosu (gercek kisiler) */}
+                <div style={{ order: 40 }}>
                 <FriendsCard
                     currentUser={currentUser}
                     myCode={myFriendCode}
@@ -774,11 +862,15 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                     workoutHistory={workoutHistory}
                     setUserCoins={setUserCoins}
                 />
+                </div>
 
                 {/* Arkadas Davet Karti */}
+                <div style={{ order: 45 }}>
                 <InviteFriends userName={userName} myCode={myFriendCode} />
+                </div>
 
                 {/* Paylaşım Kartı */}
+                <div style={{ order: 82 }}>
                 <ShareCard
                     userName={userName}
                     userLevel={userLevel}
@@ -789,9 +881,10 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                     activeCosmetics={activeCosmetics}
                     ownedCosmetics={ownedCosmetics}
                 />
+                </div>
 
                 {/* 0. AYARLAR: isim + dil */}
-                <div className="glass-card slide-in">
+                <div className="glass-card slide-in" style={{ order: 14 }}>
                     <h3 style={{ color: '#fff', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Settings size={20} color="var(--accent-primary)" /> {t('set_title')}
                     </h3>
@@ -859,12 +952,14 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                                 >🇬🇧 EN</button>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        {/* Haftalik hedef: kac gun antrenman (dinlenme gunleri serbest) */}
-                        <div>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '6px' }}>
-                                <CalendarCheck size={14} /> {t('set_weekly_goal_label')}
-                            </label>
+                <div className="glass-card slide-in" style={{ order: 35 }}>
+                    <div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '6px' }}>
+                            <CalendarCheck size={14} /> {t('set_weekly_goal_label')}
+                        </label>
                             <div style={{ display: 'flex', gap: '5px', background: 'rgba(0,0,0,0.3)', padding: '5px', borderRadius: '10px', border: '1px solid var(--glass-border)', width: 'fit-content', flexWrap: 'wrap' }}>
                                 {[1, 2, 3, 4, 5, 6].map((n) => (
                                     <button
@@ -885,10 +980,10 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                             </div>
                             <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem', margin: '6px 0 0 0' }}>{t('set_weekly_goal_hint')}</p>
                         </div>
-                    </div>
                 </div>
 
                 {/* 0b. ENVANTER: satin alinan boostlar + kullanim */}
+                <div style={{ order: 80 }}>
                 <InventoryCard
                     inventory={inventory}
                     activeBuddyId={activeBuddyId}
@@ -904,29 +999,63 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                         setBuddyCollection(res.collection);
                         if (res.evolved) onBuddyEvolved?.(activeBuddyId, res.xp);
                     }}
-                    onOpenShop={onOpenShop}
                 />
+                </div>
 
                 {/* 0c. PROFIL OZELLESTIRME: kozmetikleri kusan/cikar */}
+                <div style={{ order: 85 }}>
                 <CosmeticCard
                     ownedCosmetics={ownedCosmetics}
                     activeCosmetics={activeCosmetics}
                     setActiveCosmetics={setActiveCosmetics}
-                    onOpenShop={onOpenShop}
                 />
+                </div>
 
                 {/* Bulut Eşitleme Kartı (girisliyken: yardimci arac olarak altta;
                     girissizken en ustteki kopyasi render edilir) */}
                 {currentUser && (
-                    <CloudSyncCard currentUser={currentUser} onLoginClick={onLoginClick} />
+                    <div style={{ order: 30 }}><CloudSyncCard currentUser={currentUser} onLoginClick={onLoginClick} /></div>
                 )}
 
                 {/* Yedekleme: indir / geri yukle */}
-                <BackupCard />
+                <div style={{ order: 60 }}><BackupCard /></div>
 
                 {/* Bulut Snapshot: oto-yedek + yedeklerden yukle (girisli) */}
-                <CloudSnapshotCard />
+                <div style={{ order: 70 }}><CloudSnapshotCard /></div>
 
+                {setMinimalMode && (
+                <div className="glass-card slide-in" style={{ order: 75, border: '1px solid rgba(148,163,184,0.25)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                        <div>
+                            <h3 style={{ margin: 0, color: '#fff', fontSize: '1.05rem' }}>{t('minimal_title')}</h3>
+                            <p style={{ margin: '4px 0 0 0', color: 'var(--text-light)', fontSize: '0.75rem' }}>{t('minimal_desc')}</p>
+                        </div>
+                        <button
+                            onClick={() => { haptic(8); setMinimalMode(!minimalMode); }}
+                            style={{
+                                width: '44px', height: '24px', flexShrink: 0,
+                                borderRadius: '12px',
+                                border: `1px solid ${minimalMode ? 'rgba(0,195,255,0.5)' : 'rgba(255,255,255,0.15)'}`,
+                                background: minimalMode ? 'rgba(0,195,255,0.25)' : 'rgba(255,255,255,0.06)',
+                                position: 'relative', cursor: 'pointer'
+                            }}
+                            role="switch"
+                            aria-checked={minimalMode}
+                            aria-label={t('minimal_title')}
+                        >
+                            <span style={{
+                                position: 'absolute', top: '2px',
+                                left: minimalMode ? '22px' : '2px',
+                                width: '18px', height: '18px', borderRadius: '50%',
+                                background: minimalMode ? '#00c3ff' : '#888',
+                                transition: 'all 0.2s'
+                            }} />
+                        </button>
+                    </div>
+                </div>
+                )}
+
+                </div>}
             </div>
 
             {/* Tam Ekran Fotoğraf Görüntüleyici Modal */}
@@ -982,43 +1111,10 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
             )}
 
             {/* Bildirim / Hatirlatma Ayarlari */}
-            <ReminderSettingsCard />
-
-            {/* SADE MOD: oyunlastirmayi gizleyen sade arayuz tercihi */}
-            {setMinimalMode && (
-            <div className="glass-card slide-in" style={{ marginTop: '1.5rem', border: '1px solid rgba(148,163,184,0.25)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-                    <div>
-                        <h3 style={{ margin: 0, color: '#fff', fontSize: '1.05rem' }}>{t('minimal_title')}</h3>
-                        <p style={{ margin: '4px 0 0 0', color: 'var(--text-light)', fontSize: '0.75rem' }}>{t('minimal_desc')}</p>
-                    </div>
-                    <button
-                        onClick={() => { haptic(8); setMinimalMode(!minimalMode); }}
-                        style={{
-                            width: '44px', height: '24px', flexShrink: 0,
-                            borderRadius: '12px',
-                            border: `1px solid ${minimalMode ? 'rgba(0,195,255,0.5)' : 'rgba(255,255,255,0.15)'}`,
-                            background: minimalMode ? 'rgba(0,195,255,0.25)' : 'rgba(255,255,255,0.06)',
-                            position: 'relative', cursor: 'pointer'
-                        }}
-                        role="switch"
-                        aria-checked={minimalMode}
-                        aria-label={t('minimal_title')}
-                    >
-                        <span style={{
-                            position: 'absolute', top: '2px',
-                            left: minimalMode ? '22px' : '2px',
-                            width: '18px', height: '18px', borderRadius: '50%',
-                            background: minimalMode ? '#00c3ff' : '#888',
-                            transition: 'all 0.2s'
-                        }} />
-                    </button>
-                </div>
-            </div>
-            )}
+            {!isMetrics && <ReminderSettingsCard />}
 
             {/* GIZLILIK POLITIKASI (KVKK) */}
-            <button
+            {!isMetrics && <button
                 onClick={() => { haptic(8); setShowPrivacy(true); }}
                 style={{
                     width: '100%', marginTop: '1.5rem', padding: '0.9rem 1rem',
@@ -1029,7 +1125,7 @@ function BodyTracker({ currentUser, onLoginClick, userXP = 0, userLevel = 1, wor
                 }}
             >
                 <ShieldCheck size={16} /> {t('privacy_title')}
-            </button>
+            </button>}
             {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
         </div >
     );

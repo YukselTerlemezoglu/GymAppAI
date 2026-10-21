@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Bot, Activity, Wand2, Timer, PersonStanding, LayoutGrid, Dumbbell } from 'lucide-react';
+import { Trophy, Bot, Activity, Timer, PersonStanding, LayoutGrid, Dumbbell, Play } from 'lucide-react';
 import useLocalStorage, { useAllStorageHydrated } from './hooks/useLocalStorage';
 import ErrorBoundary from './components/ErrorBoundary';
 import AICoachOnboarding from './components/aicoach/AICoachOnboarding';
-import CustomProgramBuilder from './components/dashboard/CustomProgramBuilder';
 import ActiveWorkoutView from './components/workout/ActiveWorkoutView';
 import ScoreTracker from './components/dashboard/ScoreTracker';
 import SocialWeeklyCard from './components/dashboard/SocialWeeklyCard';
@@ -12,7 +11,6 @@ import CoachInsightFeed from './components/dashboard/CoachInsightFeed';
 import WorkoutCalendar from './components/dashboard/WorkoutCalendar';
 import StrengthCurves from './components/dashboard/StrengthCurves';
 import CheckInModal from './components/dashboard/CheckInModal';
-import ProgramWizard from './components/workout/ProgramWizard';
 import SeasonCard from './components/dashboard/SeasonCard';
 import DailyQuestsCard from './components/dashboard/DailyQuestsCard';
 import { seasonInfo, SEASON_EPOCH, leagueForSP, seasonSP } from './utils/season';
@@ -59,7 +57,7 @@ import { localDayKey } from './utils/dateKey.js';
 
 function AppContent() {
   const { t, lang } = useLanguage();
-  const { haptic } = useToast();
+  const { haptic, confirmDialog } = useToast();
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'workout' | 'aicoach' | 'activeAiWorkout' | 'auth'
   const [currentUser, setCurrentUser] = useState(null);
   const [hasOnboarded, setHasOnboarded] = useLocalStorage('gym_app_onboarded', false);
@@ -241,7 +239,6 @@ function AppContent() {
     return dashCardVisibility?.[id] !== false;
   };
   // FAZ 3: program sihirbazi
-  const [showWizard, setShowWizard] = useState(false);
   const [showCheckIn, setShowCheckIn] = useState(false);
   // Evrim kutlamasi: { buddyId, newXp } / null (antrenman + dukkan ortak)
   const [buddyEvolution, setBuddyEvolution] = useState(null);
@@ -338,7 +335,6 @@ function AppContent() {
   const [lastResetDate, setLastResetDate] = useLocalStorage('gym_app_last_reset_date', null);
 
   // UI / Routing State
-  const [showCustomBuilder, setShowCustomBuilder] = useState(false);
   const [dashboardTab, setDashboardTab] = useLocalStorage('gym_app_dashboard_tab', 'today');
   const [activeAiWorkoutDayIdx, setActiveAiWorkoutDayIdx] = useLocalStorage('gym_app_active_day_idx', null);
   const [activeAiWorkoutDayParams, setActiveAiWorkoutDayParams] = useLocalStorage('gym_app_active_day_params', null);
@@ -531,18 +527,47 @@ function AppContent() {
 
 
 
-  const handleUpdateAiProgram = (dayIdx, exIdx, field, value) => {
-    // Önceki kod shallow copy yapıp nested mutate ediyordu (aliasing bug riski).
-    // structuredCycle güvenli derin kopya sağlar.
+  const patchAiProgram = (mutator) => {
     setSavedAiProgram(prev => {
-      if (!prev?.days?.[dayIdx]?.exercises?.[exIdx]) return prev;
-      // Modern tarayıcılarda structuredClone var; geri düşür JSON round-trip.
+      if (!prev) return prev;
       const clone = (typeof structuredClone === 'function')
         ? structuredClone(prev)
         : JSON.parse(JSON.stringify(prev));
-      clone.days[dayIdx].exercises[exIdx][field] = value;
+      mutator(clone);
       return clone;
     });
+  };
+
+  const handleUpdateAiProgram = (dayIdx, exIdx, field, value) => {
+    patchAiProgram((clone) => {
+      if (!clone?.days?.[dayIdx]?.exercises?.[exIdx]) return;
+      clone.days[dayIdx].exercises[exIdx][field] = value;
+    });
+  };
+
+  const startBlankProgram = async () => {
+    if (savedAiProgram) {
+      const ok = await confirmDialog({
+        title: t('train_replace_title'),
+        message: t('train_replace_msg'),
+        confirmLabel: t('train_write_own'),
+        cancelLabel: t('aw_exit_cancel'),
+        danger: true
+      });
+      if (!ok) return;
+    }
+    setSavedAiProgram({
+      programName: '',
+      notes: '',
+      isCustom: true,
+      days: [{
+        dayName: t('builder_default_day_name', { num: 1 }),
+        focus: '',
+        exercises: [{ name: '', sets: '3', reps: '8-12', weight: '', rest: '90', rpe: '', notes: '' }]
+      }]
+    });
+    setCompletedDays([]);
+    setDashboardTab('train');
   };
 
   // --- LIVE AI WORKOUT LOGIC ---
@@ -689,7 +714,7 @@ function AppContent() {
         );
       }
       if (currentView === 'aicoach') {
-        return <AICoachOnboarding setSavedAiProgram={setSavedAiProgram} setCurrentView={setCurrentView} />;
+        return <AICoachOnboarding setSavedAiProgram={setSavedAiProgram} setCurrentView={setCurrentView} onSaved={() => setDashboardTab('train')} />;
       }
       if (currentView === 'auth') {
         return <AuthScreen onBack={() => setCurrentView('dashboard')} onLoginSuccess={() => setCurrentView('dashboard')} setUserName={setUserName} />;
@@ -973,30 +998,33 @@ function AppContent() {
               </div>
             )}
 
-            {/* AI Koc + Check-in: gunun ana giris noktalari — en ustte (mobilde alt alta) */}
-            <div className="span-both" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.75rem' }}>
-              <motion.button
-                onClick={() => setShowCheckIn(true)}
-                className="neon-btn"
-                style={{ background: 'rgba(255, 107, 129, 0.1)', borderColor: '#ff6b81', color: '#ff6b81', boxShadow: 'none', fontSize: '0.9rem' }}
-                whileTap={{ scale: 0.97 }}
-              >
-                {checkinToday(checkinData) ? '✅ ' + t('checkin_done_btn') : '🩺 ' + t('checkin_open_btn')}
-              </motion.button>
-              <motion.button
-                onClick={() => setCurrentView('aicoach')}
-                className="neon-btn"
-                style={{ background: 'rgba(0, 195, 255, 0.1)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none', fontSize: '0.9rem' }}
-                whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(0, 195, 255, 0.4)' }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ duration: 0.05 }}
-              >
-                <Bot size={20} /> {t('btn_ai_coach')}
-              </motion.button>
-            </div>
+            {(() => {
+              const days = savedAiProgram?.days || [];
+              const openIdx = days.findIndex((d, i) => !d.isRestDay && !(completedDays || []).includes(i));
+              const fallbackIdx = days.findIndex((d) => !d.isRestDay);
+              const todayIdx = openIdx >= 0 ? openIdx : fallbackIdx;
+              const todayDay = todayIdx >= 0 ? days[todayIdx] : null;
+              return (
+                <div className="span-both glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '4px' }}>{t('today_workout_label')}</div>
+                    <div style={{ color: '#fff', fontWeight: 700 }}>{todayDay ? todayDay.dayName : t('today_no_program')}</div>
+                    {todayDay?.focus && <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: '2px' }}>{todayDay.focus}</div>}
+                  </div>
+                  {todayDay ? (
+                    <button onClick={() => startActiveAiWorkout(todayIdx, todayDay)} className="neon-btn" style={{ padding: '8px 16px' }}>
+                      <Play size={14} fill="currentColor" /> {completedDays?.includes(todayIdx) ? t('preview_repeat_workout') : t('preview_start_workout')}
+                    </button>
+                  ) : (
+                    <button onClick={startBlankProgram} className="neon-btn" style={{ padding: '8px 16px' }}>
+                      <Dumbbell size={14} /> {t('today_write_program')}
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
 
-            {/* Sol kolon: skor + gunun oyunsal kartlari */}
-            <div className="dash-main" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div className="span-both" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {isCardVisible('score') && (
               <ScoreTracker
                 workoutHistory={workoutHistory}
@@ -1013,19 +1041,22 @@ function AppContent() {
               {isCardVisible('season') && (
               <SeasonCard seasonData={seasonData} workoutHistory={workoutHistory} />
               )}
-            </div>
-
-            {/* Sag kolon: gunluk bakim (beslenme/su/toparlanma/check-in) */}
-            <div className="dash-side" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <motion.button
+                onClick={() => setShowCheckIn(true)}
+                className="neon-btn"
+                style={{ background: 'rgba(255, 107, 129, 0.1)', borderColor: '#ff6b81', color: '#ff6b81', boxShadow: 'none', fontSize: '0.9rem' }}
+                whileTap={{ scale: 0.97 }}
+              >
+                {checkinToday(checkinData) ? '✅ ' + t('checkin_done_btn') : '🩺 ' + t('checkin_open_btn')}
+              </motion.button>
+              {isCardVisible('water') && <WaterTrackerWidget />}
+              {isCardVisible('recovery') && <RecoveryWidget workoutHistory={workoutHistory} />}
               {isCardVisible('nutrition') && (
               <NutritionSummary
                 nutritionData={nutritionData}
                 onClick={() => setCurrentView('nutrition')}
               />
               )}
-              {isCardVisible('water') && <WaterTrackerWidget />}
-              {isCardVisible('recovery') && <RecoveryWidget workoutHistory={workoutHistory} />}
-              {/* Sosyal haftalik ozet: girisli + arkadasi olan kullaniciya ozel */}
               {currentUser && socialFriendsSafe.length > 0 && (
                 <SocialWeeklyCard friends={socialFriendsSafe} myName={userName} workoutHistory={workoutHistory} />
               )}
@@ -1093,85 +1124,52 @@ function AppContent() {
         {dashboardTab === 'train' && (
           <div className="stack-grid">
 
-            {/* Aksiyon butonlari: 2x2 grid (mobilde tek kolon) */}
-            <div className="fade-in span-both" style={{ animationDelay: '0.15s', display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
-              <motion.button
-                onClick={() => setShowWizard(true)}
-                className="neon-btn btn-accent"
-                style={{ background: 'rgba(255, 0, 136, 0.1)', borderColor: '#ff0088', color: '#ff0088', boxShadow: 'none' }}
-                whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(255, 0, 136, 0.4)' }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ duration: 0.05 }}
-              >
-                <Wand2 size={20} /> {t('btn_wizard_program')}
-              </motion.button>
-
-              <motion.button
-                onClick={() => setCurrentView('anatomy')}
-                className="neon-btn btn-accent"
-                style={{ background: 'rgba(173, 255, 47, 0.1)', borderColor: '#adff2f', color: '#adff2f', boxShadow: 'none' }}
-                whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(173, 255, 47, 0.4)' }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ duration: 0.05 }}
-              >
-                <Activity size={20} /> {t('btn_anatomy')}
-              </motion.button>
-
-              <motion.button
-                onClick={() => setCurrentView('hiit')}
-                className="neon-btn btn-accent"
-                style={{ background: 'rgba(255, 107, 61, 0.1)', borderColor: '#ff6b3d', color: '#ff6b3d', boxShadow: 'none' }}
-                whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(255, 107, 61, 0.4)' }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ duration: 0.05 }}
-              >
-                <Timer size={20} /> {t('btn_hiit')}
-              </motion.button>
-
-              <motion.button
-                onClick={() => setCurrentView('mobility')}
-                className="neon-btn btn-accent"
-                style={{ background: 'rgba(0, 195, 255, 0.08)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none' }}
-                whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(0, 195, 255, 0.35)' }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ duration: 0.05 }}
-              >
-                <PersonStanding size={20} /> {t('btn_mobility')}
-              </motion.button>
-
-              <motion.button
-                onClick={() => setShowCustomBuilder(true)}
-                className="neon-btn btn-accent"
-                style={{ background: 'rgba(0, 255, 136, 0.08)', borderColor: '#00ff88', color: '#00ff88', boxShadow: 'none', gridColumn: '1 / -1' }}
-                whileHover={{ scale: 1.02, boxShadow: '0 0 25px rgba(0, 255, 136, 0.35)' }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ duration: 0.05 }}
-              >
-                <Dumbbell size={20} /> {t('btn_create_program')}
-              </motion.button>
-            </div>
-
-            {/* AI Saved Program — tam genislik; gunler iceride coklu kolon (grid) */}
             <div className="span-both">
             <SavedProgramPreview
               savedAiProgram={savedAiProgram}
               painData={checkinToPainData(checkinData)}
-              showCustomBuilder={showCustomBuilder}
               completedDays={completedDays}
               clearAiProgram={clearAiProgram}
               startActiveAiWorkout={startActiveAiWorkout}
               handleUpdateAiProgram={handleUpdateAiProgram}
+              patchAiProgram={patchAiProgram}
             />
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+              <button type="button" onClick={() => setCurrentView('aicoach')} className="neon-btn" style={{ flex: 1, background: 'rgba(0,195,255,0.1)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none' }}>
+                <Bot size={18} /> {t('train_ask_coach')}
+              </button>
+              <button type="button" onClick={startBlankProgram} className="neon-btn" style={{ flex: 1, background: 'rgba(0,255,136,0.08)', borderColor: '#00ff88', color: '#00ff88', boxShadow: 'none' }}>
+                <Dumbbell size={18} /> {t('train_write_own')}
+              </button>
+            </div>
             </div>
 
-            {/* Custom Program Builder */}
-            {
-              showCustomBuilder && (
-                <div className="span-both">
-                <CustomProgramBuilder setSavedAiProgram={setSavedAiProgram} setShowCustomBuilder={setShowCustomBuilder} />
-                </div>
-              )
-            }
+            <div className="fade-in span-both" style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+              <motion.button
+                onClick={() => setCurrentView('hiit')}
+                className="neon-btn btn-accent"
+                style={{ background: 'rgba(255, 107, 61, 0.1)', borderColor: '#ff6b3d', color: '#ff6b3d', boxShadow: 'none' }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Timer size={20} /> {t('btn_hiit')}
+              </motion.button>
+              <motion.button
+                onClick={() => setCurrentView('mobility')}
+                className="neon-btn btn-accent"
+                style={{ background: 'rgba(0, 195, 255, 0.08)', borderColor: '#00c3ff', color: '#00c3ff', boxShadow: 'none' }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <PersonStanding size={20} /> {t('btn_mobility')}
+              </motion.button>
+              <motion.button
+                onClick={() => setCurrentView('anatomy')}
+                className="neon-btn btn-accent"
+                style={{ background: 'rgba(173, 255, 47, 0.1)', borderColor: '#adff2f', color: '#adff2f', boxShadow: 'none' }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Activity size={20} /> {t('btn_anatomy')}
+              </motion.button>
+            </div>
 
             {/* Sablonlar: tam genislik; sablon kartlari iceride coklu kolon */}
             <div className="span-both">
@@ -1188,21 +1186,25 @@ function AppContent() {
             analizler (standartlar, egiriler, rapor), en sonda isi haritasi. */}
         {dashboardTab === 'progress' && (
           <div className="stack-grid">
-            {workoutHistory && workoutHistory.length > 0 && (
-              <WorkoutProgressCharts workoutHistory={workoutHistory} onOpenPrHistory={() => setCurrentView('prhistory')} />
-            )}
-
             <WorkoutCalendar workoutHistory={workoutHistory} />
 
             <WorkoutHeatmap workoutHistory={workoutHistory} />
 
-            <StrengthStandards workoutHistory={workoutHistory} />
+            {workoutHistory && workoutHistory.length > 0 && (
+              <WorkoutProgressCharts workoutHistory={workoutHistory} onOpenPrHistory={() => setCurrentView('prhistory')} />
+            )}
 
             <StrengthCurves workoutHistory={workoutHistory} />
+
+            <StrengthStandards workoutHistory={workoutHistory} />
 
             <WeeklyAiReport workoutHistory={workoutHistory} />
 
             <CoachInsightFeed workoutHistory={workoutHistory} weeklyGoal={weeklyGoal} activeBuddyId={activeBuddyId} painData={checkinToPainData(checkinData)} />
+
+            <div className="span-both">
+              <BodyTracker variant="metrics" />
+            </div>
           </div>
         )}
 
@@ -1213,18 +1215,6 @@ function AppContent() {
           initial={checkinToday(checkinData) ? checkinData.entries[0] : null}
           onSave={(entry) => saveCheckIn(entry, checkinData, setCheckinData)}
         />
-
-        {/* FAZ 3: Program Uretici Sihirbazi — kosullu render: her acilista
-            taze check-in agrisiyla yeniden mount edilir (kara liste on-secimi) */}
-        {showWizard && (
-          <ProgramWizard
-            open
-            onClose={() => setShowWizard(false)}
-            workoutHistory={workoutHistory}
-            painData={checkinToPainData(checkinData)}
-            onProgramCreated={(prog) => setSavedAiProgram(prog)}
-          />
-        )}
 
         {/* Level Up Confetti Modal */}
         {

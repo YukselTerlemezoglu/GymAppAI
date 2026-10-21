@@ -46,11 +46,16 @@ function InventoryCard({ inventory, activeBuddyId, onFeedSnack, onOpenShop }) {
             </h3>
 
             {!hasAnything ? (
-                <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', margin: '0 0 0.8rem' }}>
-                    {t('myinv_empty')}{' '}
-                    <button onClick={onOpenShop} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: '0.85rem' }}>
-                        {t('profile_open_shop')}
-                    </button>
+                <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', margin: 0 }}>
+                    {t('myinv_empty')}
+                    {onOpenShop && (
+                        <>
+                            {' '}
+                            <button onClick={onOpenShop} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: '0.85rem' }}>
+                                {t('profile_open_shop')}
+                            </button>
+                        </>
+                    )}
                 </p>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>

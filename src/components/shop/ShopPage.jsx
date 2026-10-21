@@ -25,8 +25,8 @@ import EvolutionModal from './EvolutionModal';
  */
 
 const TABS = [
-    { id: 'boosts', icon: Zap, labelKey: 'shop_tab_boosts' },
     { id: 'buddy', icon: Package, labelKey: 'shop_tab_buddy' },
+    { id: 'boosts', icon: Zap, labelKey: 'shop_tab_boosts' },
     { id: 'boxes', icon: Dices, labelKey: 'shop_tab_boxes' },
     { id: 'themes', icon: Palette, labelKey: 'shop_tab_themes' }
 ];
@@ -55,7 +55,7 @@ function ShopPage({
 }) {
     const { t, lang } = useTranslation();
     const { toast, confirmDialog } = useToast();
-    const [tab, setTab] = useState('boosts');
+    const [tab, setTab] = useState('buddy');
     const [reveal, setReveal] = useState(null);
     const [spinning, setSpinning] = useState(false);
     // Senkron meşguliyet kilidi: cark/kutu/yumurta handler'lari await
