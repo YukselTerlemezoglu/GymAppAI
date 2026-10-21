@@ -23,7 +23,9 @@ function BottomNav({ currentView, dashboardTab, onGoHome, onSelectTab, onOpenSho
     return createPortal(
         <nav className="bottom-nav" role="navigation">
             {items.map(item => {
-                const isActive = (isDashboard && item.id === dashboardTab) || (!isDashboard && item.id === 'profile' && currentView === 'profile');
+                const isActive = (isDashboard && item.id === dashboardTab)
+                    || (item.id === 'profile' && currentView === 'profile')
+                    || (item.id === 'shop' && currentView === 'shop');
                 const Icon = item.icon;
                 const isProfile = item.id === 'profile';
                 const isShop = item.id === 'shop';
